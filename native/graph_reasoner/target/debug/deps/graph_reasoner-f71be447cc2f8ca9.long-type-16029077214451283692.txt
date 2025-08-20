@@ -1,2 +1,0 @@
-Result<CentralityResult, rustler::Error>
-Result<CentralityResult, rustler::Error>: NifReturnable

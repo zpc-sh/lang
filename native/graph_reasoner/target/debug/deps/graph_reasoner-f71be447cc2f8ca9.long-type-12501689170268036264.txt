@@ -1,2 +1,0 @@
-Result<CommunityResult, rustler::Error>
-Result<CommunityResult, rustler::Error>: NifReturnable

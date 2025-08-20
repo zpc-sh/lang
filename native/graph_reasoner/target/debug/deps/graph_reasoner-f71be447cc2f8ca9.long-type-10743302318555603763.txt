@@ -1,2 +1,0 @@
-Result<HashMap<std::string::String, Value>, rustler::Error>
-Result<HashMap<std::string::String, Value>, rustler::Error>: NifReturnable

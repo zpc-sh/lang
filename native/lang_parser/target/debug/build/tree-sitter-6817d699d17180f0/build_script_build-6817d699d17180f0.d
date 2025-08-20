@@ -1,5 +1,0 @@
-/Users/locnguyen/src/code/lang/native/lang_parser/target/debug/build/tree-sitter-6817d699d17180f0/build_script_build-6817d699d17180f0.d: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-0.19.5/binding_rust/build.rs
-
-/Users/locnguyen/src/code/lang/native/lang_parser/target/debug/build/tree-sitter-6817d699d17180f0/build_script_build-6817d699d17180f0: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-0.19.5/binding_rust/build.rs
-
-/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-0.19.5/binding_rust/build.rs:

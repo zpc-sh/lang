@@ -1,2 +1,0 @@
-Result<ReasoningResult, rustler::Error>
-Result<ReasoningResult, rustler::Error>: NifReturnable

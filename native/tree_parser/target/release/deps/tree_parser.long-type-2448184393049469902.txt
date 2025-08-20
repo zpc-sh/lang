@@ -1,3 +1,0 @@
-AHashMap<std::string::String, f64>
-AHashMap<std::string::String, f64>: Serialize
-AHashMap<std::string::String, f64>: Deserialize<'_>

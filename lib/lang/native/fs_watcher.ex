@@ -27,7 +27,7 @@ defmodule Lang.Native.FsWatcher do
   use RustlerPrecompiled,
     otp_app: :lang,
     crate: "fs_watcher",
-    base_url: "https://github.com/yourusername/lang/releases/download/v",
+    base_url: "https://github.com/nocsi/lang/releases/download/v",
     force_build: System.get_env("RUSTLER_PRECOMPILATION_EXAMPLE_BUILD") in ["1", "true"],
     version: "0.1.0"
 
