@@ -20,11 +20,21 @@ defmodule LangWeb.Router do
     plug :put_secure_browser_headers
   end
 
+  pipeline :require_authenticated_user do
+    plug AshAuthentication.Plug, otp_app: :lang
+  end
+
   scope "/", LangWeb do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/auth", AuthLive, :index
     live "/analyze", TextAnalysisLive, :index
+  end
+
+  scope "/", LangWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
     live "/dashboard", DashboardLive, :index
     live "/api-portal", ApiPortalLive, :index
   end

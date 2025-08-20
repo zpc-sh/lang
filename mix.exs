@@ -164,7 +164,12 @@ defmodule Lang.MixProject do
         "esbuild lang --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"],
+
+      # Development and maintenance
+      precommit: ["precommit"],
+      clean: ["clean.artifacts --force"],
+      "dev.reset": ["dev.clean --all --deps --force"],
+      "dev.quick": ["dev.clean --artifacts --format --force"],
 
       # Native compilation
       "compile.native": ["rustler.compile"],

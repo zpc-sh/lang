@@ -140,7 +140,7 @@ show_instructions() {
     echo "1. Push the tag: git push origin $tag_name"
     echo "2. GitHub Actions will build precompiled NIFs for all platforms"
     echo "3. Once complete, update the base_url in your NIF modules to point to:"
-    echo "   https://github.com/yourusername/lang/releases/download/v"
+    echo "   https://github.com/nocsi/lang/releases/download/v"
     echo "4. Update the checksum files with real checksums from the release"
     echo ""
     echo "To force local compilation for testing:"

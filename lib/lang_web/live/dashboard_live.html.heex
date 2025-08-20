@@ -459,4 +459,7 @@
       </div>
     </div>
   </div>
+
+  <!-- Load Stripe.js only when billing tab is active -->
+  <script :if={@active_tab == "billing"} src="https://js.stripe.com/v3/"></script>
 </Layouts.app>
