@@ -1,0 +1,8 @@
+/Users/locnguyen/src/code/lang/native/lang_parser/target/release/deps/tree_sitter_markdown-0789af7743395f4f.d: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/../../src/node-types.json
+
+/Users/locnguyen/src/code/lang/native/lang_parser/target/release/deps/libtree_sitter_markdown-0789af7743395f4f.rlib: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/../../src/node-types.json
+
+/Users/locnguyen/src/code/lang/native/lang_parser/target/release/deps/libtree_sitter_markdown-0789af7743395f4f.rmeta: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/../../src/node-types.json
+
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/lib.rs:
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-markdown-0.7.1/bindings/rust/../../src/node-types.json:

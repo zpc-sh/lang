@@ -1,0 +1,462 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+      <p class="mt-2 text-lg text-gray-600">
+        Welcome back, <%= @current_user.name || @current_user.email %>
+      </p>
+      
+      <!-- Plan Badge -->
+      <div class="mt-3">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+          <.icon name="hero-star" class="h-4 w-4 mr-1" />
+          <%= String.capitalize(to_string(@organization.plan)) %> Plan
+        </span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="border-b border-gray-200 mb-8">
+      <nav class="-mb-px flex space-x-8">
+        <button
+          phx-click="change_tab"
+          phx-value-tab="overview"
+          class={[
+            "whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm",
+            if(@active_tab == "overview", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+          ]}
+        >
+          Overview
+        </button>
+        <button
+          phx-click="change_tab"
+          phx-value-tab="billing"
+          class={[
+            "whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm",
+            if(@active_tab == "billing", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+          ]}
+        >
+          Billing & Plans
+        </button>
+        <button
+          phx-click="change_tab"
+          phx-value-tab="usage"
+          class={[
+            "whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm",
+            if(@active_tab == "usage", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+          ]}
+        >
+          Usage Analytics
+        </button>
+        <button
+          phx-click="change_tab"
+          phx-value-tab="team"
+          class={[
+            "whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm",
+            if(@active_tab == "team", do: "border-blue-500 text-blue-600", else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+          ]}
+        >
+          Team
+        </button>
+      </nav>
+    </div>
+
+    <!-- Overview Tab -->
+    <div :if={@active_tab == "overview"}>
+      <!-- Quick Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Usage Card -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <.icon name="hero-chart-bar" class="h-6 w-6 text-blue-600" />
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">API Requests</dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    <%= @usage_limits.current_usage || 0 %>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm">
+              <span class={[
+                "font-medium",
+                if(@usage_limits.remaining < (@usage_limits.limit * 0.1), do: "text-red-600", else: "text-green-600")
+              ]}>
+                <%= if @usage_limits.limit > 0, do: round((@usage_limits.current_usage / @usage_limits.limit) * 100), else: 0 %>%
+              </span>
+              <span class="text-gray-500">of monthly limit</span>
+            </div>
+            <!-- Usage Progress Bar -->
+            <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+              <div class={[
+                "h-2 rounded-full transition-all duration-300",
+                if(@usage_limits.remaining < (@usage_limits.limit * 0.1), do: "bg-red-500", else: if(@usage_limits.remaining < (@usage_limits.limit * 0.2), do: "bg-yellow-500", else: "bg-green-500"))
+              ]} style={"width: #{if @usage_limits.limit > 0, do: min((@usage_limits.current_usage / @usage_limits.limit) * 100, 100), else: 0}%"}></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Rate -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <.icon name="hero-check-circle" class="h-5 w-5 text-green-600" />
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
+                  <dd class="text-lg font-medium text-gray-900">99.8%</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Response Time -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <.icon name="hero-bolt" class="h-6 w-6 text-yellow-600" />
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Avg Response</dt>
+                  <dd class="text-lg font-medium text-gray-900">142ms</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plan Status -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <.icon name="hero-star" class="h-6 w-6 text-purple-600" />
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Current Plan</dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    <%= String.capitalize(to_string(@organization.plan)) %>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Billing Tab -->
+    <div :if={@active_tab == "billing"}>
+      <!-- Current Plan Status -->
+      <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Current Subscription</h3>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xl font-semibold text-gray-900">
+              <%= String.capitalize(to_string(@organization.plan)) %> Plan
+            </p>
+            <p class="text-gray-600">
+              <%= case @organization.plan do %>
+                <% :free -> %>
+                  Free plan with 1,000 requests per month
+                <% :pro -> %>
+                  $49/month with 50,000 requests per month
+                <% :enterprise -> %>
+                  $199/month with 500,000 requests per month
+              <% end %>
+            </p>
+            <p :if={@organization.current_period_end} class="text-sm text-gray-500 mt-1">
+              Next billing date: <%= Calendar.strftime(@organization.current_period_end, "%B %d, %Y") %>
+            </p>
+          </div>
+          <div class="text-right">
+            <span class={[
+              "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
+              if(@organization.subscription_status == :active, do: "bg-green-100 text-green-800", else: "bg-gray-100 text-gray-800")
+            ]}>
+              <%= String.capitalize(to_string(@organization.subscription_status)) %>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan Comparison -->
+      <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-lg font-medium text-gray-900 mb-6">Choose Your Plan</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Free Plan -->
+          <div class={[
+            "border rounded-lg p-6 relative",
+            if(@organization.plan == :free, do: "border-blue-500 bg-blue-50", else: "border-gray-200")
+          ]}>
+            <div class="text-center">
+              <h4 class="text-lg font-medium text-gray-900 mb-2">Free</h4>
+              <div class="text-3xl font-bold text-gray-900 mb-1">$0</div>
+              <div class="text-gray-500 mb-4">per month</div>
+              <ul class="text-left space-y-2 mb-6 text-sm text-gray-600">
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  1,000 requests/month
+                </li>
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  Basic support
+                </li>
+              </ul>
+              <button 
+                :if={@organization.plan != :free}
+                phx-click="downgrade_plan"
+                phx-value-plan="free"
+                class="w-full py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Downgrade
+              </button>
+              <div :if={@organization.plan == :free} class="w-full py-2 px-4 bg-gray-100 rounded-md text-sm font-medium text-gray-500">
+                Current Plan
+              </div>
+            </div>
+          </div>
+
+          <!-- Pro Plan -->
+          <div class={[
+            "border rounded-lg p-6 relative",
+            if(@organization.plan == :pro, do: "border-blue-500 bg-blue-50", else: "border-gray-200")
+          ]}>
+            <div class="text-center">
+              <h4 class="text-lg font-medium text-gray-900 mb-2">Pro</h4>
+              <div class="text-3xl font-bold text-gray-900 mb-1">$49</div>
+              <div class="text-gray-500 mb-4">per month</div>
+              <ul class="text-left space-y-2 mb-6 text-sm text-gray-600">
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  50,000 requests/month
+                </li>
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  Priority support
+                </li>
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  Advanced analytics
+                </li>
+              </ul>
+              <button 
+                :if={@organization.plan != :pro}
+                phx-click="upgrade_plan"
+                phx-value-plan="pro"
+                class="w-full py-2 px-4 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+              >
+                <%= if @organization.plan == :free, do: "Upgrade", else: "Change Plan" %>
+              </button>
+              <div :if={@organization.plan == :pro} class="w-full py-2 px-4 bg-blue-100 rounded-md text-sm font-medium text-blue-800">
+                Current Plan
+              </div>
+            </div>
+          </div>
+
+          <!-- Enterprise Plan -->
+          <div class={[
+            "border rounded-lg p-6 relative",
+            if(@organization.plan == :enterprise, do: "border-blue-500 bg-blue-50", else: "border-gray-200")
+          ]}>
+            <div class="text-center">
+              <h4 class="text-lg font-medium text-gray-900 mb-2">Enterprise</h4>
+              <div class="text-3xl font-bold text-gray-900 mb-1">$199</div>
+              <div class="text-gray-500 mb-4">per month</div>
+              <ul class="text-left space-y-2 mb-6 text-sm text-gray-600">
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  500,000 requests/month
+                </li>
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  24/7 dedicated support
+                </li>
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  Custom integrations
+                </li>
+                <li class="flex items-center">
+                  <.icon name="hero-check" class="h-4 w-4 text-green-500 mr-2" />
+                  SLA guarantee
+                </li>
+              </ul>
+              <button 
+                :if={@organization.plan != :enterprise}
+                phx-click="upgrade_plan"
+                phx-value-plan="enterprise"
+                class="w-full py-2 px-4 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+              >
+                <%= if @organization.plan == :free, do: "Upgrade", else: "Change Plan" %>
+              </button>
+              <div :if={@organization.plan == :enterprise} class="w-full py-2 px-4 bg-blue-100 rounded-md text-sm font-medium text-blue-800">
+                Current Plan
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Billing History -->
+      <div :if={@organization.plan != :free} class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Billing History</h3>
+        <div class="flow-root">
+          <div class="-my-2 overflow-x-auto">
+            <div class="inline-block min-w-full py-2 align-middle">
+              <table class="min-w-full divide-y divide-gray-300">
+                <thead>
+                  <tr>
+                    <th class="py-3 pl-4 pr-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Date
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Amount
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Status
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Invoice
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr>
+                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
+                      <%= Calendar.strftime(DateTime.utc_now(), "%B %d, %Y") %>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                      $<%= case @organization.plan do %>
+                        <% :pro -> %>49.00
+                        <% :enterprise -> %>199.00
+                        <% _ -> %>0.00
+                      <% end %>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-sm">
+                      <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">
+                        Paid
+                      </span>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-sm text-blue-600 hover:text-blue-900">
+                      <a href="#" class="hover:underline">Download</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Tab -->
+    <div :if={@active_tab == "usage"}>
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-6">Usage Analytics</h3>
+        
+        <!-- Usage Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <dt class="text-sm font-medium text-gray-500">Current Period Usage</dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900">
+              <%= @usage_limits.current_usage || 0 %>
+            </dd>
+            <dd class="text-sm text-gray-600">requests this month</dd>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <dt class="text-sm font-medium text-gray-500">Remaining</dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900">
+              <%= @usage_limits.remaining || 0 %>
+            </dd>
+            <dd class="text-sm text-gray-600">requests left</dd>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <dt class="text-sm font-medium text-gray-500">Success Rate</dt>
+            <dd class="mt-1 text-3xl font-semibold text-gray-900">99.8%</dd>
+            <dd class="text-sm text-gray-600">of all requests</dd>
+          </div>
+        </div>
+
+        <!-- Usage Chart Placeholder -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+          <.icon name="hero-chart-bar" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h4 class="text-lg font-medium text-gray-900 mb-2">Usage Charts Coming Soon</h4>
+          <p class="text-gray-600">Detailed usage analytics and charts will be available in the next update.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Tab -->
+    <div :if={@active_tab == "team"}>
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Team Management</h3>
+        <p class="text-gray-600">Team collaboration features coming soon!</p>
+      </div>
+    </div>
+
+    <!-- Payment Form Modal (Hidden by default) -->
+    <div id="payment-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+            <.icon name="hero-credit-card" class="h-6 w-6 text-blue-600" />
+          </div>
+          <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Complete Your Upgrade</h3>
+            <p class="text-sm text-gray-500 mt-2">
+              Add a payment method to upgrade your plan
+            </p>
+          </div>
+
+          <!-- Payment Form -->
+          <form id="payment-form" class="mt-6">
+            <!-- Stripe Elements will be inserted here -->
+            <div id="payment-element" class="mb-4"></div>
+
+            <!-- Error Display -->
+            <div id="payment-errors" class="text-red-600 text-sm mb-4 hidden"></div>
+
+            <!-- Success Display -->
+            <div id="payment-success" class="text-green-600 text-sm mb-4 hidden"></div>
+
+            <div class="flex items-center justify-between">
+              <button
+                type="button"
+                onclick="document.getElementById('payment-modal').classList.add('hidden')"
+                class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                id="submit-payment"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              >
+                <svg id="payment-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Complete Upgrade
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

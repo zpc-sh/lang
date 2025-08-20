@@ -1,0 +1,7 @@
+/Users/locnguyen/src/code/lang/native/fs_watcher/target/debug/deps/kqueue_sys-7f5bb92bc1d458af.d: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/constants/mod.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/constants/darwin.rs
+
+/Users/locnguyen/src/code/lang/native/fs_watcher/target/debug/deps/libkqueue_sys-7f5bb92bc1d458af.rmeta: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/constants/mod.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/constants/darwin.rs
+
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/lib.rs:
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/constants/mod.rs:
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/kqueue-sys-1.0.4/src/constants/darwin.rs:

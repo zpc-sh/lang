@@ -1,0 +1,2 @@
+Result<PathAnalysisResult, rustler::Error>
+Result<PathAnalysisResult, rustler::Error>: NifReturnable

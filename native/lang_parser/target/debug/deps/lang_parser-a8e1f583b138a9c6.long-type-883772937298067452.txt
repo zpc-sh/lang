@@ -1,0 +1,1 @@
+rayon::iter::Map<rayon::slice::Iter<'_, (std::string::String, std::string::String)>, {closure@src/lib.rs:359:14: 359:33}>

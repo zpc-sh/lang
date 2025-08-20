@@ -1,0 +1,7 @@
+/Users/locnguyen/src/code/lang/native/tree_parser/target/debug/deps/twox_hash-c36e539e07e79579.d: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/xxhash32.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/../README.md
+
+/Users/locnguyen/src/code/lang/native/tree_parser/target/debug/deps/libtwox_hash-c36e539e07e79579.rmeta: /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/lib.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/xxhash32.rs /Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/../README.md
+
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/lib.rs:
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/xxhash32.rs:
+/Users/locnguyen/.local/share/mise/installs/rust/1.87.0/registry/src/index.crates.io-1949cf8c6b5b557f/twox-hash-2.1.1/src/../README.md:

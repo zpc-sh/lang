@@ -1,0 +1,132 @@
+<Layouts.flash_group flash={@flash} />
+<div class="max-w-4xl mx-auto py-12 px-4">
+  <div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">
+      Lang
+    </h1>
+    <p class="text-xl text-gray-600">
+      Universal Text Intelligence Platform
+    </p>
+  </div>
+
+  <!-- Main Actions -->
+  <div class="text-center mb-12">
+    <div class="flex flex-col sm:flex-row justify-center gap-4">
+      <.link navigate="/analyze" class="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        <.icon name="hero-magnifying-glass" class="-ml-1 mr-3 h-6 w-6" />
+        Try Text Analysis
+      </.link>
+      <.link navigate="/dashboard" class="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md shadow-sm text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        <.icon name="hero-chart-bar" class="-ml-1 mr-3 h-6 w-6" />
+        View Dashboard
+      </.link>
+      <.link navigate="/api-portal" class="inline-flex items-center px-8 py-4 border border-gray-300 text-lg font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        <.icon name="hero-key" class="-ml-1 mr-3 h-6 w-6" />
+        API Portal
+      </.link>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <!-- Customer Dashboard -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-2xl font-semibold mb-4">
+        <.icon name="hero-chart-bar" class="inline-block w-6 h-6 mr-2 text-blue-600" />
+        Customer Dashboard
+      </h2>
+      <p class="text-gray-600 mb-4">
+        Monitor your API usage, billing, team members, and subscription analytics in real-time.
+      </p>
+      <ul class="text-sm text-gray-600 space-y-1 mb-4">
+        <li>• Usage analytics & limits</li>
+        <li>• Billing & subscription management</li>
+        <li>• Team collaboration tools</li>
+        <li>• Performance monitoring</li>
+      </ul>
+      <.link navigate="/dashboard" class="text-blue-600 hover:text-blue-800 font-medium">
+        Open Dashboard →
+      </.link>
+    </div>
+
+    <!-- API Portal -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-2xl font-semibold mb-4">
+        <.icon name="hero-key" class="inline-block w-6 h-6 mr-2 text-green-600" />
+        API Portal
+      </h2>
+      <p class="text-gray-600 mb-4">
+        Generate API keys, explore interactive documentation, and test endpoints in real-time.
+      </p>
+      <ul class="text-sm text-gray-600 space-y-1 mb-4">
+        <li>• API key management</li>
+        <li>• Interactive documentation</li>
+        <li>• Live endpoint testing</li>
+        <li>• Rate limit monitoring</li>
+      </ul>
+      <.link navigate="/api-portal" class="text-green-600 hover:text-green-800 font-medium">
+        Manage APIs →
+      </.link>
+    </div>
+
+    <!-- Text Analysis -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-2xl font-semibold mb-4">
+        <.icon name="hero-magnifying-glass" class="inline-block w-6 h-6 mr-2 text-purple-600" />
+        Real-time Analysis
+      </h2>
+      <p class="text-gray-600 mb-4">
+        Get instant feedback on text quality, readability, sentiment, and language detection.
+      </p>
+      <ul class="text-sm text-gray-600 space-y-1 mb-4">
+        <li>• Multi-format support</li>
+        <li>• Live text analysis</li>
+        <li>• Quality scoring</li>
+        <li>• Writing suggestions</li>
+      </ul>
+      <.link navigate="/analyze" class="text-purple-600 hover:text-purple-800 font-medium">
+        Try Analysis →
+      </.link>
+    </div>
+  </div>
+
+  <!-- SaaS Features Grid -->
+  <div class="mt-16">
+    <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">Enterprise-Ready Platform</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="text-center p-4">
+        <.icon name="hero-users" class="w-8 h-8 mx-auto mb-3 text-blue-600" />
+        <h3 class="font-semibold">Team Management</h3>
+        <p class="text-sm text-gray-600">Multi-user collaboration with role-based access</p>
+      </div>
+      <div class="text-center p-4">
+        <.icon name="hero-credit-card" class="w-8 h-8 mx-auto mb-3 text-green-600" />
+        <h3 class="font-semibold">Flexible Billing</h3>
+        <p class="text-sm text-gray-600">Usage-based pricing with subscription tiers</p>
+      </div>
+      <div class="text-center p-4">
+        <.icon name="hero-shield-check" class="w-8 h-8 mx-auto mb-3 text-red-600" />
+        <h3 class="font-semibold">Rate Limiting</h3>
+        <p class="text-sm text-gray-600">Fair usage policies and traffic management</p>
+      </div>
+      <div class="text-center p-4">
+        <.icon name="hero-chart-line" class="w-8 h-8 mx-auto mb-3 text-purple-600" />
+        <h3 class="font-semibold">Analytics</h3>
+        <p class="text-sm text-gray-600">Detailed usage insights and performance metrics</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <div class="mt-16 bg-blue-600 rounded-lg text-center py-12 px-8">
+    <h2 class="text-3xl font-bold text-white mb-4">Ready to Start Building?</h2>
+    <p class="text-blue-100 text-lg mb-8">Join thousands of developers using LANG for intelligent text processing</p>
+    <div class="flex flex-col sm:flex-row justify-center gap-4">
+      <.link navigate="/dashboard" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50">
+        Get Started Free
+      </.link>
+      <.link navigate="/api-portal" class="inline-flex items-center px-6 py-3 border border-white text-base font-medium rounded-md text-white hover:bg-blue-700">
+        View Documentation
+      </.link>
+    </div>
+  </div>
+</div>

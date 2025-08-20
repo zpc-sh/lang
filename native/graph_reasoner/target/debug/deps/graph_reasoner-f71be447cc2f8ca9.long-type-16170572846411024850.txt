@@ -1,0 +1,2 @@
+Result<Vec<SubgraphResult>, rustler::Error>
+Result<Vec<SubgraphResult>, rustler::Error>: NifReturnable

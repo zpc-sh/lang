@@ -1,0 +1,301 @@
+<Layouts.app flash={@flash}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Text Intelligence Platform</h1>
+      <p class="mt-2 text-lg text-gray-600">Real-time text analysis and insights</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white shadow-sm border rounded-lg mb-6 p-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex-1 min-w-0">
+          <label for="format-select" class="block text-sm font-medium text-gray-700 mb-2">
+            Content Format
+          </label>
+          <select
+            id="format-select"
+            phx-change="format_changed"
+            name="format"
+            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <%= for {label, value} <- @available_formats do %>
+              <option value={value} selected={@selected_format == value}><%= label %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <label class="flex items-center">
+            <input
+              type="checkbox"
+              phx-change="toggle_auto_analyze"
+              name="auto_analyze"
+              value={@auto_analyze}
+              checked={@auto_analyze}
+              class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+            <span class="ml-2 text-sm text-gray-700">Auto-analyze</span>
+          </label>
+
+          <button
+            phx-click="analyze_now"
+            disabled={@analysis.processing}
+            class={[
+              "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white",
+              if(@analysis.processing, do: "bg-gray-400 cursor-not-allowed", else: "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500")
+            ]}
+          >
+            <%= if @analysis.processing do %>
+              <.icon name="hero-arrow-path" class="animate-spin -ml-1 mr-2 h-4 w-4" />
+              Analyzing...
+            <% else %>
+              <.icon name="hero-magnifying-glass" class="-ml-1 mr-2 h-4 w-4" />
+              Analyze Now
+            <% end %>
+          </button>
+
+          <button
+            phx-click="clear_content"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <.icon name="hero-trash" class="-ml-1 mr-2 h-4 w-4" />
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Input Section -->
+      <div class="space-y-6">
+        <div class="bg-white shadow-sm border rounded-lg">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Content Input</h2>
+          </div>
+          <div class="p-4">
+            <textarea
+              phx-change="content_changed"
+              name="content"
+              value={@content}
+              placeholder="Enter your text here for analysis..."
+              rows="15"
+              class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-mono"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Basic Stats -->
+        <div class="bg-white shadow-sm border rounded-lg">
+          <div class="px-4 py-3 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Statistics</h3>
+          </div>
+          <div class="p-4">
+            <dl class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <dt class="font-medium text-gray-900">Words</dt>
+                <dd class="text-gray-600"><%= @analysis.word_count %></dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-900">Characters</dt>
+                <dd class="text-gray-600"><%= @analysis.character_count %></dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-900">Paragraphs</dt>
+                <dd class="text-gray-600"><%= @analysis.paragraph_count %></dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-900">Sentences</dt>
+                <dd class="text-gray-600"><%= @analysis.sentence_count %></dd>
+              </div>
+              <div class="col-span-2">
+                <dt class="font-medium text-gray-900">Reading Time</dt>
+                <dd class="text-gray-600">
+                  <%= @analysis.reading_time_minutes %> minute<%= if @analysis.reading_time_minutes != 1, do: "s" %>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis Results Section -->
+      <div class="space-y-6">
+        <!-- Quality Score -->
+        <%= if @analysis.quality_score do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="px-4 py-3 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Quality Score</h3>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center">
+                <div class={[
+                  "flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white",
+                  cond do
+                    @analysis.quality_score >= 80 -> "bg-green-500"
+                    @analysis.quality_score >= 60 -> "bg-yellow-500"
+                    true -> "bg-red-500"
+                  end
+                ]}>
+                  <%= @analysis.quality_score %>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm text-gray-600">
+                    <%= cond do %>
+                      <% @analysis.quality_score >= 80 -> %>
+                        Excellent quality content
+                      <% @analysis.quality_score >= 60 -> %>
+                        Good quality content
+                      <% true -> %>
+                        Content could be improved
+                    <% end %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Readability -->
+        <%= if @analysis.readability do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="px-4 py-3 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Readability</h3>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-900"><%= @analysis.readability.level %></span>
+                <span class={["text-sm font-medium", "text-#{@analysis.readability.color}-600"]}>
+                  Score: <%= @analysis.readability.score %>
+                </span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  class={["h-2 rounded-full", "bg-#{@analysis.readability.color}-500"]}
+                  style={"width: #{@analysis.readability.score}%"}
+                ></div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Language Detection -->
+        <%= if @analysis.language do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="px-4 py-3 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Language</h3>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center justify-between">
+                <span class="text-lg font-medium text-gray-900"><%= @analysis.language.language %></span>
+                <span class="text-sm text-gray-500">
+                  <%= round(@analysis.language.confidence * 100) %>% confidence
+                </span>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Sentiment Analysis -->
+        <%= if @analysis.sentiment do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="px-4 py-3 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Sentiment</h3>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center justify-between">
+                <span class={["text-lg font-medium", "text-#{@analysis.sentiment.color}-600"]}>
+                  <%= @analysis.sentiment.sentiment %>
+                </span>
+                <span class="text-sm text-gray-500">
+                  Score: <%= Float.round(@analysis.sentiment.score, 2) %>
+                </span>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Suggestions -->
+        <%= if length(@analysis.suggestions) > 0 do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="px-4 py-3 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Suggestions</h3>
+            </div>
+            <div class="p-4">
+              <ul class="space-y-2">
+                <%= for suggestion <- @analysis.suggestions do %>
+                  <li class="flex items-start">
+                    <.icon
+                      name={
+                        case suggestion.type do
+                          "error" -> "hero-exclamation-triangle"
+                          "improvement" -> "hero-light-bulb"
+                          "formatting" -> "hero-document-text"
+                          _ -> "hero-information-circle"
+                        end
+                      }
+                      class={[
+                        "flex-shrink-0 w-4 h-4 mt-0.5 mr-2",
+                        case suggestion.type do
+                          "error" -> "text-red-500"
+                          "improvement" -> "text-yellow-500"
+                          "formatting" -> "text-blue-500"
+                          _ -> "text-gray-500"
+                        end
+                      ]}
+                    />
+                    <span class="text-sm text-gray-700"><%= suggestion.text %></span>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Processing Indicator -->
+        <%= if @analysis.processing do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="p-4">
+              <div class="flex items-center">
+                <.icon name="hero-arrow-path" class="animate-spin h-5 w-5 text-blue-500 mr-3" />
+                <span class="text-sm text-gray-700">Analyzing content...</span>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Analysis History -->
+        <%= if length(@analysis_history) > 0 do %>
+          <div class="bg-white shadow-sm border rounded-lg">
+            <div class="px-4 py-3 border-b border-gray-200">
+              <h3 class="text-lg font-medium text-gray-900">Recent Analysis</h3>
+            </div>
+            <div class="p-4">
+              <div class="space-y-3">
+                <%= for {entry, index} <- Enum.with_index(@analysis_history) do %>
+                  <div class="text-xs text-gray-500 border-l-2 border-gray-200 pl-3">
+                    <div class="flex justify-between items-start">
+                      <div class="flex-1">
+                        <p class="text-gray-700 font-medium">
+                          <%= entry.content_preview %>
+                        </p>
+                        <%= if entry.analysis.quality_score do %>
+                          <p class="mt-1">
+                            Quality: <span class="font-medium"><%= entry.analysis.quality_score %>/100</span>
+                          </p>
+                        <% end %>
+                      </div>
+                      <time class="text-gray-500 text-xs">
+                        <%= Calendar.strftime(entry.timestamp, "%H:%M") %>
+                      </time>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

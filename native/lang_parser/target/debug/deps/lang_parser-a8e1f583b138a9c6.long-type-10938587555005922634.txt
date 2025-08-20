@@ -1,0 +1,2 @@
+Unique<(dyn Encoder + 'static)>
+Result<ParseResult, rustler::Error>

@@ -1,0 +1,2 @@
+Result<KnowledgeGraphResult, rustler::Error>
+Result<KnowledgeGraphResult, rustler::Error>: NifReturnable
