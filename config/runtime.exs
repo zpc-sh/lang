@@ -47,6 +47,26 @@ if external_config.openai_api_key do
   config :lang, :openai, api_key: external_config.openai_api_key
 end
 
+# Configure Stripe
+stripe_config = %{
+  api_key: System.get_env("STRIPE_SECRET_KEY"),
+  webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET"),
+  publishable_key: System.get_env("STRIPE_PUBLISHABLE_KEY"),
+  pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID"),
+  enterprise_price_id: System.get_env("STRIPE_ENTERPRISE_PRICE_ID")
+}
+
+if stripe_config.api_key do
+  config :stripity_stripe,
+    api_key: stripe_config.api_key,
+    webhook_secret: stripe_config.webhook_secret
+
+  config :lang, :stripe,
+    publishable_key: stripe_config.publishable_key,
+    pro_price_id: stripe_config.pro_price_id,
+    enterprise_price_id: stripe_config.enterprise_price_id
+end
+
 if external_config.sendgrid_api_key do
   config :lang, Lang.Mailer,
     adapter: Swoosh.Adapters.Sendgrid,

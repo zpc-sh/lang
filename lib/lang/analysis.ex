@@ -348,6 +348,29 @@ defmodule Lang.Analysis do
     |> Repo.update()
   end
 
+  @doc """
+  Creates a scan result record for filesystem scanning.
+
+  ## Examples
+
+      iex> create_scan_result(%{session_id: session_id, status: "completed"})
+      {:ok, %ScanResult{}}
+
+  """
+  def create_scan_result(attrs \\ %{}) do
+    %{
+      session_id: Map.get(attrs, :session_id),
+      status: Map.get(attrs, :status, "pending"),
+      files_scanned: Map.get(attrs, :files_scanned, 0),
+      errors_count: Map.get(attrs, :errors_count, 0),
+      scan_data: Map.get(attrs, :scan_data, %{}),
+      started_at: Map.get(attrs, :started_at, DateTime.utc_now()),
+      completed_at: Map.get(attrs, :completed_at),
+      id: Ecto.UUID.generate()
+    }
+    |> then(fn scan_result -> {:ok, scan_result} end)
+  end
+
   # Violations
 
   @doc """

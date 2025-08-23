@@ -122,4 +122,5 @@ stripe_*
 *.bench
 
 # Profiling data
-*.prof
+*.profdeploy/secrets*.yml
+!deploy/secrets*.example

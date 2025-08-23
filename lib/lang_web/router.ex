@@ -85,6 +85,7 @@ defmodule LangWeb.Router do
       live "/dashboard", DashboardLive, :index
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
+      live "/billing", BillingLive, :index
     end
   end
 
@@ -120,6 +121,19 @@ defmodule LangWeb.Router do
     # Statistics
     get "/stats/user", AnalysisController, :user_stats
     get "/stats/sessions/:session_id", AnalysisController, :session_stats
+  end
+
+  # API v2 routes - Text Intelligence endpoints
+  scope "/api/v2", LangWeb.Api.V2 do
+    pipe_through [:api, :require_authenticated_api]
+
+    # Text Intelligence endpoints matching OpenAPI specification
+    post "/text/parse", TextController, :parse
+    post "/text/entities", TextController, :entities
+    post "/text/semantic", TextController, :semantic
+    post "/text/stylometry", TextController, :stylometry
+    post "/text/markdown-ld", TextController, :markdown_ld
+    post "/text/analyze", TextController, :analyze
   end
 
   # Webhook routes
