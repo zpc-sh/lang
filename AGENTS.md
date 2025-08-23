@@ -1,4 +1,9 @@
-This is **LANG Universal Text Intelligence Platform** - a sophisticated web application built with Phoenix, Ash Framework, and native Rust NIFs for high-performance text analysis.
+<div align="center">
+  <img src="priv/static/images/lang_logo.svg" alt="LANG Logo" width="600">
+  <p><strong>LANG Universal Text Intelligence Platform</strong></p>
+</div>
+
+This is a sophisticated web application built with Phoenix, Ash Framework, and native Rust NIFs for high-performance text analysis.
 
 ## LANG Architecture Overview
 
@@ -16,6 +21,8 @@ This is **LANG Universal Text Intelligence Platform** - a sophisticated web appl
 - **Always** use native Rust NIFs for filesystem operations via `Lang.Native.FSScanner` instead of pure Elixir file operations
 - **Always** use Ash resources for data operations instead of raw Ecto queries
 - **Always** use Oban workers for long-running background tasks
+- **NEVER** start long-running processes like servers (`mix phx.server`, `npm run dev`, `python -m http.server`, etc.) or file watchers that don't terminate on their own
+- **NEVER** run commands that block indefinitely - always use timeouts or background jobs for long operations
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>` which wraps all inner content
@@ -110,6 +117,7 @@ custom classes must fully style the input
 - Read the docs and options before using tasks (by using `mix help task_name`)
 - To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`
 - `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason
+- **NEVER** run `mix phx.server` or other long-running commands that don't terminate - use `mix run` for one-time operations instead
 <!-- phoenix:elixir-end -->
 <!-- phoenix:phoenix-start -->
 ## Phoenix guidelines
@@ -531,5 +539,206 @@ case User.create(attrs) do
     # Handle other errors
 end
 ```
+
+## Monitoring & Telemetry Best Practices
+
+### Oban Telemetry Events
+Oban automatically emits telemetry events without requiring plugins:
+
+```elixir
+# Available events (no configuration needed):
+[:oban, :job, :start]       # Job starts executing
+[:oban, :job, :stop]        # Job completes successfully  
+[:oban, :job, :exception]   # Job fails or crashes
+
+# Handle telemetry in your application
+:telemetry.attach_many(
+  "oban-logger",
+  [
+    [:oban, :job, :start],
+    [:oban, :job, :stop], 
+    [:oban, :job, :exception]
+  ],
+  &YourApp.TelemetryHandler.handle_event/4,
+  %{}
+)
+```
+
+### Performance Monitoring
+```elixir
+# Monitor native operations
+Logger.info("FSScanner completed", [
+  duration: duration,
+  files_scanned: result.stats.total_files,
+  memory_used: :erlang.memory(:total)
+])
+
+# Track expensive operations
+:telemetry.span([:lang, :analysis], %{type: :filesystem}, fn ->
+  result = Lang.Native.FSScanner.scan(path)
+  {result, %{files_count: length(result.files)}}
+end)
+```
+
+## Process Management Guidelines
+
+### Long-Running Process Restrictions
+**CRITICAL**: Never start processes that run indefinitely or require manual termination:
+
+```bash
+# ❌ NEVER do these - they block indefinitely:
+mix phx.server          # Web server - runs forever
+npm run dev             # Development server - runs forever  
+npm run start           # Production server - runs forever
+python -m http.server   # HTTP server - runs forever
+iex -S mix              # Interactive shell - requires manual exit
+mix test --stale        # File watcher - runs forever
+
+# ✅ ALWAYS do these instead - they terminate:
+mix compile             # Compiles and exits
+mix test               # Runs tests and exits  
+mix ecto.migrate       # Runs migrations and exits
+mix run script.exs     # Runs script and exits
+timeout 30 mix phx.server  # Use timeout for testing startup
+```
+
+### Background Job Processing
+- **Always** use Oban workers for operations that take more than a few seconds
+- **Always** implement proper timeout handling in workers
+- **Never** block the main thread with long-running operations
+
+### Development Testing
+```bash
+# Test application startup (with timeout)
+timeout 15 mix phx.server 2>&1 | head -10
+
+# Test compilation only
+mix compile --force
+
+# Run specific tests
+mix test test/my_test.exs --max-failures 1
+```
+
+## Troubleshooting Guide
+
+### Common Oban Issues
+```bash
+# Check Oban status
+iex> Oban.config() |> Map.get(:queues)
+%{analysis: 3, default: 5, lsp: 10}
+
+# View running jobs
+iex> Oban.Job |> Oban.Repo.all() |> Enum.filter(&(&1.state == "executing"))
+
+# Clear stuck jobs
+iex> Oban.cancel_all_jobs()
+```
+
+### Native NIF Troubleshooting
+```elixir
+# Check if NIFs are loaded
+case Code.ensure_loaded(Lang.Native.FSScanner) do
+  {:module, _} -> Logger.info("FSScanner NIF loaded successfully")
+  {:error, reason} -> Logger.error("Failed to load FSScanner: #{reason}")
+end
+
+# Handle NIF compilation issues
+# 1. Clean native artifacts: mix clean.native
+# 2. Recompile: mix compile.native
+# 3. Check Rust toolchain: rustc --version
+```
+
+### Authentication Debug
+```elixir
+# Debug auth issues in IEx
+iex> conn = %Plug.Conn{} # Mock connection
+iex> LangWeb.AuthHelpers.current_user(conn)
+iex> LangWeb.AuthHelpers.authenticated?(conn)
+
+# Check API key validity
+iex> Lang.Accounts.ApiKey.by_key("your-api-key")
+```
+
+### Database Performance
+```elixir
+# Monitor slow Ash queries
+config :ash, :profiler, enabled: true
+
+# Check connection pool
+iex> Ecto.Adapters.SQL.query(Lang.Repo, "SHOW STATS", [])
+
+# Optimize queries with proper loading
+User.read_all!() |> Ash.Query.load([:organization, :api_keys])
+```
+
+## Deployment Checklist
+
+### Pre-deployment
+- [ ] Run `mix precommit` and fix all issues
+- [ ] Verify all native NIFs compile: `mix compile.native`  
+- [ ] Run full test suite: `mix test`
+- [ ] Check database migrations: `mix ecto.migrate --dry-run`
+- [ ] Verify environment variables are set
+
+### Production Configuration
+```elixir
+# config/runtime.production.exs
+config :lang, Oban,
+  repo: Lang.Repo,
+  plugins: [
+    # Only use existing plugins
+    Oban.Plugins.Pruner,
+    {Oban.Plugins.Cron, crontab: [...]}
+  ],
+  queues: [
+    default: System.get_env("OBAN_DEFAULT_QUEUE", "10") |> String.to_integer(),
+    analysis: System.get_env("OBAN_ANALYSIS_QUEUE", "5") |> String.to_integer()
+  ]
+```
+
+### Health Checks
+```elixir
+# Add to your application
+def health_check do
+  checks = [
+    database: fn -> Ecto.Adapters.SQL.query(Lang.Repo, "SELECT 1", []) end,
+    oban: fn -> Process.whereis(Oban) != nil end,
+    native_nifs: fn -> Code.ensure_loaded(Lang.Native.FSScanner) end
+  ]
+  
+  Enum.map(checks, fn {name, check} ->
+    {name, try do; check.(); :ok; rescue _ -> :error; end}
+  end)
+end
+```
+
+---
+
+## Quick Command Reference
+
+```bash
+# Development
+mix setup                 # Initial setup
+mix precommit            # Run all checks before commit
+mix compile.native       # Compile Rust NIFs
+mix phx.server          # Start development server
+
+# Testing
+mix test                # Run test suite
+mix test --failed       # Re-run failed tests only
+mix test.coverage       # Generate coverage report
+
+# Database
+mix ecto.migrate        # Run migrations
+mix ecto.rollback       # Rollback last migration
+mix ecto.reset          # Drop, create, migrate, seed
+
+# Production
+mix assets.deploy       # Build production assets
+mix release             # Create production release
+mix phx.digest          # Generate static asset digests
+```
+
+**🚀 You're now ready to build high-performance text intelligence applications with LANG!**
 
 <!-- usage-rules-end -->

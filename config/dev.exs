@@ -62,8 +62,7 @@ config :lang, :native_profiling,
 config :lang, Oban,
   repo: Lang.Repo,
   plugins: [
-    # Enable telemetry for job monitoring
-    {Oban.Plugins.Telemetry, measurements: [:queue_depth, :job_count, :duration]},
+    # Telemetry is built-in to Oban - no plugin needed
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
      crontab: [

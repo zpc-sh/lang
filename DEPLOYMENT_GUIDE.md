@@ -1,4 +1,7 @@
-# LANG Production Deployment Guide 🚀
+<div align="center">
+  <img src="priv/static/images/lang_logo.svg" alt="LANG Logo" width="600">
+  <h1>LANG Production Deployment Guide 🚀</h1>
+</div>
 
 Complete guide for deploying LANG Universal Text Intelligence Platform to production using Fly.io, with Stripe billing, Rust NIFs, and comprehensive monitoring.
 

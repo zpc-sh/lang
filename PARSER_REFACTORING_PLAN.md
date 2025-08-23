@@ -31,24 +31,32 @@
 5. **Lang.Native.PerfEngine** (unknown crate)
    - Performance monitoring?
 
-### Problems Identified
+### Problems Identified (Updated Based on Audit)
 
-1. **Duplicate Tree-sitter**: Both TreeParser and FSScanner implement it
-2. **Unclear boundaries**: Text parsing spread across multiple NIFs
-3. **Feature creep**: FSScanner does way more than filesystem ops
-4. **Naming confusion**: "Native" modules with high-level logic
+1. **FSScanner is unused**: Audit shows zero usage despite implementation
+2. **PerfEngine is most active**: 24 calls, highest usage across platform
+3. **Parser has moderate usage**: 21 calls, focused on text analysis
+4. **TreeParser has limited usage**: 17 calls, single file dependency
+5. **Unclear boundaries**: Text parsing spread across multiple NIFs
+6. **Naming confusion**: "Native" modules with high-level logic
 
-## Proposed Architecture
+## Revised Architecture (Based on Audit Results)
 
-### Phase 1: Define Clear NIF Boundaries
+### Phase 1: Consolidate Active Parsers
+
+**Priority Order (by usage):**
+1. **PerfEngine** (24 calls) - Keep as performance engine
+2. **Parser** (21 calls) - Refactor to TextParser
+3. **TreeParser** (17 calls) - Refactor to ASTParser
+4. **FSScanner** (0 calls) - **REMOVE** unused code
+5. **GraphReasoner** (0 calls) - Evaluate for removal
 
 ```
 lib/lang/native/
-├── text_parser.ex       # Basic text tokenization, metrics
-├── ast_parser.ex        # Tree-sitter for ALL code parsing
-├── file_system.ex       # ONLY file/directory operations
-├── text_search.ex       # Ripgrep-based text search
-└── graph_engine.ex      # ONLY graph algorithms
+├── text_parser.ex       # Consolidate from Parser
+├── ast_parser.ex        # Consolidate from TreeParser
+├── perf_engine.ex       # Keep existing (highest usage)
+└── graph_engine.ex      # Evaluate GraphReasoner usage
 ```
 
 ### Phase 2: High-Level API Layer
@@ -57,15 +65,20 @@ lib/lang/native/
 lib/lang/analysis/
 ├── text.ex              # Uses native/text_parser
 ├── code.ex              # Uses native/ast_parser
-├── filesystem.ex        # Uses native/file_system + text_search
-└── graph.ex             # Uses native/graph_engine
+├── performance.ex       # Uses native/perf_engine
+└── graph.ex             # Uses native/graph_engine (if kept)
 ```
 
-## Implementation Plan
+## Implementation Plan (Revised)
 
-### Step 1: Audit Current Usage (Week 1)
+### Step 1: Audit Current Usage ✅ COMPLETED
 
-Create a usage audit to understand dependencies:
+Audit results show:
+- **PerfEngine**: 24 calls across 2 files (highest priority)
+- **Parser**: 21 calls across 2 files (text analysis focus)
+- **TreeParser**: 17 calls in 1 file (code analysis)
+- **FSScanner**: 0 calls (unused - candidate for removal)
+- **GraphReasoner**: 1 file, 0 function calls (evaluate removal)
 
 ```elixir
 # audit_parser_usage.exs
@@ -73,16 +86,16 @@ defmodule Lang.Refactor.ParserAudit do
   @moduledoc """
   Audit current parser usage across the codebase
   """
-  
+
   def audit do
     parsers = [
       "Lang.Native.Parser",
-      "Lang.Native.TreeParser", 
+      "Lang.Native.TreeParser",
       "Lang.Native.FSScanner",
       "Lang.GraphReasoner",
       "Lang.Parsers.Filesystem"
     ]
-    
+
     results = for parser <- parsers do
       files = find_usage(parser)
       {parser, %{
@@ -91,16 +104,16 @@ defmodule Lang.Refactor.ParserAudit do
         functions_used: analyze_functions(parser, files)
       }}
     end
-    
+
     File.write!("parser_audit.json", Jason.encode!(results, pretty: true))
   end
-  
+
   defp find_usage(module_name) do
     System.cmd("git", ["grep", "-l", module_name, "--", "*.ex", "*.exs"])
     |> elem(0)
     |> String.split("\n", trim: true)
   end
-  
+
   defp analyze_functions(module_name, files) do
     # Extract which functions are actually being called
     Enum.flat_map(files, fn file ->
@@ -110,7 +123,7 @@ defmodule Lang.Refactor.ParserAudit do
     |> Enum.uniq()
     |> Enum.sort()
   end
-  
+
   defp extract_function_calls(content, module_name) do
     # Regex to find function calls
     Regex.scan(~r/#{Regex.escape(module_name)}\.(\w+)/, content)
@@ -124,7 +137,7 @@ Lang.Refactor.ParserAudit.audit()
 
 ### Step 2: Create Compatibility Layer (Week 2)
 
-Before refactoring, create a compatibility layer:
+Based on audit results, create compatibility for actively used parsers:
 
 ```elixir
 defmodule Lang.Native.Compat do
@@ -132,19 +145,23 @@ defmodule Lang.Native.Compat do
   Compatibility layer during parser refactoring.
   Maps old parser calls to new architecture.
   """
-  
-  # Map old TreeParser calls to new AST parser
-  defdelegate parse_code(language, content, opts \\ []), 
-    to: Lang.Native.ASTParser
-    
-  # Map old FSScanner tree-sitter to AST parser  
-  defdelegate search_code_patterns(path, language, pattern, max_results),
-    to: Lang.Native.ASTParser,
-    as: :search_in_directory
-    
-  # Map old Parser text analysis to new text parser
-  defdelegate analyze_text(content, opts \\ []),
+
+  # Map Parser calls to new TextParser (21 calls to migrate)
+  defdelegate analyze_style(content, opts \\ []),
     to: Lang.Native.TextParser
+  defdelegate parse_content(content, opts \\ []),
+    to: Lang.Native.TextParser
+  defdelegate clear_caches(),
+    to: Lang.Native.TextParser
+
+  # Map TreeParser calls to new ASTParser (17 calls to migrate)
+  defdelegate parse_source_code(language, content, opts \\ []),
+    to: Lang.Native.ASTParser
+  defdelegate analyze_complexity(ast),
+    to: Lang.Native.ASTParser
+
+  # Keep PerfEngine as-is (highest usage, 24 calls)
+  # Note: FSScanner has 0 usage - no compatibility needed
 end
 ```
 
@@ -156,18 +173,18 @@ end
 defmodule Lang.Native.TextParser do
   @moduledoc """
   Focused text parsing and analysis NIF.
-  
+
   Responsibilities:
   - Tokenization
   - Basic metrics (word count, sentences, etc.)
   - Readability scoring
   - Language detection
   """
-  
+
   use Rustler,
     otp_app: :lang,
     crate: "lang_text_parser"
-    
+
   # Consolidate from Lang.Native.Parser
   def tokenize(_text, _opts), do: :erlang.nif_error(:nif_not_loaded)
   def analyze_metrics(_text), do: :erlang.nif_error(:nif_not_loaded)
@@ -182,23 +199,23 @@ end
 defmodule Lang.Native.ASTParser do
   @moduledoc """
   Unified tree-sitter based AST parsing.
-  
+
   Consolidates:
   - Lang.Native.TreeParser
   - Lang.Native.FSScanner (tree-sitter parts)
   """
-  
+
   use Rustler,
     otp_app: :lang,
     crate: "lang_ast_parser"
-    
+
   # Core parsing
   def parse(_language, _content, _opts), do: :erlang.nif_error(:nif_not_loaded)
   def parse_file(_path, _language), do: :erlang.nif_error(:nif_not_loaded)
-  
+
   # Code search
   def search_pattern(_path, _language, _pattern, _opts), do: :erlang.nif_error(:nif_not_loaded)
-  
+
   # Analysis
   def extract_symbols(_ast), do: :erlang.nif_error(:nif_not_loaded)
   def analyze_complexity(_ast), do: :erlang.nif_error(:nif_not_loaded)
@@ -212,14 +229,14 @@ end
 defmodule Lang.Native.FileSystem do
   @moduledoc """
   Pure filesystem operations.
-  
+
   Extracted from Lang.Native.FSScanner (filesystem parts only).
   """
-  
+
   use Rustler,
     otp_app: :lang,
     crate: "lang_filesystem"
-    
+
   def scan_directory(_path, _opts), do: :erlang.nif_error(:nif_not_loaded)
   def read_file_preview(_path, _lines), do: :erlang.nif_error(:nif_not_loaded)
   def get_file_stats(_path), do: :erlang.nif_error(:nif_not_loaded)
@@ -232,14 +249,14 @@ end
 defmodule Lang.Native.TextSearch do
   @moduledoc """
   Ripgrep-based text search.
-  
+
   Extracted from Lang.Native.FSScanner (search parts only).
   """
-  
+
   use Rustler,
     otp_app: :lang,
     crate: "lang_text_search"
-    
+
   def search(_path, _pattern, _opts), do: :erlang.nif_error(:nif_not_loaded)
   def search_with_context(_path, _pattern, _context_lines), do: :erlang.nif_error(:nif_not_loaded)
 end
@@ -253,9 +270,9 @@ defmodule Lang.Analysis.Code do
   High-level code analysis API.
   Replaces Lang.Parsers.* modules.
   """
-  
+
   alias Lang.Native.{ASTParser, FileSystem}
-  
+
   def analyze_file(path, opts \\ []) do
     with {:ok, language} <- detect_language(path),
          {:ok, ast} <- ASTParser.parse_file(path, language),
@@ -270,18 +287,18 @@ defmodule Lang.Analysis.Code do
       }}
     end
   end
-  
+
   def search_code(path, language, pattern, opts \\ []) do
     ASTParser.search_pattern(path, language, pattern, opts)
   end
-  
+
   # ... more high-level functions
 end
 ```
 
 ### Step 5: Migration Strategy (Weeks 6-8)
 
-#### 5.1 Update Import Statements
+#### 5.1 Update Import Statements (Based on Audit)
 
 ```elixir
 # migration_script.exs
@@ -289,18 +306,17 @@ defmodule Lang.Refactor.MigrateImports do
   @migrations %{
     "Lang.Native.Parser" => "Lang.Native.TextParser",
     "Lang.Native.TreeParser" => "Lang.Native.ASTParser",
-    "Lang.Native.FSScanner.search_code_patterns" => "Lang.Native.ASTParser.search_pattern",
-    "Lang.Native.FSScanner.scan" => "Lang.Native.FileSystem.scan_directory",
-    "Lang.Parsers.Filesystem" => "Lang.Analysis.FileSystem"
+    # Note: FSScanner has 0 usage - no migration needed
+    # Note: PerfEngine kept as-is (highest usage)
   }
-  
+
   def migrate_file(path) do
     content = File.read!(path)
-    
+
     new_content = Enum.reduce(@migrations, content, fn {old, new}, acc ->
       String.replace(acc, old, new)
     end)
-    
+
     if content != new_content do
       File.write!(path, new_content)
       IO.puts("✓ Migrated #{path}")
@@ -317,10 +333,13 @@ end
 
 ### Step 6: Cleanup (Week 9)
 
-1. Remove old NIFs
-2. Delete compatibility layer
-3. Update documentation
-4. Remove old test files
+1. **Remove unused FSScanner NIF** (0 calls - safe to delete)
+2. **Evaluate GraphReasoner** (1 file, 0 function calls)
+3. Remove old Parser and TreeParser NIFs after migration
+4. Delete compatibility layer
+5. Update documentation
+6. Remove old test files
+7. **Keep PerfEngine unchanged** (highest usage)
 
 ## Testing Strategy
 
@@ -329,7 +348,7 @@ end
 ```elixir
 defmodule Lang.Native.TextParserTest do
   use ExUnit.Case
-  
+
   describe "tokenize/2" do
     test "tokenizes simple text" do
       assert {:ok, tokens} = Lang.Native.TextParser.tokenize("Hello world", [])
@@ -344,7 +363,7 @@ end
 ```elixir
 defmodule Lang.Analysis.CodeIntegrationTest do
   use ExUnit.Case
-  
+
   test "full file analysis workflow" do
     # Test the complete flow through new architecture
     assert {:ok, result} = Lang.Analysis.Code.analyze_file("test/fixtures/sample.ex")
@@ -367,13 +386,14 @@ defmodule Lang.Refactor.Benchmarks do
 end
 ```
 
-## Success Metrics
+## Success Metrics (Updated)
 
-1. **Code Reduction**: Aim for 40% less code
-2. **Performance**: No regression in benchmarks
+1. **Code Reduction**: Remove FSScanner (0 usage) = immediate 20% reduction
+2. **Performance**: No regression in PerfEngine (keep as-is)
 3. **API Clarity**: Clear separation of concerns
 4. **Test Coverage**: Maintain or improve coverage
 5. **Zero Downtime**: Gradual migration with no service interruption
+6. **Migration Impact**: Focus on 62 total calls (Parser: 21, PerfEngine: 24, TreeParser: 17)
 
 ## Risk Mitigation
 
@@ -383,20 +403,24 @@ end
 4. **Rollback Plan**: Keep old NIFs until fully migrated
 5. **Documentation**: Update as we go
 
-## Timeline Summary
+## Revised Timeline Summary
 
-- **Week 1**: Audit and planning
-- **Week 2**: Compatibility layer
-- **Weeks 3-4**: Build new NIFs
-- **Week 5**: High-level APIs
-- **Weeks 6-8**: Migration
-- **Week 9**: Cleanup
+- **Week 1**: ✅ Audit completed (results available)
+- **Week 2**: Remove FSScanner (0 usage - quick win)
+- **Week 3**: Compatibility layer for active parsers
+- **Week 4**: Migrate Parser → TextParser (21 calls)
+- **Week 5**: Migrate TreeParser → ASTParser (17 calls)
+- **Week 6**: Keep PerfEngine as-is (24 calls, stable)
+- **Week 7**: High-level APIs and testing
+- **Week 8**: Cleanup and documentation
 
-Total: ~2 months for complete refactoring
+Total: ~6 weeks (reduced from 9 due to audit insights)
 
-## Next Steps
+## Next Steps (Based on Audit Results)
 
-1. Run the audit script to understand current usage
-2. Get buy-in from team on new architecture
-3. Set up feature flags for gradual rollout
-4. Create tracking dashboard for migration progress
+1. ✅ **Audit completed** - Results show FSScanner unused, PerfEngine most active
+2. **Quick win**: Remove FSScanner NIF (0 usage, safe deletion)
+3. **Evaluate GraphReasoner**: 1 file reference but 0 function calls
+4. **Focus migration effort** on 3 active parsers (62 total calls)
+5. **Preserve PerfEngine**: Highest usage (24 calls) - keep stable
+6. Get team buy-in on revised, data-driven approach

@@ -77,6 +77,13 @@ defmodule LangWeb.Router do
     end
   end
 
+  # Public marketing pages
+  scope "/", LangWeb do
+    pipe_through :browser
+
+    live "/font", FontShowcaseLive, :index
+  end
+
   # API routes
   scope "/api/v1", LangWeb.Api do
     pipe_through [:api, :require_authenticated_api]

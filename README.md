@@ -1,4 +1,7 @@
-# LANG - Universal Text Intelligence Platform
+<div align="center">
+  <img src="priv/static/images/lang_logo.svg" alt="LANG Logo" width="600">
+  <h1>LANG - Universal Text Intelligence Platform</h1>
+</div>
 
 LANG extends Language Server Protocol (LSP) and Tree-sitter parsing beyond code to provide semantic understanding, intelligent completions, and analysis for ANY structured content format.
 
