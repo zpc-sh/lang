@@ -12,7 +12,7 @@ defmodule LangWeb.SEO do
   @default_description "Transform any text into actionable intelligence. LANG provides semantic understanding and intelligent editing for code, documents, logs, and more."
   @default_keywords "text intelligence, AI text analysis, code analysis, document intelligence, LSP, tree-sitter, semantic analysis"
   @default_image "/images/lang-og-image.png"
-  @site_url "https://lang.ai"
+  @site_url "https://lang.nocsi.com"
 
   @doc """
   Renders comprehensive SEO meta tags for a page.

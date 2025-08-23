@@ -134,6 +134,24 @@ defmodule LangWeb.Router do
     post "/text/stylometry", TextController, :stylometry
     post "/text/markdown-ld", TextController, :markdown_ld
     post "/text/analyze", TextController, :analyze
+
+    # MCP (Model Context Protocol) Broker endpoints - Secure wrapper for MCP servers
+    post "/mcp/connect", McpController, :connect
+    # Backwards-compatible status route
+    get "/mcp/status/:stream_id", McpController, :status
+    # Support disconnect by stream_id (existing) and connection_id (preferred)
+    delete "/mcp/disconnect/:stream_id", McpController, :disconnect
+    delete "/mcp/disconnect/:connection_id", McpController, :disconnect
+    # List active connections
+    get "/mcp/connections", McpController, :list_active
+    # Billing usage for MCP
+    get "/mcp/billing/usage", MCPBillingController, :usage
+  end
+
+  # MCP JSON:API (AshJsonApi) - mounting Domain resources
+  scope "/api/v2" do
+    pipe_through [:api, :require_authenticated_api]
+    forward "/mcp", AshJsonApi.Router, domains: [Lang.MCP.Domain]
   end
 
   # Webhook routes

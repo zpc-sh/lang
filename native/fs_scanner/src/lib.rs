@@ -5,6 +5,8 @@ use rayon::prelude::*;
 use ignore::WalkBuilder;
 use grep::regex::RegexMatcher;
 use grep::searcher::Searcher;
+use grep::matcher::Matcher;
+use regex::RegexSet;
 
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -122,14 +124,78 @@ fn scan_directory(path: String, max_depth: usize, include_hidden: bool) -> NifRe
     }
 }
 
-fn scan_recursive(
-    path: &Path, 
-    depth: usize, 
-    max_depth: usize, 
+/// Directory scanning with include/exclude globs and max file size
+#[rustler::nif(schedule = "DirtyCpu")]
+fn scan_directory_filtered(
+    path: String,
+    max_depth: usize,
     include_hidden: bool,
-    stats: Arc<std::sync::Mutex<ScanStats>>
+    include_globs: Vec<String>,
+    exclude_globs: Vec<String>,
+    max_file_size_bytes: u64,
+) -> NifResult<(FileNode, ScanStats)> {
+    let start_time = std::time::Instant::now();
+    let root = std::path::PathBuf::from(&path);
+    let include_set = build_regexset(&include_globs);
+    let exclude_set = build_regexset(&exclude_globs);
+
+    let path = root.as_path();
+    if !path.exists() {
+        return Err(Error::Term(Box::new("path_not_found")));
+    }
+
+    let stats = Arc::new(std::sync::Mutex::new(ScanStats {
+        total_files: 0,
+        total_directories: 0,
+        total_size: 0,
+        scan_duration_ms: 0,
+        files_by_extension: std::collections::HashMap::new(),
+    }));
+
+    match scan_recursive_filtered(
+        path,
+        0,
+        max_depth,
+        include_hidden,
+        stats.clone(),
+        &root,
+        include_set.as_ref(),
+        exclude_set.as_ref(),
+        max_file_size_bytes,
+    ) {
+        Ok(node) => {
+            let mut stats_guard = stats.lock().unwrap();
+            stats_guard.scan_duration_ms = start_time.elapsed().as_millis() as u64;
+            let final_stats = ScanStats {
+                total_files: stats_guard.total_files,
+                total_directories: stats_guard.total_directories,
+                total_size: stats_guard.total_size,
+                scan_duration_ms: stats_guard.scan_duration_ms,
+                files_by_extension: stats_guard.files_by_extension.clone(),
+            };
+            Ok((node, final_stats))
+        }
+        Err(e) => Err(Error::Term(Box::new(format!("scan_error: {}", e)))),
+    }
+}
+
+fn scan_recursive(
+    path: &Path,
+    depth: usize,
+    max_depth: usize,
+    include_hidden: bool,
+    stats: Arc<std::sync::Mutex<ScanStats>>,
 ) -> Result<FileNode, std::io::Error> {
-    let metadata = fs::metadata(path)?;
+    // Never follow symlinks to avoid cycles
+    let symlink_meta = fs::symlink_metadata(path)?;
+    let file_type = symlink_meta.file_type();
+    // Use metadata for size/mtime where appropriate (it follows symlinks)
+    let metadata = if file_type.is_symlink() {
+        symlink_meta
+    } else {
+        // Fall back to regular metadata for non-symlinks
+        fs::metadata(path)?
+    };
     let name = path.file_name()
         .unwrap_or_default()
         .to_string_lossy()
@@ -141,6 +207,20 @@ fn scan_recursive(
         .unwrap_or_default()
         .as_secs();
     
+    if file_type.is_symlink() {
+        // Represent symlink without traversing
+        return Ok(FileNode {
+            path: path.to_string_lossy().to_string(),
+            name,
+            node_type: FileType::Symlink,
+            size: 0,
+            extension: path.extension().map(|e| e.to_string_lossy().to_string()),
+            modified_time,
+            children: None,
+            metadata: FileMetadata { lines: None, language: detect_language_from_path(path), is_binary: false, encoding: None },
+        });
+    }
+
     if metadata.is_dir() && depth < max_depth {
         // Update directory count
         {
@@ -206,6 +286,22 @@ fn scan_recursive(
                 encoding: None,
             },
         })
+    } else if metadata.is_dir() {
+        // Max depth reached: still represent as a directory without children
+        let mut stats_guard = stats.lock().unwrap();
+        stats_guard.total_directories += 1;
+        drop(stats_guard);
+
+        Ok(FileNode {
+            path: path.to_string_lossy().to_string(),
+            name: name.clone(),
+            node_type: FileType::Directory,
+            size: 0,
+            extension: None,
+            modified_time,
+            children: None,
+            metadata: FileMetadata { lines: None, language: None, is_binary: false, encoding: None },
+        })
     } else {
         let file_metadata = if metadata.is_file() {
             // Update file stats
@@ -222,7 +318,7 @@ fn scan_recursive(
                 }
             }
             
-            analyze_file_content(path)
+            analyze_file_content(path, size)
         } else {
             FileMetadata {
                 lines: None,
@@ -235,11 +331,7 @@ fn scan_recursive(
         Ok(FileNode {
             path: path.to_string_lossy().to_string(),
             name: name.clone(),
-            node_type: if metadata.is_file() { 
-                FileType::File 
-            } else { 
-                FileType::Symlink 
-            },
+            node_type: if metadata.is_file() { FileType::File } else { FileType::Symlink },
             size: metadata.len(),
             extension: path.extension()
                 .map(|e| e.to_string_lossy().to_string()),
@@ -250,8 +342,220 @@ fn scan_recursive(
     }
 }
 
-fn analyze_file_content(path: &Path) -> FileMetadata {
+#[inline]
+fn matches_globs(
+    root: &Path,
+    path: &Path,
+    include: Option<&RegexSet>,
+    exclude: Option<&RegexSet>,
+    is_dir: bool,
+) -> bool {
+    let rel = path.strip_prefix(root).unwrap_or(path);
+    let s = rel.to_string_lossy();
+    if let Some(ex) = exclude {
+        if ex.is_match(&s) {
+            return false;
+        }
+    }
+    if let Some(inc) = include {
+        // For directories, allow traversal even if they don't match include patterns
+        if is_dir {
+            return true;
+        }
+        return inc.is_match(&s);
+    }
+    true
+}
+
+fn build_regexset(patterns: &Vec<String>) -> Option<RegexSet> {
+    if patterns.is_empty() {
+        return None;
+    }
+    let mut regexes = Vec::with_capacity(patterns.len());
+    for p in patterns {
+        if let Some(rx) = glob_to_regex(p) {
+            regexes.push(rx);
+        }
+    }
+    if regexes.is_empty() { None } else { RegexSet::new(regexes).ok() }
+}
+
+fn glob_to_regex(glob: &str) -> Option<String> {
+    let mut out = String::from("^");
+    let mut chars = glob.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '.' | '+' | '(' | ')' | '|' | '^' | '$' | '{' | '}' | '[' | ']' | '\\' => {
+                out.push('\\');
+                out.push(c);
+            }
+            '*' => {
+                if matches!(chars.peek(), Some('*')) {
+                    let _ = chars.next();
+                    out.push_str(".*");
+                } else {
+                    out.push_str("[^/]*");
+                }
+            }
+            '?' => out.push('.'),
+            '/' => out.push('/'),
+            _ => out.push(c),
+        }
+    }
+    out.push('$');
+    Some(out)
+}
+
+fn scan_recursive_filtered(
+    path: &Path,
+    depth: usize,
+    max_depth: usize,
+    include_hidden: bool,
+    stats: Arc<std::sync::Mutex<ScanStats>>,
+    root: &Path,
+    include: Option<&RegexSet>,
+    exclude: Option<&RegexSet>,
+    max_file_size_bytes: u64,
+) -> Result<FileNode, std::io::Error> {
+    let symlink_meta = fs::symlink_metadata(path)?;
+    let file_type = symlink_meta.file_type();
+    let metadata = if file_type.is_symlink() { symlink_meta } else { fs::metadata(path)? };
+
+    let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let modified_time = metadata
+        .modified()
+        .unwrap_or_else(|_| std::time::SystemTime::UNIX_EPOCH)
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    if file_type.is_symlink() {
+        return Ok(FileNode {
+            path: path.to_string_lossy().to_string(),
+            name,
+            node_type: FileType::Symlink,
+            size: 0,
+            extension: path.extension().map(|e| e.to_string_lossy().to_string()),
+            modified_time,
+            children: None,
+            metadata: FileMetadata { lines: None, language: detect_language_from_path(path), is_binary: false, encoding: None },
+        });
+    }
+
+    if metadata.is_dir() && depth < max_depth {
+        {
+            let mut stats_guard = stats.lock().unwrap();
+            stats_guard.total_directories += 1;
+        }
+
+        let mut entries: Vec<_> = fs::read_dir(path)?
+            .filter_map(|e| e.ok())
+            .filter(|entry| {
+                if !include_hidden {
+                    let file_name = entry.file_name();
+                    let name = file_name.to_string_lossy();
+                    if name.starts_with('.') { return false; }
+                }
+                let p = entry.path();
+                // Do not block directories on include globs
+                let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+                matches_globs(root, &p, include, exclude, is_dir)
+            })
+            .collect();
+        entries.sort_by_key(|e| e.path());
+
+        let children: Vec<FileNode> = if entries.len() > 50 {
+            entries
+                .into_par_iter()
+                .filter_map(|entry| {
+                    let p = entry.path();
+                    if should_ignore(&p) { None } else {
+                        scan_recursive_filtered(&p, depth + 1, max_depth, include_hidden, stats.clone(), root, include, exclude, max_file_size_bytes).ok()
+                    }
+                })
+                .collect()
+        } else {
+            entries
+                .into_iter()
+                .filter_map(|entry| {
+                    let p = entry.path();
+                    if should_ignore(&p) { None } else {
+                        scan_recursive_filtered(&p, depth + 1, max_depth, include_hidden, stats.clone(), root, include, exclude, max_file_size_bytes).ok()
+                    }
+                })
+                .collect()
+        };
+
+        return Ok(FileNode {
+            path: path.to_string_lossy().to_string(),
+            name,
+            node_type: FileType::Directory,
+            size: 0,
+            extension: None,
+            modified_time,
+            children: Some(children),
+            metadata: FileMetadata { lines: None, language: None, is_binary: false, encoding: None },
+        });
+    } else if metadata.is_dir() {
+        let mut stats_guard = stats.lock().unwrap();
+        stats_guard.total_directories += 1;
+        drop(stats_guard);
+        return Ok(FileNode {
+            path: path.to_string_lossy().to_string(),
+            name: name.clone(),
+            node_type: FileType::Directory,
+            size: 0,
+            extension: None,
+            modified_time,
+            children: None,
+            metadata: FileMetadata { lines: None, language: None, is_binary: false, encoding: None },
+        });
+    }
+
+    if !matches_globs(root, path, include, exclude, false) {
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "filtered"));
+    }
+    if max_file_size_bytes > 0 && metadata.len() > max_file_size_bytes {
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "filtered"));
+    }
+
+    let size = metadata.len();
+    let extension = path.extension().map(|e| e.to_string_lossy().to_string());
+    {
+        let mut stats_guard = stats.lock().unwrap();
+        stats_guard.total_files += 1;
+        stats_guard.total_size += size;
+        if let Some(ref ext) = extension {
+            *stats_guard.files_by_extension.entry(ext.clone()).or_insert(0) += 1;
+        }
+    }
+    let file_metadata = analyze_file_content(path, size);
+
+    Ok(FileNode {
+        path: path.to_string_lossy().to_string(),
+        name: name.clone(),
+        node_type: FileType::File,
+        size,
+        extension,
+        modified_time,
+        children: None,
+        metadata: file_metadata,
+    })
+}
+
+fn analyze_file_content(path: &Path, size: u64) -> FileMetadata {
     // Quick file analysis
+    // Avoid mapping extremely large files
+    const MAX_ANALYZE_BYTES: u64 = 8 * 1024 * 1024; // 8MB safety cap
+    if size > MAX_ANALYZE_BYTES {
+        return FileMetadata {
+            lines: None,
+            language: detect_language_from_path(path),
+            is_binary: false,
+            encoding: None,
+        };
+    }
+
     if let Ok(file) = fs::File::open(path) {
         if let Ok(mmap) = unsafe { Mmap::map(&file) } {
             let content = &mmap[..std::cmp::min(mmap.len(), 8192)]; // First 8KB
@@ -260,7 +564,7 @@ fn analyze_file_content(path: &Path) -> FileMetadata {
             if is_binary {
                 return FileMetadata {
                     lines: None,
-                    language: detect_language_from_extension(path),
+                    language: detect_language_from_path(path),
                     is_binary: true,
                     encoding: Some("binary".to_string()),
                 };
@@ -271,7 +575,7 @@ fn analyze_file_content(path: &Path) -> FileMetadata {
             
             return FileMetadata {
                 lines: Some(lines),
-                language: detect_language_from_extension(path),
+                language: detect_language_from_path(path),
                 is_binary: false,
                 encoding: Some("utf-8".to_string()),
             };
@@ -280,7 +584,7 @@ fn analyze_file_content(path: &Path) -> FileMetadata {
     
     FileMetadata {
         lines: None,
-        language: detect_language_from_extension(path),
+        language: detect_language_from_path(path),
         is_binary: false,
         encoding: None,
     }
@@ -337,6 +641,22 @@ fn detect_language_from_extension(path: &Path) -> Option<String> {
     Some(language.to_string())
 }
 
+fn detect_language_from_path(path: &Path) -> Option<String> {
+    // Try extension first
+    if let Some(lang) = detect_language_from_extension(path) {
+        return Some(lang);
+    }
+    // Fallback to common filenames
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        match name {
+            "Dockerfile" => return Some("dockerfile".to_string()),
+            "Makefile" => return Some("makefile".to_string()),
+            _ => {}
+        }
+    }
+    None
+}
+
 fn should_ignore(path: &Path) -> bool {
     let ignore_dirs = [
         ".git", "node_modules", "_build", "deps", "target", 
@@ -366,13 +686,19 @@ fn search_content(
     context_lines: usize,
     case_sensitive: bool
 ) -> NifResult<Vec<SearchResult>> {
-    let matcher = if case_sensitive {
-        RegexMatcher::new(&pattern)
-    } else {
-        RegexMatcher::new_line_matcher(&pattern)
-    };
-    
-    let matcher = matcher
+    // Build regex with proper case sensitivity
+    let mut builder = grep::regex::RegexMatcherBuilder::new();
+    builder.case_insensitive(!case_sensitive);
+    let matcher = builder
+        .build(&pattern)
+        .map_err(|e| Error::Term(Box::new(format!("regex_error: {}", e))))?;
+
+    // Separate regex just to compute match offsets on a matched line
+    let mut re_builder = regex::bytes::RegexBuilder::new(&pattern);
+    re_builder.case_insensitive(!case_sensitive);
+    re_builder.multi_line(true);
+    let pos_re = re_builder
+        .build()
         .map_err(|e| Error::Term(Box::new(format!("regex_error: {}", e))))?;
     
     let results = Arc::new(DashMap::new());
@@ -391,6 +717,7 @@ fn search_content(
             let matcher = matcher.clone();
             let results = results.clone();
             let counter = counter.clone();
+            let pos_re = pos_re.clone();
             
             Box::new(move |entry| {
                 let entry = match entry {
@@ -407,6 +734,10 @@ fn search_content(
                 }
                 
                 let path = entry.path();
+                // Default ignores for heavy/noisy directories
+                if should_ignore(path) {
+                    return ignore::WalkState::Continue;
+                }
                 
                 // Skip binary files
                 if is_likely_binary(path) {
@@ -427,6 +758,7 @@ fn search_content(
                             max_results,
                             context_lines,
                             content: &mmap,
+                            pos_re: pos_re.clone(),
                         };
                         
                         let _ = searcher.search_slice(&matcher, &mmap, sink);
@@ -455,6 +787,7 @@ struct SearchSink<'a> {
     max_results: usize,
     context_lines: usize,
     content: &'a [u8],
+    pos_re: regex::bytes::Regex,
 }
 
 impl<'a> grep::searcher::Sink for SearchSink<'a> {
@@ -469,18 +802,26 @@ impl<'a> grep::searcher::Sink for SearchSink<'a> {
             return Ok(false);
         }
         
-        let line_text = String::from_utf8_lossy(mat.bytes()).to_string();
+        let line_bytes = mat.bytes();
+        let line_text = String::from_utf8_lossy(line_bytes).to_string();
         let line_number = mat.line_number().unwrap_or(0);
         
         // Extract context lines
         let (context_before, context_after) = self.extract_context(line_number);
+
+        // Compute match byte offsets within the line (first match)
+        let (match_start, match_end) = if let Some(m) = self.pos_re.find(line_bytes) {
+            (m.start(), m.end())
+        } else {
+            (0, line_text.len())
+        };
         
         let result = SearchResult {
             path: self.path.to_string_lossy().to_string(),
             line_number,
             line_text: line_text.trim_end().to_string(),
-            match_start: 0, // Would need more work to get exact position
-            match_end: line_text.len(),
+            match_start,
+            match_end,
             context_before,
             context_after,
         };
@@ -546,7 +887,8 @@ fn search_code_patterns(
     root_path: String,
     language: String,
     pattern: String,
-    max_results: usize
+    max_results: usize,
+    max_depth: usize
 ) -> NifResult<Vec<CodeMatch>> {
     use tree_sitter::{Parser, Query, QueryCursor};
     
@@ -574,7 +916,10 @@ fn search_code_patterns(
     WalkBuilder::new(&root_path)
         .hidden(false)
         .ignore(true)
-        .max_depth(Some(15))
+        .git_ignore(true)
+        .git_global(true)
+        .git_exclude(true)
+        .max_depth(Some(max_depth))
         .build_parallel()
         .run(|| {
             let mut parser = Parser::new();
@@ -595,6 +940,9 @@ fn search_code_patterns(
                 };
                 
                 let path = entry.path();
+                if should_ignore(path) {
+                    return ignore::WalkState::Continue;
+                }
                 if !is_target_language_file(path, &language_str) {
                     return ignore::WalkState::Continue;
                 }
@@ -676,15 +1024,24 @@ fn is_target_language_file(path: &Path, language: &str) -> bool {
 /// Fast file content preview
 #[rustler::nif]
 fn get_file_preview(path: String, max_lines: usize) -> NifResult<Vec<String>> {
-    match fs::read_to_string(&path) {
-        Ok(content) => {
-            let lines: Vec<String> = content
-                .lines()
-                .take(max_lines)
-                .map(|s| s.to_string())
-                .collect();
-            Ok(lines)
-        },
+    use std::io::{BufRead, BufReader};
+    let path_ref = Path::new(&path);
+    if is_likely_binary(path_ref) {
+        return Err(Error::Term(Box::new("read_error")));
+    }
+    match fs::File::open(path_ref) {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            let mut out = Vec::with_capacity(max_lines.min(1024));
+            for (i, line) in reader.lines().enumerate() {
+                if i >= max_lines { break; }
+                match line {
+                    Ok(s) => out.push(s),
+                    Err(_) => break,
+                }
+            }
+            Ok(out)
+        }
         Err(_) => Err(Error::Term(Box::new("read_error"))),
     }
 }
@@ -693,8 +1050,27 @@ rustler::init!(
     "Elixir.Lang.Native.FSScanner",
     [
         scan_directory,
+        scan_directory_filtered,
         search_content,
         search_code_patterns,
         get_file_preview
     ]
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_language_by_extension() {
+        assert_eq!(detect_language_from_extension(Path::new("foo.rs")).as_deref(), Some("rust"));
+        assert_eq!(detect_language_from_extension(Path::new("bar.ex")).as_deref(), Some("elixir"));
+        assert_eq!(detect_language_from_extension(Path::new("baz.unknown")).as_deref(), None);
+    }
+
+    #[test]
+    fn detects_language_by_filename() {
+        assert_eq!(detect_language_from_path(Path::new("/a/b/Dockerfile")).as_deref(), Some("dockerfile"));
+        assert_eq!(detect_language_from_path(Path::new("/a/Makefile")).as_deref(), Some("makefile"));
+    }
+}

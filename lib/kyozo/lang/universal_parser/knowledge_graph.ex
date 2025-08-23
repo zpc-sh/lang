@@ -208,7 +208,7 @@ defmodule Kyozo.Lang.UniversalParser.KnowledgeGraph do
       nil ->
         {:ok, []}
 
-      connected_ids ->
+      _connected_ids ->
         relationships =
           graph.relationships
           |> Map.values()
@@ -534,7 +534,7 @@ defmodule Kyozo.Lang.UniversalParser.KnowledgeGraph do
     |> length()
   end
 
-  defp infer_relationships(entities, relationships) do
+  defp infer_relationships(_entities, relationships) do
     # Simple transitive relationship inference
     # If A -> B and B -> C, infer A -> C (with lower confidence)
 

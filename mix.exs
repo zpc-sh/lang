@@ -124,11 +124,13 @@ defmodule Lang.MixProject do
       {:sobelow, "~> 0.8", only: [:dev, :test], runtime: false},
       {:bcrypt_elixir, "~> 3.0"},
       {:tidewave, "~> 0.4", only: [:dev, :test]},
-      {:jsonld_ex, "~> 0.1.1"},
-      {:markdown_ld, "~> 0.3"},
+      {:jsonld_ex, "~> 0.4.0"},
+      {:markdown_ld, "~> 0.4.0"},
 
       # Performance profiling and optimization
-      {:ash_profiler, "~> 0.1.0", only: [:dev, :test]}
+      {:ash_profiler, "~> 0.1.0", only: [:dev, :test]},
+      # SAT solver for Spark/Ash DSL verification without adding a NIF
+      {:simple_sat, "~> 0.1", runtime: false}
     ]
   end
 

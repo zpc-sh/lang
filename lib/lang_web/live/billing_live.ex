@@ -140,7 +140,7 @@ defmodule LangWeb.BillingLive do
           <h1 class="text-3xl font-bold text-gray-900">Billing & Subscription</h1>
           <p class="text-gray-600 mt-2">Manage your subscription, usage, and billing information.</p>
         </div>
-
+        
     <!-- Tab Navigation -->
         <div class="border-b border-gray-200 mb-8">
           <nav class="-mb-px flex space-x-8">
@@ -190,7 +190,7 @@ defmodule LangWeb.BillingLive do
             </button>
           </nav>
         </div>
-
+        
     <!-- Tab Content -->
         <div class="space-y-6">
           <%= case @active_tab do %>
@@ -205,7 +205,7 @@ defmodule LangWeb.BillingLive do
           <% end %>
         </div>
       </div>
-
+      
     <!-- Upgrade Modal -->
       <div
         :if={@show_upgrade_modal}
@@ -341,7 +341,7 @@ defmodule LangWeb.BillingLive do
           <% end %>
         </div>
       </div>
-
+      
     <!-- Usage Summary Card -->
       <div class="bg-white rounded-lg border shadow-sm p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">This Month's Usage</h3>
@@ -420,7 +420,7 @@ defmodule LangWeb.BillingLive do
             <div class="text-sm text-gray-800">Daily Average</div>
           </div>
         </div>
-
+        
     <!-- Usage Chart Placeholder -->
         <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
           <div class="text-center">
@@ -430,7 +430,7 @@ defmodule LangWeb.BillingLive do
           </div>
         </div>
       </div>
-
+      
     <!-- Endpoint Usage Breakdown -->
       <div class="bg-white rounded-lg border shadow-sm p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Endpoint Usage Breakdown</h3>
@@ -638,7 +638,7 @@ defmodule LangWeb.BillingLive do
           </div>
         </div>
       </div>
-
+      
     <!-- Feature Comparison -->
       <div class="bg-white rounded-lg border shadow-sm p-6 mt-12">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">Feature Comparison</h3>
@@ -769,21 +769,108 @@ defmodule LangWeb.BillingLive do
 
   defp create_checkout_session(organization, plan_type) do
     # Get environment variables for Stripe price IDs
-    price_id = case plan_type do
-      :pro -> System.get_env("STRIPE_PRO_PRICE_ID")
-      :enterprise -> System.get_env("STRIPE_ENTERPRISE_PRICE_ID")
-      _ -> nil
+    price_id =
+      case plan_type do
+        :pro -> System.get_env("STRIPE_PRO_PRICE_ID")
+        :enterprise -> System.get_env("STRIPE_ENTERPRISE_PRICE_ID")
+        _ -> nil
+      end
+
+    if is_nil(price_id) do
+      Logger.error("Missing Stripe price ID for plan: #{plan_type}")
+      {:error, "Plan configuration error"}
+    else
+      # Create or retrieve Stripe customer
+      case ensure_stripe_customer(organization) do
+        {:ok, customer_id} ->
+          create_stripe_checkout_session(customer_id, price_id, organization)
+
+        {:error, reason} ->
+          Logger.error("Failed to create Stripe customer: #{inspect(reason)}")
+          {:error, "Customer creation failed"}
+      end
     end
+  end
 
-    if is_nil(price_id) heckout_url = "https://checkout.stripe.com/pay/cs_test_pro_plan"
-        {:ok, checkout_url}
+  defp ensure_stripe_customer(organization) do
+    case organization.stripe_customer_id do
+      nil ->
+        # Create new Stripe customer
+        customer_params = %{
+          email: organization.primary_email || "noreply@#{organization.slug}.lang.co",
+          name: organization.name,
+          metadata: %{
+            organization_id: organization.id,
+            slug: organization.slug
+          }
+        }
 
-      :enterprise ->
-        checkout_url = "https://checkout.stripe.com/pay/cs_test_enterprise_plan"
-        {:ok, checkout_url}
+        case Stripe.Customer.create(customer_params) do
+          {:ok, customer} ->
+            # Update organization with customer ID
+            case Accounts.Organization.update(organization, %{stripe_customer_id: customer.id}) do
+              {:ok, _updated_org} ->
+                {:ok, customer.id}
 
-      _ ->
-        {:error, "Invalid plan type"}
+              {:error, reason} ->
+                Logger.error("Failed to save customer ID: #{inspect(reason)}")
+                # Continue with checkout even if save fails
+                {:ok, customer.id}
+            end
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      existing_customer_id ->
+        {:ok, existing_customer_id}
+    end
+  end
+
+  defp create_stripe_checkout_session(customer_id, price_id, organization) do
+    base_url = LangWeb.Endpoint.url()
+
+    session_params = %{
+      customer: customer_id,
+      payment_method_types: ["card"],
+      line_items: [
+        %{
+          price: price_id,
+          quantity: 1
+        }
+      ],
+      mode: "subscription",
+      success_url: "#{base_url}/billing?tab=overview&session_id={CHECKOUT_SESSION_ID}",
+      cancel_url: "#{base_url}/billing?tab=overview",
+      metadata: %{
+        organization_id: organization.id
+      },
+      subscription_data: %{
+        metadata: %{
+          organization_id: organization.id,
+          slug: organization.slug
+        }
+      }
+    }
+
+    case Stripe.Checkout.Session.create(session_params) do
+      {:ok, session} ->
+        # Track checkout event
+        Events.track_event(%{
+          event_type: "checkout_initiated",
+          user_id: nil,
+          organization_id: organization.id,
+          metadata: %{
+            session_id: session.id,
+            price_id: price_id
+          }
+        })
+
+        {:ok, session.url}
+
+      {:error, reason} ->
+        Logger.error("Stripe checkout session creation failed: #{inspect(reason)}")
+        {:error, "Checkout session creation failed"}
     end
   end
 

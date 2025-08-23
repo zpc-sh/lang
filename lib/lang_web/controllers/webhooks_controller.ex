@@ -17,6 +17,7 @@ defmodule LangWeb.WebhooksController do
   """
 
   use LangWeb, :controller
+  alias LangWeb.ApiError
 
   alias Lang.{Billing, Events}
   require Logger
@@ -44,10 +45,7 @@ defmodule LangWeb.WebhooksController do
     else
       {:error, :invalid_signature} ->
         Logger.warning("Invalid Stripe webhook signature")
-
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Invalid signature"})
+        ApiError.json(conn, :unauthorized, "Invalid signature")
 
       {:error, :duplicate_event} ->
         Logger.info("Duplicate Stripe webhook event, ignoring")
@@ -60,17 +58,11 @@ defmodule LangWeb.WebhooksController do
 
       {:error, reason} when is_binary(reason) ->
         Logger.error("Failed to process Stripe webhook: #{reason}")
-
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: reason})
+        ApiError.json(conn, :unprocessable_entity, to_string(reason))
 
       {:error, reason} ->
         Logger.error("Failed to process Stripe webhook: #{inspect(reason)}")
-
-        conn
-        |> put_status(:internal_server_error)
-        |> json(%{error: "Internal server error"})
+        ApiError.json(conn, :internal_server_error, "Internal server error")
     end
   end
 

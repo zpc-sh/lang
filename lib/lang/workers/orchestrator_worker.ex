@@ -228,7 +228,8 @@ defmodule Lang.Workers.OrchestratorWorker do
             "name" => "X-API-Key"
           }
         },
-        "schemas" => generate_common_schemas()
+        "schemas" => generate_common_schemas(),
+        "responses" => generate_common_responses()
       }
     }
 
@@ -300,6 +301,78 @@ defmodule Lang.Workers.OrchestratorWorker do
     }
   end
 
+  defp generate_common_responses do
+    %{
+      "BadRequest" => %{
+        "description" => "Bad request - invalid parameters",
+        "content" => %{
+          "application/json" => %{
+            "schema" => %{
+              "type" => "object",
+              "properties" => %{
+                "error" => %{"type" => "string"},
+                "details" => %{"type" => "object"}
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized" => %{
+        "description" => "Unauthorized - invalid API key",
+        "content" => %{
+          "application/json" => %{
+            "schema" => %{
+              "type" => "object",
+              "properties" => %{"error" => %{"type" => "string", "example" => "Invalid API key"}}
+            }
+          }
+        }
+      },
+      "Forbidden" => %{
+        "description" => "Forbidden",
+        "content" => %{
+          "application/json" => %{
+            "schema" => %{"$ref" => "#/components/schemas/Error"}
+          }
+        }
+      },
+      "NotFound" => %{
+        "description" => "Not found",
+        "content" => %{
+          "application/json" => %{
+            "schema" => %{"$ref" => "#/components/schemas/Error"}
+          }
+        }
+      },
+      "UnprocessableEntity" => %{
+        "description" => "Unprocessable entity",
+        "content" => %{
+          "application/json" => %{
+            "schema" => %{
+              "type" => "object",
+              "properties" => %{
+                "error" => %{"type" => "string"},
+                "details" => %{"type" => "object"}
+              }
+            }
+          }
+        }
+      },
+      "TooManyRequests" => %{
+        "description" => "Rate limited",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/Error"}}
+        }
+      },
+      "InternalError" => %{
+        "description" => "Internal server error",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/Error"}}
+        }
+      }
+    }
+  end
+
   defp generate_text_paths do
     %{
       "/api/v2/text/parse" => %{
@@ -322,7 +395,14 @@ defmodule Lang.Workers.OrchestratorWorker do
                   "schema" => %{"$ref" => "#/components/schemas/TextParseResponse"}
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       }
@@ -355,7 +435,24 @@ defmodule Lang.Workers.OrchestratorWorker do
       "/api/v2/fs/browse" => %{
         "post" => %{
           "summary" => "Browse filesystem with semantic understanding",
-          "tags" => ["Filesystem Intelligence"]
+          "tags" => ["Filesystem Intelligence"],
+          "responses" => %{
+            "200" => %{
+              "description" => "Browse result",
+              "content" => %{
+                "application/ld+json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/FileSystemBrowseResponse"}
+                }
+              }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
+          }
         }
       }
     }
@@ -369,6 +466,31 @@ defmodule Lang.Workers.OrchestratorWorker do
           "path" => %{"type" => "string"},
           "depth" => %{"type" => "integer", "default" => 3}
         }
+      },
+      "FileSystemBrowseResponse" => %{
+        "type" => "object",
+        "properties" => %{
+          "entries" => %{
+            "type" => "array",
+            "items" => %{
+              "type" => "object",
+              "properties" => %{
+                "name" => %{"type" => "string"},
+                "path" => %{"type" => "string"},
+                "type" => %{"type" => "string", "enum" => ["file", "dir"]},
+                "size" => %{"type" => "integer"}
+              }
+            }
+          },
+          "stats" => %{
+            "type" => "object",
+            "properties" => %{
+              "total" => %{"type" => "integer"},
+              "files" => %{"type" => "integer"},
+              "directories" => %{"type" => "integer"}
+            }
+          }
+        }
       }
     }
   end
@@ -378,7 +500,24 @@ defmodule Lang.Workers.OrchestratorWorker do
       "/api/v2/cloud/discover" => %{
         "post" => %{
           "summary" => "Discover cloud resources",
-          "tags" => ["Cloud Intelligence"]
+          "tags" => ["Cloud Intelligence"],
+          "responses" => %{
+            "200" => %{
+              "description" => "Discovery result",
+              "content" => %{
+                "application/ld+json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/CloudDiscoveryResponse"}
+                }
+              }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
+          }
         }
       }
     }
@@ -392,6 +531,30 @@ defmodule Lang.Workers.OrchestratorWorker do
           "provider" => %{"type" => "string", "enum" => ["aws", "gcp", "azure"]},
           "region" => %{"type" => "string"}
         }
+      },
+      "CloudDiscoveryResponse" => %{
+        "type" => "object",
+        "properties" => %{
+          "resources" => %{
+            "type" => "array",
+            "items" => %{
+              "type" => "object",
+              "properties" => %{
+                "id" => %{"type" => "string"},
+                "type" => %{"type" => "string"},
+                "provider" => %{"type" => "string"},
+                "region" => %{"type" => "string"}
+              }
+            }
+          },
+          "summary" => %{
+            "type" => "object",
+            "properties" => %{
+              "count" => %{"type" => "integer"},
+              "providers" => %{"type" => "array", "items" => %{"type" => "string"}}
+            }
+          }
+        }
       }
     }
   end
@@ -401,7 +564,24 @@ defmodule Lang.Workers.OrchestratorWorker do
       "/api/v2/systems/analyze" => %{
         "post" => %{
           "summary" => "Analyze system topology",
-          "tags" => ["Systems Intelligence"]
+          "tags" => ["Systems Intelligence"],
+          "responses" => %{
+            "200" => %{
+              "description" => "Analysis result",
+              "content" => %{
+                "application/ld+json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/SystemAnalysisResponse"}
+                }
+              }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
+          }
         }
       }
     }
@@ -414,6 +594,14 @@ defmodule Lang.Workers.OrchestratorWorker do
         "properties" => %{
           "target" => %{"type" => "string"},
           "depth" => %{"type" => "integer", "default" => 2}
+        }
+      },
+      "SystemAnalysisResponse" => %{
+        "type" => "object",
+        "properties" => %{
+          "nodes" => %{"type" => "array", "items" => %{"type" => "object"}},
+          "edges" => %{"type" => "array", "items" => %{"type" => "object"}},
+          "summary" => %{"type" => "object"}
         }
       }
     }

@@ -1,5 +1,6 @@
 defmodule LangWeb.Api.AnalysisController do
   use LangWeb, :controller
+  alias LangWeb.ApiError
 
   alias Lang.Analysis
   alias Lang.Analysis.{Project, AnalysisSession, AnalyzedFile, Violation}
@@ -26,9 +27,7 @@ defmodule LangWeb.Api.AnalysisController do
 
     case Analysis.get_user_project(user_id, id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Project not found"})
+        ApiError.json(conn, :not_found, "Project not found")
 
       project ->
         render(conn, "project.json", project: project)
@@ -64,9 +63,7 @@ defmodule LangWeb.Api.AnalysisController do
 
     case Analysis.get_user_project(user_id, id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Project not found"})
+        ApiError.json(conn, :not_found, "Project not found")
 
       project ->
         case Analysis.update_project(project, project_params) do
@@ -86,9 +83,7 @@ defmodule LangWeb.Api.AnalysisController do
 
     case Analysis.get_user_project(user_id, id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Project not found"})
+        ApiError.json(conn, :not_found, "Project not found")
 
       project ->
         case Analysis.delete_project(project) do
@@ -108,9 +103,7 @@ defmodule LangWeb.Api.AnalysisController do
 
     case Analysis.get_user_project(user_id, id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Project not found"})
+        ApiError.json(conn, :not_found, "Project not found")
 
       project ->
         case Analysis.archive_project(project) do
@@ -132,9 +125,7 @@ defmodule LangWeb.Api.AnalysisController do
 
     case Analysis.get_user_project(user_id, project_id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Project not found"})
+        ApiError.json(conn, :not_found, "Project not found")
 
       _project ->
         opts = [
@@ -157,9 +148,7 @@ defmodule LangWeb.Api.AnalysisController do
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Analysis session not found"})
+        ApiError.json(conn, :not_found, "Analysis session not found")
     end
   end
 
@@ -168,15 +157,11 @@ defmodule LangWeb.Api.AnalysisController do
 
     case Analysis.get_user_project(user_id, project_id) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Project not found"})
+        ApiError.json(conn, :not_found, "Project not found")
 
       project ->
         unless Project.active?(project) do
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{error: "Project is not active"})
+          ApiError.json(conn, :unprocessable_entity, "Project is not active")
         else
           session_attrs = %{
             project_id: project_id,
@@ -203,9 +188,7 @@ defmodule LangWeb.Api.AnalysisController do
     case Analysis.get_analysis_session!(id) do
       session ->
         unless AnalysisSession.in_progress?(session) do
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{error: "Cannot cancel session that is not in progress"})
+          ApiError.json(conn, :unprocessable_entity, "Cannot cancel session that is not in progress")
         else
           case Analysis.cancel_analysis_session(session) do
             {:ok, session} ->
@@ -220,9 +203,7 @@ defmodule LangWeb.Api.AnalysisController do
     end
   rescue
     Ecto.NoResultsError ->
-      conn
-      |> put_status(:not_found)
-      |> json(%{error: "Analysis session not found"})
+      ApiError.json(conn, :not_found, "Analysis session not found")
   end
 
   # File Upload and Analysis
@@ -233,9 +214,7 @@ defmodule LangWeb.Api.AnalysisController do
       case Analysis.get_analysis_session!(session_id) do
         session ->
           unless session.status == "pending" do
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{error: "Session is not in pending state"})
+            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
           else
             case extract_files_from_upload(params) do
               {:ok, files} ->
@@ -250,17 +229,13 @@ defmodule LangWeb.Api.AnalysisController do
                 end
 
               {:error, reason} ->
-                conn
-                |> put_status(:bad_request)
-                |> json(%{error: reason})
+                ApiError.json(conn, :bad_request, to_string(reason))
             end
           end
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Analysis session not found"})
+        ApiError.json(conn, :not_found, "Analysis session not found")
     end
   end
 
@@ -270,18 +245,14 @@ defmodule LangWeb.Api.AnalysisController do
       case Analysis.get_analysis_session!(session_id) do
         session ->
           unless session.status == "pending" do
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{error: "Session is not in pending state"})
+            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
           else
             text_content = params["content"]
             file_name = params["file_name"] || "untitled.txt"
             language = params["language"]
 
             unless text_content do
-              conn
-              |> put_status(:bad_request)
-              |> json(%{error: "Content is required"})
+              ApiError.json(conn, :bad_request, "Content is required")
             else
               file_attrs = %{
                 file_name: file_name,
@@ -308,9 +279,7 @@ defmodule LangWeb.Api.AnalysisController do
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Analysis session not found"})
+        ApiError.json(conn, :not_found, "Analysis session not found")
     end
   end
 
@@ -336,9 +305,7 @@ defmodule LangWeb.Api.AnalysisController do
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "File not found"})
+        ApiError.json(conn, :not_found, "File not found")
     end
   end
 
@@ -365,9 +332,7 @@ defmodule LangWeb.Api.AnalysisController do
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Violation not found"})
+        ApiError.json(conn, :not_found, "Violation not found")
     end
   end
 
@@ -419,16 +384,12 @@ defmodule LangWeb.Api.AnalysisController do
               |> render("errors.json", changeset: changeset)
 
             {:error, message} ->
-              conn
-              |> put_status(:bad_request)
-              |> json(%{error: message})
+              ApiError.json(conn, :bad_request, to_string(message))
           end
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Violation not found"})
+        ApiError.json(conn, :not_found, "Violation not found")
     end
   end
 
@@ -449,9 +410,7 @@ defmodule LangWeb.Api.AnalysisController do
       end
     rescue
       Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Analysis session not found"})
+        ApiError.json(conn, :not_found, "Analysis session not found")
     end
   end
 

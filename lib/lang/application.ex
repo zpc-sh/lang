@@ -23,8 +23,8 @@ defmodule Lang.Application do
       {Phoenix.PubSub, name: Lang.PubSub},
       {Finch, name: Lang.Finch},
 
-      # Redis for caching and background processing (temporarily disabled)
-      # {Redix, redis_config()},
+      # Redis for caching and lightweight storage
+      {Redix, redis_config()},
 
       # Core LANG services
       {Lang.TextIntelligence.ParserRegistry, []},
@@ -40,6 +40,12 @@ defmodule Lang.Application do
 
       # LSP Server Supervisor
       {Lang.LSP.Supervisor, []},
+
+      # MCP Broker Security Layer
+      {DynamicSupervisor, strategy: :one_for_one, name: Lang.MCP.ServerSupervisor},
+      Lang.MCP.Broker,
+      Lang.MCP.Pool,
+      Lang.MCP.StreamBridge,
 
       # Web endpoint
       LangWeb.Endpoint

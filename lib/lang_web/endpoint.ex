@@ -15,6 +15,19 @@ defmodule LangWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # JSON-RPC / LSP WebSocket for editor/agent clients
+  socket "/lsp", LangWeb.LspSocket,
+    websocket: [
+      subprotocols: ["jsonrpc"],
+      connect_info: [:peer_data, :x_headers, :uri]
+    ],
+    longpoll: false
+
+  # MCP WebSocket for secure streaming communication
+  socket "/socket", LangWeb.UserSocket,
+    websocket: true,
+    longpoll: false
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),

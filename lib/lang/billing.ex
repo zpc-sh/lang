@@ -278,6 +278,28 @@ defmodule Lang.Billing do
   end
 
   @doc """
+  Report a per-connection MCP usage event for billing.
+
+  In production, wire this to a metered Stripe price via Usage Records
+  or subscription items with metered billing. For now, this tracks an
+  internal event that can be aggregated downstream.
+  """
+  def report_mcp_connection(organization_id) do
+    ts = DateTime.utc_now() |> DateTime.to_iso8601()
+    args = %{"organization_id" => organization_id, "timestamp" => ts}
+    # Fire-and-forget usage record job; keep event tracking for analytics
+    _ = Oban.insert(%Oban.Job{queue: :billing, worker: Lang.Billing.Jobs.ReportMcpConnectionUsage, args: args})
+
+    Events.track_event(%{
+      event_type: "mcp_connection_charge",
+      organization_id: organization_id,
+      metadata: %{occurred_at: ts}
+    })
+
+    :ok
+  end
+
+  @doc """
   Processes Stripe webhooks.
   """
   def handle_webhook(event_type, stripe_event) do

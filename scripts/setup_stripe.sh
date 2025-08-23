@@ -94,7 +94,7 @@ echo "   Created price: $BUSINESS_PRICE"
 # Create webhook endpoint
 echo ""
 echo "5️⃣ Setting up webhook endpoint..."
-WEBHOOK_URL="${APP_HOST:-https://lang.nocsi.com}/webhooks/stripe"
+WEBHOOK_URL="${APP_HOST:-https://lang.nulity.com}/webhooks/stripe"
 
 WEBHOOK_ENDPOINT=$(stripe webhook_endpoints create \
   --url=$WEBHOOK_URL \
@@ -110,7 +110,7 @@ echo ""
 echo "Add these values to your .env file:"
 echo "=================================="
 echo "STRIPE_PRO_PRICE_ID=$PRO_PRICE"
-echo "STRIPE_BUSINESS_PRICE_ID=$BUSINESS_PRICE" 
+echo "STRIPE_BUSINESS_PRICE_ID=$BUSINESS_PRICE"
 echo "STRIPE_WEBHOOK_SECRET=$WEBHOOK_ENDPOINT"
 echo ""
 echo "Next steps:"

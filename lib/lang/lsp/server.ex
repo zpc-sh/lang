@@ -155,7 +155,7 @@ defmodule Lang.LSP.Server do
     end
   end
 
-  defp send_response(socket, nil), do: :ok
+  defp send_response(_socket, nil), do: :ok
 
   defp send_response(socket, response) do
     json_content = Jason.encode!(response)
@@ -165,7 +165,7 @@ defmodule Lang.LSP.Server do
     :gen_tcp.send(socket, message)
   end
 
-  defp handle_initialize(id, params) do
+  defp handle_initialize(id, _params) do
     Logger.info("LSP Initialize request received")
 
     capabilities = build_server_capabilities()
@@ -328,10 +328,10 @@ defmodule Lang.LSP.Server do
 
   defp generate_completions(content, position) do
     line_num = position["line"]
-    char_pos = position["character"]
+    _char_pos = position["character"]
 
     lines = String.split(content, "\n")
-    current_line = Enum.at(lines, line_num, "")
+    _current_line = Enum.at(lines, line_num, "")
 
     # Simple word-based completions
     words = String.split(content) |> Enum.uniq() |> Enum.filter(&(String.length(&1) > 2))
@@ -679,52 +679,7 @@ defmodule Lang.LSP.Server do
     ]
   end
 
-  defp generate_hover_info(document, position) do
-    case Map.get(document, :analysis) do
-      nil ->
-        nil
-
-      analysis ->
-        # Generate hover content based on analysis
-        content = build_hover_content(analysis, position)
-
-        %{
-          "contents" => %{
-            "kind" => "markdown",
-            "value" => content
-          },
-          "range" => build_hover_range(position)
-        }
-    end
-  end
-
-  defp build_hover_content(analysis, _position) do
-    """
-    ## LANG Analysis Results
-
-    **Format:** #{analysis.format}
-    **Content Size:** #{analysis.content_size} bytes
-    **Complexity Score:** #{analysis.analysis.complexity_score}/10
-    **Readability Score:** #{analysis.analysis.readability_score}/10
-    **Structure Quality:** #{analysis.analysis.structure_quality}/10
-
-    ### Suggestions
-    #{Enum.map_join(analysis.analysis.suggestions, "\n", &"- #{&1}")}
-
-    *Analysis performed at #{Calendar.strftime(analysis.timestamp, "%Y-%m-%d %H:%M:%S")} UTC*
-    """
-  end
-
-  defp build_hover_range(position) do
-    %{
-      "start" => position,
-      "end" => %{
-        "line" => position["line"],
-        "character" => position["character"] + 10
-      }
-    }
-  end
-
+  # Helper functions that were accidentally removed during cleanup
   defp convert_to_lsp_diagnostics(diagnostics) when is_list(diagnostics) do
     Enum.map(diagnostics, &convert_diagnostic/1)
   end
@@ -801,29 +756,6 @@ defmodule Lang.LSP.Server do
     end)
   end
 
-  defp send_diagnostics(uri, diagnostics) do
-    # In a real LSP implementation, this would send diagnostics via JSON-RPC
-    # For now, we'll just log them
-    Logger.info("Sending diagnostics", uri: uri, count: length(diagnostics))
-
-    # You could implement actual JSON-RPC notification sending here
-    # Phoenix.PubSub.broadcast(Lang.PubSub, "lsp_diagnostics", {:diagnostics, uri, diagnostics})
-  end
-
-  # TCP Message Handling Functions
-
-  defp receive_message(socket) do
-    # LSP uses Content-Length header for message framing
-    case read_headers(socket) do
-      {:ok, headers} ->
-        content_length = parse_content_length(headers)
-        read_content(socket, content_length)
-
-      error ->
-        error
-    end
-  end
-
   defp read_headers(socket, acc \\ "") do
     case :gen_tcp.recv(socket, 0) do
       {:ok, data} ->
@@ -869,94 +801,6 @@ defmodule Lang.LSP.Server do
     end
   end
 
-  defp process_lsp_message(%{"method" => method} = message) do
-    id = Map.get(message, "id")
-    params = Map.get(message, "params", %{})
-
-    response =
-      case method do
-        "initialize" ->
-          handle_initialize(params)
-
-        "initialized" ->
-          # Client notification that initialization is complete
-          nil
-
-        "shutdown" ->
-          %{"result" => nil}
-
-        "textDocument/didOpen" ->
-          handle_did_open(params)
-          nil
-
-        "textDocument/didChange" ->
-          handle_did_change(params)
-          nil
-
-        "textDocument/didClose" ->
-          handle_did_close(params)
-          nil
-
-        "textDocument/completion" ->
-          handle_completion(params)
-
-        "textDocument/hover" ->
-          handle_hover(params)
-
-        "textDocument/publishDiagnostics" ->
-          handle_publish_diagnostics(params)
-
-        _ ->
-          %{"error" => %{"code" => -32601, "message" => "Method not found"}}
-      end
-
-    if id && response do
-      Map.merge(%{"jsonrpc" => "2.0", "id" => id}, response)
-    else
-      response
-    end
-  end
-
-  defp process_lsp_message(_), do: nil
-
-  defp send_response(socket, nil), do: :ok
-
-  defp send_response(socket, response) do
-    json = Jason.encode!(response)
-    content_length = byte_size(json)
-
-    message = "Content-Length: #{content_length}\r\n\r\n#{json}"
-    :gen_tcp.send(socket, message)
-  end
-
-  # LSP Request Handlers
-
-  defp handle_initialize(params) do
-    capabilities = build_server_capabilities()
-
-    %{
-      "result" => %{
-        "capabilities" => capabilities,
-        "serverInfo" => %{
-          "name" => "LANG LSP Server",
-          "version" => "1.0.0"
-        }
-      }
-    }
-  end
-
-  defp handle_did_open(%{"textDocument" => doc}) do
-    handle_document_open(
-      doc["uri"],
-      doc["text"],
-      doc["languageId"]
-    )
-  end
-
-  defp handle_did_change(%{"textDocument" => doc, "contentChanges" => changes}) do
-    handle_document_change(doc["uri"], changes)
-  end
-
   defp handle_did_close(%{"textDocument" => doc}) do
     handle_document_close(doc["uri"])
   end
@@ -992,18 +836,6 @@ defmodule Lang.LSP.Server do
   end
 
   # Streaming Support for Large Responses
-
-  defp send_streaming_response(socket, response, chunk_size \\ 8192) do
-    json = Jason.encode!(response)
-
-    if byte_size(json) > chunk_size do
-      # For very large responses, we can send in chunks
-      # This is still within the LSP protocol as we send complete messages
-      send_response(socket, response)
-    else
-      send_response(socket, response)
-    end
-  end
 
   # Connection Management
 

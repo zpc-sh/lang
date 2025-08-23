@@ -85,7 +85,12 @@ config :ash, :validate_domain_config_inclusion?, false
 config :lang, Oban,
   repo: Lang.Repo,
   plugins: [
-    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Generate MCP spec monthly at 03:15 UTC on the 1st
+       {"15 3 1 * *", Lang.Workers.MCPEnvironment, args: %{"task" => "generate_spec"}}
+     ]}
   ],
   queues: [
     default: 10,

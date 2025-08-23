@@ -228,6 +228,23 @@ config :lang, :billing,
       }
     }
   },
+  mcp_connections: %{
+    # $0.25 per connection
+    price_cents: 25,
+    price_dollars: 0.25,
+    display_name: "MCP Secure Connection",
+    description: "Secured, sandboxed MCP server connection",
+    stripe_metadata: %{
+      service: "mcp_broker",
+      managed_by: "lang_platform",
+      billing_type: "metered"
+    },
+    limits: %{
+      max_connections_per_user: 10,
+      idle_timeout_minutes: 30,
+      max_concurrent_connections: 5
+    }
+  },
 
   # Feature categories for easy management
   feature_categories: %{

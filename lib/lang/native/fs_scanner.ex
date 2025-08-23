@@ -9,6 +9,11 @@ defmodule Lang.Native.FSScanner do
   - Memory-mapped file access for zero-copy operations
 
   Integrates seamlessly with the existing LANG architecture and Oban job processing.
+
+  Defaults and behaviors:
+  - Scans and searches automatically ignore noisy/system folders like `.git`, `node_modules`, `_build`, `deps`, `target`, etc.
+  - Code search supports a configurable `:max_depth` to bound traversal.
+  - Scanning supports include/exclude globs and a maximum file size filter.
   """
 
   use Rustler,
@@ -19,11 +24,13 @@ defmodule Lang.Native.FSScanner do
 
   # These will be replaced by the NIF functions
   def scan_directory(_path, _max_depth, _include_hidden), do: :erlang.nif_error(:nif_not_loaded)
+  def scan_directory_filtered(_path, _max_depth, _include_hidden, _include_globs, _exclude_globs, _max_file_size_bytes),
+    do: :erlang.nif_error(:nif_not_loaded)
 
   def search_content(_root_path, _pattern, _max_results, _context_lines, _case_sensitive),
     do: :erlang.nif_error(:nif_not_loaded)
 
-  def search_code_patterns(_root_path, _language, _pattern, _max_results),
+  def search_code_patterns(_root_path, _language, _pattern, _max_results, _max_depth),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def get_file_preview(_path, _max_lines), do: :erlang.nif_error(:nif_not_loaded)
@@ -35,6 +42,12 @@ defmodule Lang.Native.FSScanner do
   - `:max_depth` - Maximum directory depth to scan (default: 10)
   - `:include_hidden` - Include hidden files/directories (default: false)
   - `:stats` - Return scanning statistics (default: true)
+  - `:include_globs` - List of include globs relative to `path` (e.g., ["**/*.exs"]). If provided, only matching files are included.
+  - `:exclude_globs` - List of exclude globs (e.g., ["**/node_modules/**"]). Always excluded.
+  - `:max_file_size_bytes` - Skip files larger than this size in bytes (default: no limit)
+  - `:include_globs` - List of include globs relative to `path` (e.g., ["**/*.exs"]) – if present, only matches are scanned
+  - `:exclude_globs` - List of exclude globs (e.g., ["**/node_modules/**"]) – always excluded
+  - `:max_file_size_bytes` - Skip files larger than this size in bytes (default: no limit)
 
   ## Examples
       iex> Lang.Native.FSScanner.scan("/path/to/project")
@@ -47,16 +60,42 @@ defmodule Lang.Native.FSScanner do
     max_depth = Keyword.get(opts, :max_depth, 10)
     include_hidden = Keyword.get(opts, :include_hidden, false)
     include_stats = Keyword.get(opts, :stats, true)
+    timeout = Keyword.get(opts, :timeout, 60_000)
+    include_globs = Keyword.get(opts, :include_globs, [])
+    exclude_globs = Keyword.get(opts, :exclude_globs, [])
+    max_file_size_bytes = Keyword.get(opts, :max_file_size_bytes, 0)
 
-    case scan_directory(to_string(path), max_depth, include_hidden) do
-      {tree, stats} when include_stats ->
-        {:ok, %{tree: tree, stats: stats}}
+    task =
+      Task.async(fn ->
+        if (include_globs != [] or exclude_globs != [] or max_file_size_bytes != 0) do
+          scan_directory_filtered(
+            to_string(path),
+            max_depth,
+            include_hidden,
+            Enum.map(include_globs, &to_string/1),
+            Enum.map(exclude_globs, &to_string/1),
+            max_file_size_bytes
+          )
+        else
+          scan_directory(to_string(path), max_depth, include_hidden)
+        end
+      end)
 
-      {tree, _stats} ->
-        {:ok, %{tree: tree}}
+    try do
+      case Task.await(task, timeout) do
+        {tree, stats} when include_stats ->
+          {:ok, %{tree: tree, stats: stats}}
 
-      {:error, reason} ->
-        {:error, reason}
+        {tree, _stats} ->
+          {:ok, %{tree: tree}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    catch
+      :exit, {:timeout, _} ->
+        Task.shutdown(task, :brutal_kill)
+        {:error, :timeout}
     end
   end
 
@@ -68,6 +107,7 @@ defmodule Lang.Native.FSScanner do
   - `:context_lines` - Number of context lines before/after matches (default: 2)
   - `:case_sensitive` - Case-sensitive matching (default: false)
   - `:timeout` - Search timeout in milliseconds (default: 30_000)
+  - Always ignores common noisy folders like `.git`, `node_modules`, `_build`, `deps`, and similar
 
   ## Examples
       iex> Lang.Native.FSScanner.search("/path/to/project", "TODO|FIXME")
@@ -131,6 +171,7 @@ defmodule Lang.Native.FSScanner do
   """
   def search_code(path, language, pattern, opts \\ []) do
     max_results = Keyword.get(opts, :max_results, 100)
+    max_depth = Keyword.get(opts, :max_depth, 15)
     timeout = Keyword.get(opts, :timeout, 45_000)
 
     task =
@@ -139,7 +180,8 @@ defmodule Lang.Native.FSScanner do
           to_string(path),
           to_string(language),
           to_string(pattern),
-          max_results
+          max_results,
+          max_depth
         )
       end)
 

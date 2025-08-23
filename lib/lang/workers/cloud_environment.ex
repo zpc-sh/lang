@@ -44,7 +44,8 @@ defmodule Lang.Workers.CloudEnvironment do
       info: %{
         title: "LANG Cloud Intelligence API",
         version: "2.0.0",
-        description: "Cloud infrastructure analysis and resource intelligence"
+        description:
+          "Cloud infrastructure analysis and resource intelligence\n\n## Error Conventions\nAll error responses use a consistent JSON shape:\n\n- error: human‑readable message (string)\n- details: optional object with structured fields (e.g., allowed lists, limits)\n\nCommon HTTP status codes:\n- 400 Bad Request (validation issues)\n- 401 Unauthorized (missing/invalid auth)\n- 403 Forbidden\n- 404 Not Found\n- 422 Unprocessable Entity (semantic validation)\n- 429 Too Many Requests (rate limiting)\n- 500 Internal Server Error"
       },
       servers: [
         %{url: "https://lang.nocsi.com/api/v2/cloud", description: "Production"},
@@ -53,7 +54,15 @@ defmodule Lang.Workers.CloudEnvironment do
       paths: generate_cloud_paths(),
       components: %{
         schemas: generate_cloud_schemas(),
-        responses: generate_common_responses()
+        responses: Map.merge(generate_common_responses(), %{
+          BadRequestError: %{description: "Bad request", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}, details: %{type: "object", additionalProperties: true}}}}}},
+          UnauthorizedError: %{description: "Unauthorized", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}}}}}},
+          ForbiddenError: %{description: "Forbidden", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}}}}}},
+          NotFoundError: %{description: "Not found", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}}}}}},
+          UnprocessableEntityError: %{description: "Unprocessable entity", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}, details: %{type: "object", additionalProperties: true}}}}}},
+          TooManyRequestsError: %{description: "Rate limited", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}}}}}},
+          InternalError: %{description: "Internal server error", content: %{"application/json": %{schema: %{type: "object", properties: %{error: %{type: "string"}}}}}}
+        })
       }
     }
 
@@ -260,7 +269,14 @@ defmodule Lang.Workers.CloudEnvironment do
                   }
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       },
@@ -288,7 +304,14 @@ defmodule Lang.Workers.CloudEnvironment do
                   }
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       },
@@ -316,7 +339,14 @@ defmodule Lang.Workers.CloudEnvironment do
                   }
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       },
@@ -344,7 +374,14 @@ defmodule Lang.Workers.CloudEnvironment do
                   }
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       },
@@ -372,7 +409,14 @@ defmodule Lang.Workers.CloudEnvironment do
                   }
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       },
@@ -400,7 +444,14 @@ defmodule Lang.Workers.CloudEnvironment do
                   }
                 }
               }
-            }
+            },
+            "400" => %{"$ref" => "#/components/responses/BadRequest"},
+            "401" => %{"$ref" => "#/components/responses/Unauthorized"},
+            "403" => %{"$ref" => "#/components/responses/Forbidden"},
+            "404" => %{"$ref" => "#/components/responses/NotFound"},
+            "422" => %{"$ref" => "#/components/responses/UnprocessableEntity"},
+            "429" => %{"$ref" => "#/components/responses/TooManyRequests"},
+            "500" => %{"$ref" => "#/components/responses/InternalError"}
           }
         }
       }
@@ -508,6 +559,53 @@ defmodule Lang.Workers.CloudEnvironment do
               properties: %{
                 error: %{type: "string", example: "Invalid API key"}
               }
+            }
+          }
+        }
+      },
+      Forbidden: %{
+        description: "Forbidden",
+        content: %{
+          "application/json" => %{
+            schema: %{
+              type: "object",
+              properties: %{error: %{type: "string"}}
+            }
+          }
+        }
+      },
+      NotFound: %{
+        description: "Not found",
+        content: %{
+          "application/json" => %{
+            schema: %{
+              type: "object",
+              properties: %{error: %{type: "string"}}
+            }
+          }
+        }
+      },
+      UnprocessableEntity: %{
+        description: "Unprocessable entity",
+        content: %{
+          "application/json" => %{
+            schema: %{
+              type: "object",
+              properties: %{
+                error: %{type: "string"},
+                details: %{type: "object"}
+              }
+            }
+          }
+        }
+      },
+      TooManyRequests: %{
+        description: "Rate limited",
+        content: %{
+          "application/json" => %{
+            schema: %{
+              type: "object",
+              properties: %{error: %{type: "string"}}
             }
           }
         }

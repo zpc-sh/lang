@@ -357,6 +357,54 @@ defmodule Mix.Tasks.Stripe.Setup do
     Stripe.WebhookEndpoint.create(params)
   end
 
+  defp create_mcp_metered_price(results) do
+    Logger.info("💰 Creating MCP connection metered price...")
+
+    mcp_config = billing_config()[:mcp_connections]
+
+    # Create or find the MCP product first
+    mcp_product_params = %{
+      name: mcp_config.display_name,
+      description: mcp_config.description,
+      metadata: mcp_config.stripe_metadata
+    }
+
+    case Stripe.Product.create(mcp_product_params) do
+      {:ok, product} ->
+        # Create metered price for MCP connections
+        price_params = %{
+          product: product.id,
+          nickname: "MCP Connection",
+          unit_amount: mcp_config.price_cents,
+          currency: "usd",
+          recurring: %{
+            interval: "month",
+            usage_type: "metered",
+            aggregate_usage: "sum"
+          },
+          metadata: %{
+            created_by: "lang_setup_script",
+            service: "mcp_broker"
+          }
+        }
+
+        case Stripe.Price.create(price_params) do
+          {:ok, price} ->
+            Logger.info("✅ MCP connection price created: #{price.id}")
+            Logger.info("   Add to .env: STRIPE_MCP_CONNECTION_PRICE_ID=#{price.id}")
+            Map.put(results, :mcp_price, price)
+
+          {:error, error} ->
+            Logger.error("Failed to create MCP price: #{inspect(error)}")
+            results
+        end
+
+      {:error, error} ->
+        Logger.error("Failed to create MCP product: #{inspect(error)}")
+        results
+    end
+  end
+
   defp display_setup_results(results) do
     Logger.info("\n🎉 Stripe setup completed successfully!")
 

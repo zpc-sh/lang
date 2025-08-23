@@ -29,7 +29,7 @@ defmodule Lang.Workers.TextEnvironment do
         "title" => "LANG Text Intelligence API",
         "version" => "2.0.0",
         "description" =>
-          "AI-powered text analysis with semantic extraction and Markdown-LD support",
+          "AI-powered text analysis with semantic extraction and Markdown-LD support\n\n## Error Conventions\nAll error responses use a consistent JSON shape:\n\n- error: human‑readable message (string)\n- details: optional object with structured fields (e.g., allowed lists, limits)\n\nCommon HTTP status codes:\n- 400 Bad Request (validation issues)\n- 401 Unauthorized (missing/invalid auth)\n- 403 Forbidden\n- 404 Not Found\n- 422 Unprocessable Entity (semantic validation)\n- 429 Too Many Requests (rate limiting)\n- 500 Internal Server Error",
         "x-oban-generated" => DateTime.utc_now(),
         "contact" => %{
           "name" => "LANG API Support",
@@ -61,6 +61,15 @@ defmodule Lang.Workers.TextEnvironment do
             "name" => "X-API-Key",
             "description" => "API key for authentication"
           }
+        },
+        "responses" => %{
+          "BadRequestError" => %{"description" => "Bad request", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}, "details" => %{"type" => "object", "additionalProperties" => true}}}}}},
+          "UnauthorizedError" => %{"description" => "Unauthorized", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
+          "ForbiddenError" => %{"description" => "Forbidden", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
+          "NotFoundError" => %{"description" => "Not found", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
+          "UnprocessableEntityError" => %{"description" => "Unprocessable entity", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}, "details" => %{"type" => "object", "additionalProperties" => true}}}}}},
+          "TooManyRequestsError" => %{"description" => "Rate limited", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
+          "InternalError" => %{"description" => "Internal server error", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}}
         },
         "responses" => generate_common_responses(),
         "examples" => generate_text_examples()

@@ -89,7 +89,10 @@ defmodule Lang.Migration.ApiUsageToEvents do
         updated_at: usage.updated_at
       }
     else
-      Logger.warn("Skipping record #{usage.id} - no organization found for user #{usage.user_id}")
+      Logger.warning(
+        "Skipping record #{usage.id} - no organization found for user #{usage.user_id}"
+      )
+
       nil
     end
   end
