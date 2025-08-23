@@ -35,6 +35,9 @@ defmodule Lang.Application do
       # Background processing
       {Oban, Application.fetch_env!(:lang, Oban)},
 
+      # Orchestration system
+      {Lang.Orchestration.Master, []},
+
       # LSP Server
       {Lang.LSP.Server, []},
 

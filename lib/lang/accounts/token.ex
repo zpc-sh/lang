@@ -74,13 +74,11 @@ defmodule Lang.Accounts.Token do
     prepare(build(sort: [inserted_at: :desc]))
   end
 
-  # TODO: Re-enable after fixing define_for syntax
-  # code_interface do
-  #   define_for Lang.Accounts
-  #   define(:store_token)
-  #   define(:get_token)
-  #   define(:valid_tokens)
-  #   define(:read_all, action: :read)
-  #   define(:destroy)
-  # end
+  code_interface do
+    define(:store_token)
+    define(:get_token)
+    define(:valid_tokens)
+    define(:read_all, action: :read)
+    define(:destroy)
+  end
 end

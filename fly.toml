@@ -8,24 +8,31 @@ primary_region = 'sjc'
 kill_signal = 'SIGTERM'
 
 [build]
+  dockerfile = "Dockerfile"
 
 [deploy]
-  release_command = '/app/bin/migrate'
+  release_command = "/app/bin/lang eval Lang.Release.migrate"
 
 [env]
   MIX_ENV = 'prod'
   PHX_HOST = 'lang-floral-firefly-7929.fly.dev'
   PHX_SERVER = 'true'
-  PORT = '8080'
+  #PHX_HOST = "lang.nocsi.com"
+  PORT = "4000"
+  ECTO_IPV6 = "true"
+  ERL_AFLAGS = "-proto_dist inet6_tcp"
+  # R2 for NIFs
+  R2_BUCKET = "lang-nifs"
+  R2_ENDPOINT = "https://YOUR_ACCOUNT.r2.cloudflarestorage.com"
 
 [[mounts]]
   source = 'lang_uploads'
   destination = '/home/app/uploads'
 
 [http_service]
-  internal_port = 8080
+  internal_port = 4000
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = true  # Save money!
   auto_start_machines = true
   min_machines_running = 1
   processes = ['app']
@@ -43,18 +50,16 @@ kill_signal = 'SIGTERM'
     path = '/health'
 
 [[services]]
-  protocol = 'tcp'
-  internal_port = 5432
+  protocol = "tcp"
+  internal_port = 4000
 
-  [[services.ports]]
-    port = 5432
+[[services.ports]]
+  port = 80
+  handlers = ["http"]
 
-[[services]]
-  protocol = 'tcp'
-  internal_port = 6379
-
-  [[services.ports]]
-    port = 6379
+[[services.ports]]
+  port = 443
+  handlers = ["tls", "http"]
 
 [[vm]]
   memory = '1gb'

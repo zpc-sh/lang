@@ -41,6 +41,9 @@ COPY config/billing.exs config/
 COPY priv priv
 COPY lib lib
 COPY native native
+RUN for dir in native/*/; do \
+      cd $dir && cargo build --release && cd /app; \
+    done
 COPY assets assets
 
 # Compile dependencies and NIFs

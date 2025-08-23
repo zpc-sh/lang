@@ -415,7 +415,7 @@ defmodule Lang.Native.Parser do
 
   defp maybe_analyze_style(_content, _include), do: nil
 
-  defp classify_content_type(%ParseResult{format: format, functions: functions, classes: classes}) do
+  defp classify_content_type(%{format: format, functions: functions, classes: classes}) do
     cond do
       format in ["javascript", "python", "elixir"] and length(functions) > 0 -> :code
       format == "markdown" -> :documentation

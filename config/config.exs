@@ -77,8 +77,25 @@ config :ash, :validate_domain_config_inclusion?, false
 # Configure Oban
 config :lang, Oban,
   repo: Lang.Repo,
-  plugins: [Oban.Plugins.Pruner],
-  queues: [default: 10, analysis: 5, lsp: 20, metrics: 15, cleanup: 2]
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}
+  ],
+  queues: [
+    default: 10,
+    # Increased for document processing
+    analysis: 20,
+    # For filesystem operations
+    lsp: 20,
+    # For telemetry and monitoring
+    metrics: 15,
+    cleanup: 2,
+    # New queue for SDK generation
+    sdk_generation: 5,
+    # New queue for publishing
+    publishing: 3,
+    # New queue for marketing content
+    marketing: 2
+  ]
 
 # Configure LANG-specific settings
 config :lang, :text_intelligence,

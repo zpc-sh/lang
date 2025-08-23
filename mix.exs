@@ -41,7 +41,6 @@ defmodule Lang.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:usage_rules, "~> 0.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       # Phoenix & Web
       {:phoenix, "~> 1.8.0"},
@@ -78,6 +77,12 @@ defmodule Lang.MixProject do
       {:ash_authentication, "~> 4.0"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:ash_oban, "~> 0.2"},
+      {:open_api_spex, "~> 3.16"},
+      # For cloud orchestration
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_s3, "~> 2.0"},
+      # For distributed orchestration
+      {:libcluster, "~> 3.3"},
 
       # Native Performance Engines
       {:rustler, "~> 0.34.0", optional: true},
@@ -117,7 +122,9 @@ defmodule Lang.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:sobelow, "~> 0.8", only: [:dev, :test], runtime: false},
       {:bcrypt_elixir, "~> 3.0"},
-      {:tidewave, "~> 0.4", only: [:dev, :test]}
+      {:tidewave, "~> 0.4", only: [:dev, :test]},
+      {:jsonld_ex, "~> 0.1.1"},
+      {:markdown_ld, "~> 0.3"}
     ]
   end
 
