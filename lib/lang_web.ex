@@ -48,6 +48,15 @@ defmodule LangWeb do
     end
   end
 
+  def view do
+    quote do
+      use Phoenix.LiveView
+      import Plug.Conn
+
+      unquote(html_helpers())
+    end
+  end
+
   def live_view do
     quote do
       use Phoenix.LiveView

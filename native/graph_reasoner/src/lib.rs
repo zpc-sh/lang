@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 // Simple data structures for NIF compatibility
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.Node"]
+#[module = "Elixir.Lang.GraphReasoner.Node"]
 pub struct GraphNode {
     pub id: String,
     pub node_type: String,
@@ -18,7 +18,7 @@ pub struct GraphNode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.Edge"]
+#[module = "Elixir.Lang.GraphReasoner.Edge"]
 pub struct GraphEdge {
     pub id: String,
     pub source: String,
@@ -34,7 +34,7 @@ pub struct GraphEdge {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.ReasoningResult"]
+#[module = "Elixir.Lang.GraphReasoner.ReasoningResult"]
 pub struct ReasoningResult {
     pub query_type: String,
     pub nodes: Vec<GraphNode>,
@@ -48,7 +48,7 @@ pub struct ReasoningResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.SubgraphResult"]
+#[module = "Elixir.Lang.GraphReasoner.SubgraphResult"]
 pub struct SubgraphResult {
     pub id: String,
     pub nodes: Vec<String>,
@@ -59,7 +59,7 @@ pub struct SubgraphResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.CentralityResult"]
+#[module = "Elixir.Lang.GraphReasoner.CentralityResult"]
 pub struct CentralityResult {
     pub node_scores: HashMap<String, f64>,
     pub algorithm_used: String,
@@ -69,7 +69,7 @@ pub struct CentralityResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.CentralityStats"]
+#[module = "Elixir.Lang.GraphReasoner.CentralityStats"]
 pub struct CentralityStats {
     pub mean: f64,
     pub median: f64,
@@ -80,7 +80,7 @@ pub struct CentralityStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.CommunityResult"]
+#[module = "Elixir.Lang.GraphReasoner.CommunityResult"]
 pub struct CommunityResult {
     pub communities: Vec<Community>,
     pub modularity_score: f64,
@@ -89,7 +89,7 @@ pub struct CommunityResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.Community"]
+#[module = "Elixir.Lang.GraphReasoner.Community"]
 pub struct Community {
     pub id: String,
     pub nodes: Vec<String>,
@@ -100,7 +100,7 @@ pub struct Community {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.PathAnalysisResult"]
+#[module = "Elixir.Lang.GraphReasoner.PathAnalysisResult"]
 pub struct PathAnalysisResult {
     pub shortest_paths: Vec<PathResult>,
     pub critical_paths: Vec<PathResult>,
@@ -110,7 +110,7 @@ pub struct PathAnalysisResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.PathResult"]
+#[module = "Elixir.Lang.GraphReasoner.PathResult"]
 pub struct PathResult {
     pub path: Vec<String>,
     pub total_weight: f64,
@@ -120,7 +120,7 @@ pub struct PathResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.KnowledgeGraph"]
+#[module = "Elixir.Lang.GraphReasoner.KnowledgeGraph"]
 pub struct KnowledgeGraphResult {
     pub entities: Vec<Entity>,
     pub relations: Vec<Relation>,
@@ -131,7 +131,7 @@ pub struct KnowledgeGraphResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.Entity"]
+#[module = "Elixir.Lang.GraphReasoner.Entity"]
 pub struct Entity {
     pub id: String,
     pub entity_type: String,
@@ -142,7 +142,7 @@ pub struct Entity {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.Relation"]
+#[module = "Elixir.Lang.GraphReasoner.Relation"]
 pub struct Relation {
     pub id: String,
     pub relation_type: String,
@@ -153,7 +153,7 @@ pub struct Relation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.Triple"]
+#[module = "Elixir.Lang.GraphReasoner.Triple"]
 pub struct Triple {
     pub subject: String,
     pub predicate: String,
@@ -164,7 +164,7 @@ pub struct Triple {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.TextSpan"]
+#[module = "Elixir.Lang.GraphReasoner.TextSpan"]
 pub struct TextSpan {
     pub start: u32,
     pub end: u32,
@@ -173,7 +173,7 @@ pub struct TextSpan {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, NifStruct)]
-#[module = "Elixir.GraphReasoner.GraphSchema"]
+#[module = "Elixir.Lang.GraphReasoner.GraphSchema"]
 pub struct GraphSchema {
     pub entity_types: Vec<String>,
     pub relation_types: Vec<String>,
@@ -580,7 +580,7 @@ pub fn get_performance_stats() -> Result<HashMap<String, String>, rustler::Error
     Ok(stats)
 }
 
-rustler::init!("Elixir.GraphReasoner");
+rustler::init!("Elixir.Lang.GraphReasoner");
 
 mod atoms {
     rustler::atoms! {

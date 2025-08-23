@@ -56,7 +56,7 @@ defmodule Lang.Native.TreeParser do
     otp_app: :lang,
     crate: "tree_parser",
     base_url: "https://github.com/nocsi/lang/releases/download/v",
-    force_build: System.get_env("RUSTLER_PRECOMPILATION_EXAMPLE_BUILD") in ["1", "true"],
+    force_build: true,
     version: "0.1.0"
 
   # ============================================================================

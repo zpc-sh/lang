@@ -48,11 +48,14 @@ defmodule Mix.Tasks.Stripe.Setup do
 
   # Read configuration from application config
   defp billing_config, do: Application.get_env(:lang, :billing, %{})
-  defp plans_config, do: billing_config() |> Map.get(:plans, %{})
-  defp stripe_config, do: billing_config() |> Map.get(:stripe, %{})
+  defp plans_config, do: billing_config() |> Keyword.get(:plans, %{})
+  defp stripe_config, do: billing_config() |> Keyword.get(:stripe, %{})
   defp webhook_events, do: stripe_config() |> Map.get(:webhook_events, [])
 
   def run(args) do
+    # Load environment variables from .env file
+    load_env_file()
+
     {options, [], []} =
       OptionParser.parse(args,
         switches: [
@@ -142,6 +145,11 @@ defmodule Mix.Tasks.Stripe.Setup do
   defp configure_stripe do
     Application.ensure_all_started(:hackney)
     Application.ensure_all_started(:stripity_stripe)
+
+    # Configure Stripe with API key from environment
+    api_key = System.get_env("STRIPE_SECRET_KEY")
+    Application.put_env(:stripity_stripe, :api_key, api_key)
+
     :ok
   end
 
@@ -437,5 +445,34 @@ defmodule Mix.Tasks.Stripe.Setup do
 
     For more information, visit: https://stripe.com/docs/api
     """)
+  end
+
+  defp load_env_file do
+    env_file = Path.join(File.cwd!(), ".env")
+
+    if File.exists?(env_file) do
+      env_file
+      |> File.read!()
+      |> String.split("\n")
+      |> Enum.each(fn line ->
+        line = String.trim(line)
+
+        unless String.starts_with?(line, "#") or line == "" do
+          case String.split(line, "=", parts: 2) do
+            [key, value] ->
+              # Remove quotes if present
+              clean_value = String.trim(value, "\"'")
+              System.put_env(key, clean_value)
+
+            _ ->
+              :ignore
+          end
+        end
+      end)
+
+      Logger.info("✅ Loaded environment variables from .env file")
+    else
+      Logger.warning("⚠️  No .env file found, using system environment variables only")
+    end
   end
 end

@@ -1,0 +1,44 @@
+<Layouts.app flash={@flash} current_scope={:user} current_user={@current_user}>
+  <div class="max-w-5xl mx-auto px-6 py-8">
+    <h1 class="text-3xl font-bold mb-6">Settings</h1>
+
+    <div class="border-b border-gray-200 mb-6">
+      <nav class="-mb-px flex space-x-6">
+        <button phx-click="change_tab" phx-value-tab="profile" class={["py-2 px-1 border-b-2", @active_tab == "profile" && "border-blue-500 text-blue-600" || "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"]}>Profile</button>
+        <button phx-click="change_tab" phx-value-tab="security" class={["py-2 px-1 border-b-2", @active_tab == "security" && "border-blue-500 text-blue-600" || "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"]}>Security</button>
+        <button phx-click="change_tab" phx-value-tab="organization" class={["py-2 px-1 border-b-2", @active_tab == "organization" && "border-blue-500 text-blue-600" || "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"]}>Organization</button>
+        <button phx-click="change_tab" phx-value-tab="billing" class={["py-2 px-1 border-b-2", @active_tab == "billing" && "border-blue-500 text-blue-600" || "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"]}>Billing</button>
+      </nav>
+    </div>
+
+    <div>
+      <%= case @active_tab do %>
+        <% "profile" -> %>
+          <div class="rounded-lg border p-6 bg-white">
+            <h2 class="text-xl font-semibold mb-2">Profile</h2>
+            <p class="text-gray-600">Stubbed profile settings. Connect to Ash changesets to enable.</p>
+          </div>
+        <% "security" -> %>
+          <div class="rounded-lg border p-6 bg-white">
+            <h2 class="text-xl font-semibold mb-2">Security</h2>
+            <p class="text-gray-600">Password reset and 2FA settings (stub).</p>
+          </div>
+        <% "organization" -> %>
+          <div class="rounded-lg border p-6 bg-white">
+            <h2 class="text-xl font-semibold mb-2">Organization</h2>
+            <p class="text-gray-600">Stubbed organization settings for <%= @current_org && @current_org.name || "your organization" %>.</p>
+          </div>
+        <% "billing" -> %>
+          <div class="rounded-lg border p-6 bg-white">
+            <h2 class="text-xl font-semibold mb-2">Billing</h2>
+            <p class="text-gray-600">Plan management and invoices will be shown here.</p>
+          </div>
+        <% _ -> %>
+          <div class="rounded-lg border p-6 bg-white">
+            <p>Select a settings tab.</p>
+          </div>
+      <% end %>
+    </div>
+  </div>
+</Layouts.app>
+

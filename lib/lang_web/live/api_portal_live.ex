@@ -16,7 +16,10 @@ defmodule LangWeb.ApiPortalLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket) do
+    # Use assigned current_user from authenticated live_session; fallback in dev
+    socket = ensure_current_user(socket)
+
+    if connected?(socket) and socket.assigns.current_user do
       # Subscribe to real-time API key updates
       Phoenix.PubSub.subscribe(Lang.PubSub, "user:#{socket.assigns.current_user.id}:api_keys")
     end
@@ -32,6 +35,26 @@ defmodule LangWeb.ApiPortalLive do
       |> load_portal_data()
 
     {:ok, socket}
+  end
+
+  # Temporary authentication fallback for development
+  defp ensure_current_user(socket) do
+    case socket.assigns do
+      %{current_user: %{} = user} ->
+        socket
+
+      _ ->
+        # Create a mock user for development
+        mock_user = %{
+          id: "dev_user_123",
+          email: "dev@example.com",
+          name: "Development User",
+          organization_id: "dev_org_123"
+        }
+
+        socket
+        |> assign(:current_user, mock_user)
+    end
   end
 
   @impl true
@@ -150,7 +173,7 @@ defmodule LangWeb.ApiPortalLive do
 
   defp load_portal_data(socket) do
     user = socket.assigns.current_user
-    org = get_organization(user.organization_id)
+    org = fetch_organization(user.organization_id)
 
     # Load API keys
     api_keys = get_user_api_keys(user.id)
@@ -169,7 +192,7 @@ defmodule LangWeb.ApiPortalLive do
     |> assign(:api_endpoints, get_api_endpoints())
   end
 
-  defp get_user_api_keys(user_id) do
+  defp get_user_api_keys(_user_id) do
     # TODO: Replace with actual API key queries
     [
       %{
@@ -203,25 +226,42 @@ defmodule LangWeb.ApiPortalLive do
   end
 
   defp get_api_usage_stats(user_id) do
-    %{
-      total_requests: 26_270,
-      successful_requests: 25_847,
-      failed_requests: 423,
-      rate_limited_requests: 12,
-      avg_response_time: 145,
-      peak_hour_usage: 1_234,
-      daily_usage: generate_daily_api_usage(),
-      top_endpoints: [
-        %{path: "/api/v1/analyze", method: "POST", count: 18_942, percentage: 72.1},
-        %{path: "/api/v1/detect-language", method: "POST", count: 4_328, percentage: 16.5},
-        %{path: "/api/v1/sentiment", method: "POST", count: 2_156, percentage: 8.2},
-        %{path: "/api/v1/conversation", method: "POST", count: 844, percentage: 3.2}
-      ]
-    }
+    import Ash.Query
+
+    case Lang.Accounts.APIUsage
+         |> Ash.Query.for_read(:recent_usage, %{user_id: user_id, limit: 200})
+         |> Ash.read() do
+      {:ok, usages} ->
+        total = length(usages)
+        success = Enum.count(usages, &(&1.status == :success))
+        failed = Enum.count(usages, &(&1.status == :error))
+        rate_limited = Enum.count(usages, &(&1.status == :rate_limited))
+        avg_ms =
+          usages
+          |> Enum.map(&(&1.processing_time_ms || 0))
+          |> case do
+            [] -> 0
+            times -> Enum.sum(times) |> div(max(1, length(times)))
+          end
+
+        %{
+          total_requests: total,
+          successful_requests: success,
+          failed_requests: failed,
+          rate_limited_requests: rate_limited,
+          avg_response_time: avg_ms,
+          daily_usage: generate_daily_api_usage(),
+          top_endpoints: []
+        }
+
+      _ ->
+        %{total_requests: 0, successful_requests: 0, failed_requests: 0, rate_limited_requests: 0, avg_response_time: 0, daily_usage: generate_daily_api_usage(), top_endpoints: []}
+    end
   end
 
   defp get_rate_limits(organization) do
-    case organization.subscription_tier do
+    tier = organization.plan || organization.subscription_tier || :free
+    case tier do
       :free ->
         %{requests_per_minute: 10, requests_per_hour: 100, requests_per_day: 1000}
 
@@ -378,15 +418,28 @@ defmodule LangWeb.ApiPortalLive do
     ]
   end
 
-  defp get_organization(org_id) do
-    # TODO: Replace with actual organization query
-    %{
-      id: org_id,
-      name: "Acme Corporation",
-      subscription_tier: :pro,
-      monthly_request_limit: 10_000,
-      monthly_request_count: 7_234
-    }
+  defp fetch_organization(org_id) do
+    import Ash.Query
+
+    case Lang.Accounts.Organization
+         |> Ash.Query.filter(id == ^org_id)
+         |> Ash.read_one() do
+      {:ok, nil} ->
+        %{id: org_id, name: "Organization", plan: :free, subscription_tier: :free, monthly_request_limit: 1000, monthly_request_count: 0}
+
+      {:ok, org} ->
+        %{
+          id: org.id,
+          name: org.name,
+          plan: org.plan || org.subscription_tier || :free,
+          subscription_tier: org.subscription_tier || org.plan || :free,
+          monthly_request_limit: org.monthly_request_limit,
+          monthly_request_count: org.monthly_request_count
+        }
+
+      {:error, _} ->
+        %{id: org_id, name: "Organization", plan: :free, subscription_tier: :free, monthly_request_limit: 1000, monthly_request_count: 0}
+    end
   end
 
   defp generate_api_key(user_id, name) do

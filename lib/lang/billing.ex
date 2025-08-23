@@ -47,7 +47,7 @@ defmodule Lang.Billing do
   """
   def create_customer(%Organization{} = organization) do
     params = %{
-      email: organization.email,
+      email: organization.contact_email,
       name: organization.name,
       metadata: %{
         org_id: organization.id,
@@ -298,6 +298,8 @@ defmodule Lang.Billing do
         {:ok, :ignored}
     end
   end
+
+  # Refund workflows intentionally omitted for now per billing policy.
 
   # Private Functions
 

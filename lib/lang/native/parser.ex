@@ -12,7 +12,7 @@ defmodule Lang.Native.Parser do
     otp_app: :lang,
     crate: "lang_parser",
     base_url: "https://github.com/nocsi/lang/releases/download/v",
-    force_build: System.get_env("RUSTLER_PRECOMPILATION_EXAMPLE_BUILD") in ["1", "true"],
+    force_build: true,
     version: "0.1.0"
 
   # NIF Result Structs

@@ -17,11 +17,14 @@ config :lang, :billing,
       "customer.subscription.deleted",
       "invoice.payment_succeeded",
       "invoice.payment_failed",
+      "invoice.finalized",
       "checkout.session.completed",
       "customer.updated",
       "customer.deleted",
       "payment_intent.succeeded",
-      "payment_intent.payment_failed"
+      "payment_intent.payment_failed",
+      "price.updated",
+      "product.updated"
     ]
   },
 
@@ -73,8 +76,8 @@ config :lang, :billing,
       name: "Pro",
       display_name: "Pro Plan",
       # $49.00
-      price_cents: 4900,
-      price_dollars: 49,
+      price_cents: 2900,
+      price_dollars: 29,
       billing_interval: "month",
       requests_per_month: 50_000,
       description: "Advanced text intelligence for growing businesses",
@@ -120,8 +123,8 @@ config :lang, :billing,
       name: "Enterprise",
       display_name: "Enterprise Plan",
       # $199.00
-      price_cents: 19900,
-      price_dollars: 199,
+      price_cents: 9900,
+      price_dollars: 99,
       billing_interval: "month",
       requests_per_month: 500_000,
       description: "Enterprise-grade text intelligence with dedicated support",
@@ -199,14 +202,44 @@ case config_env() do
     config :lang, :billing,
       stripe: %{
         auto_sync: false,
-        sync_interval_minutes: 5
+        sync_interval_minutes: 5,
+        webhook_events: [
+          "customer.subscription.created",
+          "customer.subscription.updated",
+          "customer.subscription.deleted",
+          "invoice.payment_succeeded",
+          "invoice.payment_failed",
+          "invoice.finalized",
+          "checkout.session.completed",
+          "customer.updated",
+          "customer.deleted",
+          "payment_intent.succeeded",
+          "payment_intent.payment_failed",
+          "price.updated",
+          "product.updated"
+        ]
       }
 
   :test ->
     config :lang, :billing,
       stripe: %{
         auto_sync: false,
-        sync_interval_minutes: 999_999
+        sync_interval_minutes: 999_999,
+        webhook_events: [
+          "customer.subscription.created",
+          "customer.subscription.updated",
+          "customer.subscription.deleted",
+          "invoice.payment_succeeded",
+          "invoice.payment_failed",
+          "invoice.finalized",
+          "checkout.session.completed",
+          "customer.updated",
+          "customer.deleted",
+          "payment_intent.succeeded",
+          "payment_intent.payment_failed",
+          "price.updated",
+          "product.updated"
+        ]
       },
       plans: %{
         # Test plans with lower limits for faster testing
@@ -229,6 +262,21 @@ case config_env() do
     config :lang, :billing,
       stripe: %{
         auto_sync: true,
-        sync_interval_minutes: 60
+        sync_interval_minutes: 60,
+        webhook_events: [
+          "customer.subscription.created",
+          "customer.subscription.updated",
+          "customer.subscription.deleted",
+          "invoice.payment_succeeded",
+          "invoice.payment_failed",
+          "invoice.finalized",
+          "checkout.session.completed",
+          "customer.updated",
+          "customer.deleted",
+          "payment_intent.succeeded",
+          "payment_intent.payment_failed",
+          "price.updated",
+          "product.updated"
+        ]
       }
 end

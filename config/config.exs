@@ -56,12 +56,19 @@ config :tailwind,
   ]
 
 # Configures Elixir's Logger
-config :logger, :default_formatter,
+config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Force local compilation of Rust NIFs instead of downloading precompiled binaries
+config :rustler_precompiled, :force_build,
+  lang_parser: true,
+  lang_perf: true,
+  fs_watcher: true,
+  tree_parser: true
 
 # Configure Ash
 config :ash, :validate_domain_resource_inclusion?, false

@@ -47,7 +47,8 @@ defmodule Lang.GraphReasoner do
     otp_app: :lang,
     crate: "graph_reasoner",
     base_url: "https://github.com/nocsi/lang/releases/download/v",
-    force_build: System.get_env("RUSTLER_PRECOMPILATION_EXAMPLE_BUILD") in ["1", "true"],
+    force_build:
+      System.get_env("RUSTLER_PRECOMPILATION_EXAMPLE_BUILD") in ["1", "true"] or Mix.env() == :dev,
     version: "0.1.0"
 
   @type graph_node :: %{
@@ -78,8 +79,8 @@ defmodule Lang.GraphReasoner do
 
   @type reasoning_result :: %{
           query_type: String.t(),
-          nodes: [node()],
-          edges: [edge()],
+          nodes: [graph_node()],
+          edges: [graph_edge()],
           paths: [[String.t()]],
           subgraphs: [subgraph_result()],
           reasoning_steps: [String.t()],

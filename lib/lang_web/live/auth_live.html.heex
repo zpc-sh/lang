@@ -1,8 +1,9 @@
-<.live_title suffix=" - LANG">
-  <%= @page_title %>
-</.live_title>
+<Layouts.app flash={@flash} current_scope={:public}>
+  <.live_title suffix=" - LANG">
+    <%= @page_title %>
+  </.live_title>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
   <div class="sm:mx-auto sm:w-full sm:max-w-md">
     <!-- Logo and branding -->
     <div class="text-center">
@@ -429,3 +430,4 @@
     <p>© 2024 LANG Platform. Built for developers who need powerful text intelligence.</p>
   </div>
 </div>
+</Layouts.app>

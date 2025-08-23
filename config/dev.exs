@@ -93,3 +93,5 @@ config :ash, :compile_time_index?, false
 
 # Optimize logging for development
 config :logger, level: :info
+
+config :rustler_precompiled, :force_build, lang: true

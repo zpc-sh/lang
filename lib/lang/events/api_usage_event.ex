@@ -145,10 +145,8 @@ defmodule Lang.Events.ApiUsageEvent do
     calculate(:hour_of_day, :integer, expr(fragment("extract(hour from ?)", inserted_at)))
   end
 
-  # Aggregates for performance
-  aggregates do
-    count(:total_requests, :id)
-  end
+  # Note: Aggregates removed as they were incorrectly trying to count records in the same resource
+  # Use queries with count() function instead for counting records
 
   # Code interface
   code_interface do

@@ -178,11 +178,8 @@ defmodule Lang.Events.UserActivityEvent do
     calculate(:is_conversion, :boolean, expr(converted == true))
   end
 
-  # Aggregates for analytics
-  aggregates do
-    count(:total_activities, :id)
-    count(:unique_sessions, :session_id, uniq?: true)
-  end
+  # Note: Aggregates removed as they were incorrectly trying to count records in the same resource
+  # Use queries with count() function instead for counting records
 
   # Code interface
   code_interface do

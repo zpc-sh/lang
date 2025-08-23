@@ -1,6 +1,6 @@
 /**
  * Stripe Integration for LANG Universal Text Intelligence Platform
- * 
+ *
  * Handles payment processing, subscription management, and checkout flows
  * using Stripe Elements for secure payment collection.
  */
@@ -52,7 +52,7 @@ class PaymentFormHandler {
   async initializePaymentForm(planType, clientSecret) {
     try {
       this.selectedPlan = planType;
-      
+
       // Create Elements instance
       this.elements = stripe.elements({
         clientSecret: clientSecret,
@@ -118,13 +118,13 @@ class PaymentFormHandler {
    */
   handlePaymentSuccess(paymentIntent) {
     console.log('Payment succeeded:', paymentIntent.id);
-    
+
     // Hide payment form
     this.hidePaymentForm();
-    
+
     // Show success message
     this.displaySuccess(`Successfully upgraded to ${this.selectedPlan} plan!`);
-    
+
     // Trigger LiveView update
     window.dispatchEvent(new CustomEvent('payment:success', {
       detail: {
@@ -144,9 +144,9 @@ class PaymentFormHandler {
    */
   handlePaymentError(error) {
     console.error('Payment failed:', error);
-    
+
     let errorMessage = 'Payment failed. Please try again.';
-    
+
     // Provide specific error messages
     switch (error.code) {
       case 'card_declined':
@@ -167,7 +167,7 @@ class PaymentFormHandler {
       default:
         errorMessage = error.message || errorMessage;
     }
-    
+
     this.displayError(errorMessage);
   }
 
@@ -177,12 +177,12 @@ class PaymentFormHandler {
   setLoadingState(isLoading) {
     const submitButton = document.getElementById('submit-payment');
     const spinner = document.getElementById('payment-spinner');
-    
+
     if (submitButton) {
       submitButton.disabled = isLoading;
       submitButton.textContent = isLoading ? 'Processing...' : 'Complete Upgrade';
     }
-    
+
     if (spinner) {
       spinner.style.display = isLoading ? 'inline-block' : 'none';
     }
@@ -208,7 +208,7 @@ class PaymentFormHandler {
       successElement.textContent = message;
       successElement.style.display = 'block';
     }
-    
+
     // Also remove any existing error messages
     this.displayError('');
   }
@@ -245,7 +245,7 @@ class SubscriptionManager {
       'Are you sure you want to cancel your subscription? ' +
       'You will lose access to premium features at the end of your billing period.'
     );
-    
+
     if (!confirmed) {
       return;
     }
@@ -311,13 +311,13 @@ class UsageMonitor {
     const usagePercentage = current / limit;
     const usageElement = document.getElementById('usage-progress');
     const warningElement = document.getElementById('usage-warning');
-    
+
     if (usageElement) {
       // Update progress bar
       const progressBar = usageElement.querySelector('.progress-bar');
       if (progressBar) {
         progressBar.style.width = `${Math.min(usagePercentage * 100, 100)}%`;
-        
+
         // Color coding
         if (usagePercentage >= this.usageThresholds.critical) {
           progressBar.className = 'progress-bar bg-red-500';
@@ -327,14 +327,14 @@ class UsageMonitor {
           progressBar.className = 'progress-bar bg-green-500';
         }
       }
-      
+
       // Update text
       const usageText = usageElement.querySelector('.usage-text');
       if (usageText) {
         usageText.textContent = `${current.toLocaleString()} / ${limit.toLocaleString()} requests used`;
       }
     }
-    
+
     // Show warnings
     if (warningElement) {
       if (usagePercentage >= this.usageThresholds.critical) {
@@ -373,12 +373,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const { plan, client_secret } = event.detail;
     paymentHandler.initializePaymentForm(plan, client_secret);
   });
-  
+
   window.addEventListener('phx:usage_updated', (event) => {
     const { current, limit, plan } = event.detail;
     usageMonitor.updateUsageDisplay(current, limit, plan);
   });
-  
+
   // Handle payment form submission
   const paymentForm = document.getElementById('payment-form');
   if (paymentForm) {

@@ -23,9 +23,8 @@ defmodule Lang.Application do
       {Phoenix.PubSub, name: Lang.PubSub},
       {Finch, name: Lang.Finch},
 
-      # Redis for caching and background processing
-      {Redix,
-       name: Lang.Redis, url: Application.get_env(:lang, :redis_url, "redis://localhost:6379/0")},
+      # Redis for caching and background processing (temporarily disabled)
+      # {Redix, redis_config()},
 
       # Core LANG services
       {Lang.TextIntelligence.ParserRegistry, []},
@@ -51,5 +50,35 @@ defmodule Lang.Application do
   def config_change(changed, _new, removed) do
     LangWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  # Parse Redis URL into Redix-compatible options
+  defp redis_config do
+    redis_url = Application.get_env(:lang, :redis_url, "redis://localhost:6379/0")
+
+    case URI.parse(redis_url) do
+      %URI{scheme: "redis", host: host, port: port, path: path} when is_binary(host) ->
+        database =
+          case path do
+            "/" <> db when db != "" -> String.to_integer(db)
+            _ -> 0
+          end
+
+        [
+          name: Lang.Redis,
+          host: host,
+          port: port || 6379,
+          database: database
+        ]
+
+      _ ->
+        # Fallback to localhost if URL parsing fails
+        [
+          name: Lang.Redis,
+          host: "localhost",
+          port: 6379,
+          database: 0
+        ]
+    end
   end
 end

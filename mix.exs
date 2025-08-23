@@ -80,7 +80,7 @@ defmodule Lang.MixProject do
       {:ash_oban, "~> 0.2"},
 
       # Native Performance Engines
-      {:rustler, "~> 0.34.0"},
+      {:rustler, "~> 0.34.0", optional: true},
       {:rustler_precompiled, "~> 0.7"},
 
       # Utilities
@@ -116,7 +116,8 @@ defmodule Lang.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
       {:sobelow, "~> 0.8", only: [:dev, :test], runtime: false},
-      {:bcrypt_elixir, "~> 3.0"}
+      {:bcrypt_elixir, "~> 3.0"},
+      {:tidewave, "~> 0.4", only: [:dev, :test]}
     ]
   end
 

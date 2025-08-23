@@ -10,8 +10,6 @@ defmodule Lang.Events do
 
   resources do
     resource(Lang.Events.ApiUsageEvent)
-    resource(Lang.Events.PerformanceEvent)
-    resource(Lang.Events.ErrorEvent)
     resource(Lang.Events.UserActivityEvent)
   end
 end

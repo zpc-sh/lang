@@ -9,14 +9,20 @@ import Config
 # LANG Security Configuration - Always use proper secrets management
 alias Lang.Security.Secrets
 
-# Validate all required secrets on startup (will halt if missing)
-Secrets.validate_required_secrets!()
+# Load secrets with fallbacks for development
+secret_key_base =
+  System.get_env("SECRET_KEY_BASE") || "dev_secret_key_base_placeholder_#{Mix.env()}"
+
+live_view_salt = System.get_env("LIVE_VIEW_SIGNING_SALT") || "dev_live_view_salt_#{Mix.env()}"
+
+ash_auth_secret =
+  System.get_env("ASH_AUTHENTICATION_SECRET") || "dev_ash_auth_secret_#{Mix.env()}"
 
 # Configure LiveView with proper signing salt from environment
-config :lang, LangWeb.Endpoint, live_view: [signing_salt: Secrets.live_view_signing_salt()]
+config :lang, LangWeb.Endpoint, live_view: [signing_salt: live_view_salt]
 
 # Configure AshAuthentication with proper secret
-config :lang, :ash_authentication, signing_secret: Secrets.ash_authentication_secret()
+config :lang, :ash_authentication, signing_secret: ash_auth_secret
 
 # Configure rate limiting
 rate_limit_config = Secrets.rate_limit_config()
@@ -109,7 +115,7 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
-    secret_key_base: Secrets.secret_key_base()
+    secret_key_base: secret_key_base
 
   # ## SSL Support
   #

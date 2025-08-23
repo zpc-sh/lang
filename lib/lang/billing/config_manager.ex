@@ -108,7 +108,7 @@ defmodule Lang.Billing.ConfigManager do
     enabled_features = MapSet.new(get_enabled_features(plan_type))
 
     feature_categories =
-      Application.get_env(:lang, :billing, %{}) |> Map.get(:feature_categories, %{})
+      Application.get_env(:lang, :billing, %{}) |> Keyword.get(:feature_categories, %{})
 
     feature_categories
     |> Enum.map(fn {category, features} ->
@@ -200,7 +200,7 @@ defmodule Lang.Billing.ConfigManager do
          true <- current_usage > limit do
       overage_amount = current_usage - limit
       plan = get_plan!(plan_type)
-      overage_config = billing_config() |> Map.get(:overage, %{})
+      overage_config = billing_config() |> Keyword.get(:overage, %{})
 
       # Calculate overage rate
       overage_rate =
@@ -241,15 +241,15 @@ defmodule Lang.Billing.ConfigManager do
   @doc """
   Gets Stripe configuration settings.
   """
-  def stripe_config do
-    billing_config() |> Map.get(:stripe, %{})
+  defp stripe_config do
+    billing_config() |> Keyword.get(:stripe, %{})
   end
 
   @doc """
   Gets optimization settings for revenue features.
   """
   def optimization_config do
-    billing_config() |> Map.get(:optimization, %{})
+    billing_config() |> Keyword.get(:optimization, %{})
   end
 
   @doc """
@@ -298,7 +298,7 @@ defmodule Lang.Billing.ConfigManager do
   end
 
   defp plans_config do
-    billing_config() |> Map.get(:plans, %{})
+    billing_config() |> Keyword.get(:plans, %{})
   end
 
   defp get_raw_plan(plan_type) do

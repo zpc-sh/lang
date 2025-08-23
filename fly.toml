@@ -1,0 +1,66 @@
+# fly.toml app configuration file generated for lang-floral-firefly-7929 on 2025-08-20T14:31:14-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'lang-floral-firefly-7929'
+primary_region = 'sjc'
+kill_signal = 'SIGTERM'
+
+[build]
+
+[deploy]
+  release_command = '/app/bin/migrate'
+
+[env]
+  MIX_ENV = 'prod'
+  PHX_HOST = 'lang-floral-firefly-7929.fly.dev'
+  PHX_SERVER = 'true'
+  PORT = '8080'
+
+[[mounts]]
+  source = 'lang_uploads'
+  destination = '/home/app/uploads'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'connections'
+    hard_limit = 1000
+    soft_limit = 1000
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 5432
+
+  [[services.ports]]
+    port = 5432
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 6379
+
+  [[services.ports]]
+    port = 6379
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[metrics]]
+  port = 9091
+  path = '/metrics'
