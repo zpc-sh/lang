@@ -9,12 +9,12 @@ defmodule LangWeb.Router do
     plug :put_root_layout, html: {LangWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug(:load_from_session)
+    plug :load_from_session
   end
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug(:load_from_bearer)
+    plug :load_from_bearer
   end
 
   pipeline :webhook do
@@ -23,19 +23,42 @@ defmodule LangWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  # Authentication pipeline - TODO: Fix authentication
-  # pipeline :require_authenticated_user do
-  #   plug :load_from_session
-  # end
+  # Authentication pipelines
+  pipeline :require_authenticated_user do
+    plug LangWeb.Plugs.AuthPlug, strategy: :session, required: true
+  end
+
+  pipeline :require_authenticated_api do
+    plug LangWeb.Plugs.AuthPlug, strategy: :api_key, required: true
+  end
+
+  pipeline :optional_auth do
+    plug LangWeb.Plugs.AuthPlug, strategy: :optional, required: false
+  end
 
   scope "/", LangWeb do
-    pipe_through :browser
+    pipe_through [:browser, :optional_auth]
 
     live "/", LandingLive, :index
     get "/health", HealthController, :check
-    live "/auth", AuthLive, :index
     live "/analyze", TextAnalysisLive, :index
     live "/demo", DemoLive, :index
+  end
+
+  # Authentication routes
+  scope "/auth", LangWeb do
+    pipe_through :browser
+
+    get "/", AuthController, :show
+    post "/login", AuthController, :login
+    post "/register", AuthController, :register
+    delete "/logout", AuthController, :logout
+    get "/forgot-password", AuthController, :forgot_password
+    post "/forgot-password", AuthController, :send_reset_email
+    get "/reset-password/:token", AuthController, :reset_password
+    post "/reset-password/:token", AuthController, :update_password
+    get "/status", AuthController, :status
+    get "/oauth/:provider", AuthController, :oauth_callback
   end
 
   # Authenticated live session (stubs current_user in dev/test)
@@ -46,7 +69,7 @@ defmodule LangWeb.Router do
       {LangWeb.AuthOnMount, :mount_current_org}
     ] do
     scope "/", LangWeb do
-      pipe_through :browser
+      pipe_through [:browser, :require_authenticated_user]
 
       live "/dashboard", DashboardLive, :index
       live "/api-portal", ApiPortalLive, :index
@@ -56,7 +79,7 @@ defmodule LangWeb.Router do
 
   # API routes
   scope "/api/v1", LangWeb.Api do
-    pipe_through :api
+    pipe_through [:api, :require_authenticated_api]
 
     # Projects
     get "/projects", AnalysisController, :list_projects

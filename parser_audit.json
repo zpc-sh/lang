@@ -1,0 +1,487 @@
+{
+  "Lang.GraphReasoner": {
+    "stats": {
+      "most_used_function": "none",
+      "total_calls": 0,
+      "total_files": 1,
+      "total_functions": 0
+    },
+    "files": [
+      "lib/lang/graph_reasoner.ex"
+    ],
+    "depends_on": [],
+    "functions_used": [],
+    "usage_count": 1
+  },
+  "Lang.Native.FSScanner": {
+    "stats": {
+      "most_used_function": "none",
+      "total_calls": 0,
+      "total_files": 0,
+      "total_functions": 0
+    },
+    "files": [],
+    "depends_on": [],
+    "functions_used": [],
+    "usage_count": 0
+  },
+  "Lang.Native.FSWatcher": {
+    "stats": {
+      "most_used_function": "none",
+      "total_calls": 0,
+      "total_files": 0,
+      "total_functions": 0
+    },
+    "files": [],
+    "depends_on": [],
+    "functions_used": [],
+    "usage_count": 0
+  },
+  "Lang.Native.Parser": {
+    "stats": {
+      "most_used_function": "analyze_style (2 calls)",
+      "total_calls": 21,
+      "total_files": 2,
+      "total_functions": 16
+    },
+    "files": [
+      "lib/lang/native.ex",
+      "lib/lang/native/parser.ex"
+    ],
+    "depends_on": [],
+    "functions_used": [
+      {
+        "call_count": 2,
+        "function": "analyze_style",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 2,
+        "function": "clear_caches",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 2,
+        "function": "compare_styles",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 2,
+        "function": "get_performance_stats",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 2,
+        "function": "parse_content",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "ComparisonResult",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "ParseResult",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "StyleAnalysis",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "batch_analyze_intelligent",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "batch_parse",
+        "called_from": [
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "health_check",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "obfuscate_text",
+        "called_from": [
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "semantic_diff",
+        "called_from": [
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "stream_parse_file_mmap",
+        "called_from": [
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "stream_parse_jsonld",
+        "called_from": [
+          "lib/lang/native/parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "warm_up_caches",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      }
+    ],
+    "usage_count": 2
+  },
+  "Lang.Native.PerfEngine": {
+    "stats": {
+      "most_used_function": "health_check (2 calls)",
+      "total_calls": 24,
+      "total_files": 2,
+      "total_functions": 21
+    },
+    "files": [
+      "lib/lang/native.ex",
+      "lib/lang/native/perf_engine.ex"
+    ],
+    "depends_on": [],
+    "functions_used": [
+      {
+        "call_count": 2,
+        "function": "health_check",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 2,
+        "function": "memory_stats",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 2,
+        "function": "semantic_diff_complete",
+        "called_from": [
+          "lib/lang/native.ex",
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "batch_hash_triples",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "batch_semantic_diff",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "clear_caches",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "compare_triple_sets",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "compress_diff",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "compute_diff_streaming",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "decompress_diff",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "extract_context_only",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "find_jsonld_patterns",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "hash_jsonld_nodes",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "mmap_jsonld",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "munmap_jsonld",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "pack_triples",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "parallel_triple_diff",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "quick_structural_hash",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "simd_hash_batch",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "streaming_parse_chunk",
+        "called_from": [
+          "lib/lang/native/perf_engine.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "warm_up",
+        "called_from": [
+          "lib/lang/native.ex"
+        ]
+      }
+    ],
+    "usage_count": 2
+  },
+  "Lang.Native.TreeParser": {
+    "stats": {
+      "most_used_function": "analyze_code_complete (1 calls)",
+      "total_calls": 17,
+      "total_files": 1,
+      "total_functions": 17
+    },
+    "files": [
+      "lib/lang/native/tree_parser.ex"
+    ],
+    "depends_on": [],
+    "functions_used": [
+      {
+        "call_count": 1,
+        "function": "analyze_code_complete",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "analyze_complexity",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "analyze_semantic_structure",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "build_dependency_graph",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "check_architectural_rules",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "compress_ast",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "create_parser",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "decompress_ast",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "extract_documentation",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "extract_symbols",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "find_code_smells",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "get_ast_statistics",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "health_check",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "parse_file_batch",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "parse_source_code",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "query_ast_patterns",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      },
+      {
+        "call_count": 1,
+        "function": "validate_code_quality",
+        "called_from": [
+          "lib/lang/native/tree_parser.ex"
+        ]
+      }
+    ],
+    "usage_count": 1
+  },
+  "Lang.Parsers.Filesystem": {
+    "stats": {
+      "most_used_function": "none",
+      "total_calls": 0,
+      "total_files": 0,
+      "total_functions": 0
+    },
+    "files": [],
+    "depends_on": [
+      "Lang.Native.FSScanner"
+    ],
+    "functions_used": [],
+    "usage_count": 0
+  }
+}

@@ -10,6 +10,75 @@ config :lang, Lang.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# Performance monitoring and profiling for LANG development
+config :ash_profiler, :enabled, true
+config :ash_profiler, :report_threshold_ms, 100
+config :ash_profiler, :log_slow_queries, true
+config :ash_profiler, :track_memory_usage, true
+
+# Enable telemetry for performance monitoring
+config :telemetry_poller,
+  measurements: [
+    # VM Measurements
+    {[:vm, :memory], :total},
+    {[:vm, :memory], :processes},
+    {[:vm, :memory], :atoms},
+    {[:vm, :memory], :binary},
+    {[:vm, :memory], :code},
+    {[:vm, :memory], :ets},
+
+    # System Measurements
+    {:system_counts, :process_count},
+    {:system_counts, :atom_count},
+    {:system_counts, :port_count},
+
+    # LANG-specific measurements
+    {:lang_metrics, :native_nif_calls},
+    {:lang_metrics, :ash_query_count},
+    {:lang_metrics, :oban_job_count}
+  ]
+
+# LANG Performance Monitoring Configuration
+config :lang, :performance,
+  # Enable performance monitoring in development
+  enabled: true,
+  # Profile Ash operations slower than 50ms
+  slow_query_threshold: 50,
+  # Track memory usage for native NIFs
+  track_nif_memory: true,
+  # Monitor Oban job performance
+  monitor_background_jobs: true,
+  # Profile filesystem operations
+  profile_native_operations: true
+
+# Native NIF Performance Tracking
+config :lang, :native_profiling,
+  track_fs_scanner: true,
+  track_text_analysis: true,
+  track_graph_reasoner: true,
+  memory_sampling_interval: 1000
+
+# Oban Performance Monitoring
+config :lang, Oban,
+  repo: Lang.Repo,
+  plugins: [
+    # Enable telemetry for job monitoring
+    {Oban.Plugins.Telemetry, measurements: [:queue_depth, :job_count, :duration]},
+    Oban.Plugins.Pruner,
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Performance monitoring tasks
+       {"*/5 * * * *", Lang.Workers.PerformanceMetricsWorker, queue: :metrics, max_attempts: 1}
+     ]}
+  ],
+  queues: [
+    default: 5,
+    analysis: 3,
+    lsp: 10,
+    metrics: 2,
+    cleanup: 1
+  ]
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

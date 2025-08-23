@@ -11,7 +11,8 @@ defmodule LangWeb.Plugs.AuthAndRateLimit do
   import Phoenix.Controller, only: [json: 2]
 
   alias Lang.Accounts
-  alias Lang.Accounts.{User, APIUsage}
+  alias Lang.Accounts.User
+  alias Lang.APIUsage
   alias Lang.Security.RateLimiter
 
   @behaviour Plug

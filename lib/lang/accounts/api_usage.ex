@@ -241,18 +241,17 @@ defmodule Lang.Accounts.APIUsage do
     prepare(build(sort: [inserted_at: :desc]))
   end
 
-  # TODO: Re-enable after fixing define_for syntax
-  # code_interface do
-  #   define_for(Lang.Accounts)
-  #   define(:log_usage)
-  #   define(:usage_for_user)
-  #   define(:monthly_stats)
-  #   define(:operation_breakdown)
-  #   define(:format_breakdown)
-  #   define(:recent_usage)
-  #   define(:cleanup_old_usage, action: :destroy)
-  #   define(:read_all, action: :read)
-  # end
+  code_interface do
+    domain(Lang.Accounts)
+    define(:log_usage)
+    define(:usage_for_user, args: [:user_id, :month_year])
+    define(:monthly_stats, args: [:user_id, :month_year])
+    define(:operation_breakdown, args: [:user_id, :month_year])
+    define(:format_breakdown, args: [:user_id, :month_year])
+    define(:recent_usage, args: [:user_id, :limit])
+    define(:cleanup_old_usage, action: :destroy)
+    define(:read_all, action: :read)
+  end
 
   # Convenience functions for common queries
   def current_month_usage(user_id) do

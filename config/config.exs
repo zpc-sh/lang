@@ -12,7 +12,8 @@ import_config "billing.exs"
 
 config :lang,
   ecto_repos: [Lang.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  env: Mix.env()
 
 # Configures the endpoint
 config :lang, LangWeb.Endpoint,

@@ -1,13 +1,29 @@
-This is a web application written using the Phoenix web framework.
+This is **LANG Universal Text Intelligence Platform** - a sophisticated web application built with Phoenix, Ash Framework, and native Rust NIFs for high-performance text analysis.
+
+## LANG Architecture Overview
+
+- **Phoenix 1.8** web framework with LiveView for real-time UI
+- **Ash Framework 3.0** for sophisticated data modeling and APIs
+- **Native Rust NIFs** for performance-critical operations (60-100x faster than pure Elixir)
+- **Oban** for background job processing and orchestration
+- **Stripe** integration for SaaS billing
+- **PostgreSQL** with Ash.Postgres for data persistence
 
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
+- **Always** use native Rust NIFs for filesystem operations via `Lang.Native.FSScanner` instead of pure Elixir file operations
+- **Always** use Ash resources for data operations instead of raw Ecto queries
+- **Always** use Oban workers for long-running background tasks
 ### Phoenix v1.8 guidelines
 
-- **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
-- The `MyAppWeb.Layouts` module is aliased in the `my_app_web.ex` file, so you can use it without needing to alias it again
+- **Always** begin your LiveView templates with `<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>` which wraps all inner content
+- The `LangWeb.Layouts` module is aliased in the `lang_web.ex` file, so you can use it without needing to alias it again
+- **Authentication is required** - use the proper authentication pipelines:
+  - `:require_authenticated_user` for protected web routes
+  - `:require_authenticated_api` for protected API routes
+  - `:optional_auth` for public routes that benefit from user context
 - Anytime you run into errors with no `current_scope` assign:
   - You failed to follow the Authenticated Routes guidelines, or you failed to pass `current_scope` to `<Layouts.app>`
   - **Always** fix the `current_scope` error by moving your routes to the proper `live_session` and ensure you pass `current_scope` as needed
@@ -19,6 +35,38 @@ custom classes must fully style the input
 
 <!-- usage-rules-start -->
 <!-- phoenix:elixir-start -->
+## LANG-Specific Architecture Guidelines
+
+### Ash Framework Integration
+- **Always** use Ash resources for data operations: `User.read_all()`, `Organization.create(attrs)`, etc.
+- **Never** use raw Ecto queries - use Ash queries with proper filters: `Ash.Query.filter(active == true)`
+- **Always** load associations explicitly: `Ash.Query.load([:organization, :api_keys])`
+- Use Ash changesets for data validation: `User.changeset_for_create(attrs)`
+
+### Native Performance (Rust NIFs)
+- **Always** use `Lang.Native.FSScanner` for filesystem operations instead of `File` module
+- Use native NIFs for performance-critical text analysis: `Lang.Native.LangParser`, `Lang.Native.PerfEngine`
+- **Never** use pure Elixir for large file processing - delegate to Rust NIFs
+- Example: `Lang.Native.FSScanner.scan(path, max_depth: 10)` instead of `File.ls/1`
+
+### Background Jobs (Oban)
+- **Always** use Oban workers for long-running tasks: analysis, file processing, email sending
+- Use proper queues: `:analysis`, `:lsp`, `:metrics`, `:cleanup`, `:billing`
+- **Always** handle job failures gracefully with retry logic
+- Example: `Lang.Workers.FileSystemScanWorker.scan_async(path, session_id, project_id, user_id)`
+
+### Authentication & Authorization
+- **Always** use `AuthHelpers.current_user(conn)` to get the current user
+- **Always** check authentication with `AuthHelpers.authenticated?(conn)`
+- Use API key authentication for API routes: `AuthPlug` with `:api_key` strategy
+- **Always** load user organization: `AuthHelpers.current_org(conn)`
+
+### Billing & Subscriptions (Stripe)
+- **Always** use the billing configuration in `config/billing.exs` for plan definitions
+- Handle Stripe webhooks via `LangWeb.WebhooksController`
+- **Always** check user limits before processing: `Billing.can_make_request?(organization_id)`
+- Track usage events: `Events.track_event(%{event_type: "api_call_made", user_id: user.id})`
+
 ## Elixir guidelines
 
 - Elixir lists **do not support index based access via the access syntax**
@@ -297,5 +345,191 @@ And **never** do this:
 
 - You are FORBIDDEN from accessing the changeset in the template as it will cause errors
 - **Never** use `<.form let={f} ...>` in the template, instead **always use `<.form for={@form} ...>`**, then drive all form references from the form assign as in `@form[:field]`. The UI should **always** be driven by a `to_form/2` assigned in the LiveView module that is derived from a changeset
+
+### LANG-Specific LiveView Patterns
+- **Always** use streams for large collections: `stream(socket, :files, files)` with `phx-update="stream"`
+- For filesystem operations, use async tasks with native NIFs: `Lang.Native.FSScanner.scan_async/2`
+- **Always** subscribe to PubSub for real-time updates: `Phoenix.PubSub.subscribe(Lang.PubSub, "analysis:#{session_id}")`
+- Handle progress updates: `{:scan_progress, status, data} -> assign(socket, :scan_status, status)`
 <!-- phoenix:liveview-end -->
+
+## LANG Native Operations Guidelines
+
+### Filesystem Scanner (Rust NIF)
+```elixir
+# High-performance directory scanning
+{:ok, %{tree: tree, stats: stats}} = Lang.Native.FSScanner.scan(path, max_depth: 10)
+
+# Content search with regex
+{:ok, results} = Lang.Native.FSScanner.search(path, "TODO|FIXME", max_results: 100)
+
+# Semantic code search with tree-sitter
+{:ok, matches} = Lang.Native.FSScanner.search_code(path, "rust", "(function_item name: (identifier) @function)")
+```
+
+### Performance Engine
+```elixir
+# Use native text analysis for large documents
+{:ok, analysis} = Lang.Native.PerfEngine.analyze_text(content, format: :markdown)
+
+# Semantic diff for document comparison
+{:ok, diff} = Lang.Native.PerfEngine.semantic_diff(old_content, new_content, :elixir)
+```
+
+### Async Processing Patterns
+```elixir
+# Queue background analysis
+{:ok, job} = Lang.Workers.FileSystemScanWorker.scan_async(path, session_id, project_id, user_id)
+
+# Handle real-time updates in LiveView
+def handle_info({:scan_progress, status, data}, socket) do
+  {:noreply, assign(socket, scan_progress: {status, data})}
+end
+```
+
+### Error Handling for Native Operations
+- **Always** handle NIF timeouts: `{:error, :timeout}`
+- **Always** provide fallbacks for NIF failures
+- **Never** let NIF errors crash the entire application
+- Use `try/rescue` for NIF calls that might fail
+
+## LANG Quick Reference Patterns
+
+### Common Ash Resource Operations
+```elixir
+# Read operations
+{:ok, users} = User.read_all()
+{:ok, user} = User.by_id(user_id)
+{:ok, users} = User |> Ash.Query.filter(active == true) |> Ash.read()
+
+# Create operations
+{:ok, user} = User.create(%{name: "John", email: "john@example.com"})
+{:ok, org} = Organization.create(%{name: "ACME Corp", owner_id: user.id})
+
+# Update operations
+{:ok, updated_user} = User.update(user, %{name: "Jane"})
+
+# Load associations
+{:ok, user} = User.by_id(user_id) |> Ash.Query.load([:organization, :api_keys])
+```
+
+### Native Filesystem Operations
+```elixir
+# Fast directory scanning (60-100x faster than Elixir)
+{:ok, %{tree: tree, stats: stats}} = Lang.Native.FSScanner.scan(path)
+
+# Content search with ripgrep performance
+{:ok, results} = Lang.Native.FSScanner.search(path, "TODO|FIXME", max_results: 100)
+
+# Tree-sitter semantic code search
+{:ok, matches} = Lang.Native.FSScanner.search_code(path, "rust",
+  "(function_item name: (identifier) @function)")
+
+# File preview for UI
+{:ok, lines} = Lang.Native.FSScanner.preview("README.md", max_lines: 20)
+```
+
+### Oban Background Job Patterns
+```elixir
+# Queue filesystem analysis
+{:ok, job} = Lang.Workers.FileSystemScanWorker.scan_async(
+  path, session_id, project_id, user_id
+)
+
+# Queue with options
+%{path: path, max_depth: 10}
+|> Lang.Workers.FileSystemScanWorker.new(queue: :analysis, priority: 1)
+|> Oban.insert()
+
+# Handle job results in LiveView
+def handle_info({:scan_complete, results}, socket) do
+  {:noreply, assign(socket, results: results)}
+end
+```
+
+### Authentication Patterns
+```elixir
+# In controllers
+def show(conn, _params) do
+  user = LangWeb.AuthHelpers.current_user(conn)
+  org = LangWeb.AuthHelpers.current_org(conn)
+  
+  if LangWeb.AuthHelpers.authenticated?(conn) do
+    # Handle authenticated user
+  end
+end
+
+# In LiveViews (handled automatically by AuthOnMount)
+def mount(_params, _session, socket) do
+  case socket.assigns do
+    %{current_user: user, current_org: org} ->
+      {:ok, assign(socket, :welcome, "Hello #{user.name}!")}
+  end
+end
+```
+
+### Billing & Usage Tracking
+```elixir
+# Check if user can make request
+case Lang.Billing.can_make_request?(org.id) do
+  {:ok, :allowed} -> 
+    # Process request
+    Lang.Events.track_event(%{
+      event_type: "api_call_made",
+      user_id: user.id,
+      organization_id: org.id
+    })
+  {:error, :limit_exceeded} -> 
+    # Handle limit exceeded
+end
+
+# Get usage statistics
+stats = Lang.Billing.get_current_usage(org.id)
+```
+
+### LiveView Real-time Updates
+```elixir
+# Subscribe to analysis updates
+def mount(_params, _session, %{assigns: %{session_id: session_id}} = socket) do
+  Phoenix.PubSub.subscribe(Lang.PubSub, "analysis:#{session_id}")
+  {:ok, socket}
+end
+
+# Handle progress updates
+def handle_info({:scan_progress, :started, data}, socket) do
+  {:noreply, assign(socket, status: :scanning, progress: 0)}
+end
+
+def handle_info({:scan_progress, :completed, data}, socket) do
+  {:noreply, assign(socket, status: :complete, results: data.results)}
+end
+```
+
+### Error Handling Best Practices
+```elixir
+# For native operations
+case Lang.Native.FSScanner.scan(path) do
+  {:ok, result} -> 
+    # Success path
+  {:error, :timeout} -> 
+    # Handle timeout gracefully
+  {:error, :path_not_found} -> 
+    # Handle missing path
+  {:error, reason} ->
+ 
+    # Log and handle other errors
+    Logger.error("Scan failed: #{inspect(reason)}")
+end
+
+# For Ash operations
+case User.create(attrs) do
+  {:ok, user} -> 
+    # Success
+  {:error, %Ash.Error.Invalid{errors: errors}} -> 
+    # Handle validation errors
+  {:error, reason} -> 
+    # Handle other errors
+end
+```
+
 <!-- usage-rules-end -->

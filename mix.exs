@@ -124,7 +124,10 @@ defmodule Lang.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:tidewave, "~> 0.4", only: [:dev, :test]},
       {:jsonld_ex, "~> 0.1.1"},
-      {:markdown_ld, "~> 0.3"}
+      {:markdown_ld, "~> 0.3"},
+
+      # Performance profiling and optimization
+      {:ash_profiler, "~> 0.1.0", only: [:dev, :test]}
     ]
   end
 
@@ -145,6 +148,10 @@ defmodule Lang.MixProject do
       ],
       tree_parser: [
         path: "native/tree_parser",
+        mode: rustler_mode(Mix.env())
+      ],
+      fs_scanner: [
+        path: "native/fs_scanner",
         mode: rustler_mode(Mix.env())
       ]
     ]
