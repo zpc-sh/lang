@@ -4,6 +4,7 @@ defmodule LangWeb.Layouts do
   used by your application.
   """
   use LangWeb, :html
+  import LangWeb.Components.Footer
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
@@ -26,6 +27,7 @@ defmodule LangWeb.Layouts do
 
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
+  attr :current_user, :map, default: nil, doc: "the current authenticated user"
 
   attr :current_scope, :map,
     default: nil,
@@ -41,22 +43,38 @@ defmodule LangWeb.Layouts do
         <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <div class="flex items-center justify-between h-16">
             <!-- Logo -->
-            <div class="flex items-center space-x-3">
-              <a href="/" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <svg
-                  class="w-8 h-8 text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+            <div class="flex items-center">
+              <a href="/" class="flex items-center gap-3">
+                <svg class="w-8 h-8" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="navLogo" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
                   <path
+                    d="M 35 35 L 25 60 L 35 85"
+                    stroke="url(#navLogo)"
+                    stroke-width="3"
+                    fill="none"
                     stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  >
-                  </path>
+                  />
+                  <path
+                    d="M 40 60 Q 50 52, 60 60 T 80 60"
+                    stroke="url(#navLogo)"
+                    stroke-width="2.5"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M 85 35 L 95 60 L 85 85"
+                    stroke="url(#navLogo)"
+                    stroke-width="3"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
                 </svg>
+                <span class="text-xl font-light text-white">LANG</span>
               </a>
             </div>
             
@@ -80,12 +98,44 @@ defmodule LangWeb.Layouts do
               >
                 Pricing
               </a>
-              <a
-                href="/analyze"
-                class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5"
-              >
-                Try Free
-              </a>
+
+              <%= if @current_user do %>
+                <!-- Authenticated user menu -->
+                <div class="flex items-center space-x-4">
+                  <a
+                    href="/dashboard"
+                    class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
+                  >
+                    Dashboard
+                  </a>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-400">Hello, {@current_user.name}</span>
+                    <a
+                      href="/auth/sign-out"
+                      data-method="delete"
+                      class="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Sign Out
+                    </a>
+                  </div>
+                </div>
+              <% else %>
+                <!-- Guest user menu -->
+                <div class="flex items-center space-x-4">
+                  <a
+                    href="/auth"
+                    class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
+                  >
+                    Sign In
+                  </a>
+                  <a
+                    href="/analyze"
+                    class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5"
+                  >
+                    Try Free
+                  </a>
+                </div>
+              <% end %>
             </div>
           </div>
         </div>
@@ -96,6 +146,9 @@ defmodule LangWeb.Layouts do
         <.flash_group flash={@flash} />
         {render_slot(@inner_block)}
       </div>
+      
+    <!-- Footer -->
+      <.footer />
     </div>
     """
   end

@@ -3,9 +3,12 @@ defmodule LangWeb.LandingLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    billing_config = Application.get_env(:lang, :billing)
+    plans = billing_config[:plans]
+
     if connected?(socket) do
       :timer.send_interval(3000, self(), :cycle_use_case)
-      :timer.send_interval(100, self(), :update_stats)
+      :timer.send_interval(50, self(), :update_stats)
     end
 
     {:ok,
@@ -24,14 +27,46 @@ defmodule LangWeb.LandingLive do
          accuracy_rate: 99.2
        },
        animated_stats: %{
-         files_processed: 0,
-         insights_generated: 0,
-         time_saved: 0
+         files_processed: 230,
+         insights_generated: 1750,
+         time_saved: 85
        },
        live_demo_output: nil,
        demo_text: "",
-       testimonials: generate_testimonials()
+       testimonials: generate_testimonials(),
+       pricing_tab: "individual",
+       example_index: 0,
+       plans: plans,
+       examples: generate_examples(),
+       show_mobile_menu: false,
+       current_user: nil,
+       current_scope: nil
      )}
+  end
+
+  defp generate_examples do
+    [
+      %{
+        title: "Technical Documentation Analysis",
+        type: :api_docs
+      },
+      %{
+        title: "Network Traffic Analysis",
+        type: :network
+      },
+      %{
+        title: "FileSystem Analysis",
+        type: :filesystem
+      },
+      %{
+        title: "Production Log Analysis",
+        type: :logs
+      },
+      %{
+        title: "Database Schema Analysis",
+        type: :database
+      }
+    ]
   end
 
   @impl true
@@ -60,6 +95,36 @@ defmodule LangWeb.LandingLive do
   @impl true
   def handle_event("clear_demo", _params, socket) do
     {:noreply, assign(socket, live_demo_output: nil, demo_text: "")}
+  end
+
+  @impl true
+  def handle_event("toggle_mobile_menu", _params, socket) do
+    {:noreply, assign(socket, show_mobile_menu: !socket.assigns.show_mobile_menu)}
+  end
+
+  @impl true
+  def handle_event("next_example", _params, socket) do
+    current = socket.assigns.example_index
+    # 5 examples total
+    next_index = rem(current + 1, 5)
+    {:noreply, assign(socket, example_index: next_index)}
+  end
+
+  @impl true
+  def handle_event("prev_example", _params, socket) do
+    current = socket.assigns.example_index
+    prev_index = if current == 0, do: 4, else: current - 1
+    {:noreply, assign(socket, example_index: prev_index)}
+  end
+
+  @impl true
+  def handle_event("set_example", %{"index" => index}, socket) do
+    {:noreply, assign(socket, example_index: String.to_integer(index))}
+  end
+
+  @impl true
+  def handle_event("set_pricing_tab", %{"tab" => tab}, socket) do
+    {:noreply, assign(socket, pricing_tab: tab)}
   end
 
   @impl true
@@ -118,6 +183,11 @@ defmodule LangWeb.LandingLive do
   defp increment_stat(current, target) when current < target do
     step = max(1, div(target - current, 20))
     min(current + step, target)
+  end
+
+  defp increment_stat(current, target) when current > target do
+    # If we somehow go over, gradually decrease
+    max(current - 1, target)
   end
 
   defp increment_stat(current, _target), do: current

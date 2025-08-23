@@ -114,6 +114,7 @@ defmodule Lang.Accounts.User do
 
     create :create do
       primary?(true)
+      accept([:email, :name, :subscription_tier, :organization_id])
 
       argument :password, :string do
         sensitive?(true)
@@ -123,15 +124,11 @@ defmodule Lang.Accounts.User do
         sensitive?(true)
       end
 
-      argument(:organization_name, :string)
-      argument(:organization_slug, :string)
-
       validate(confirm(:password, :password_confirmation))
-      validate(present([:email, :name, :password, :organization_name]))
+      validate(present([:email, :name, :password]))
 
       # Hash password change required by AshAuthentication
       change(AshAuthentication.Strategy.Password.HashPasswordChange)
-      change(AshAuthentication.GenerateTokenChange)
 
       # Set monthly limits based on subscription tier
       change(fn changeset, _context ->
@@ -143,6 +140,8 @@ defmodule Lang.Accounts.User do
     end
 
     create :register_with_password do
+      accept([:email, :name, :subscription_tier])
+
       argument :password, :string do
         sensitive?(true)
       end
@@ -161,18 +160,15 @@ defmodule Lang.Accounts.User do
       change(AshAuthentication.Strategy.Password.HashPasswordChange)
       change(AshAuthentication.GenerateTokenChange)
 
-      change(fn changeset, context ->
+      change(fn changeset, _context ->
         org_name = Ash.Changeset.get_argument(changeset, :organization_name)
         org_slug = Ash.Changeset.get_argument(changeset, :organization_slug)
 
         # Create organization first
-        case Lang.Accounts.Organization.create(
-               %{
-                 name: org_name,
-                 slug: org_slug || String.downcase(String.replace(org_name, " ", "-"))
-               },
-               context
-             ) do
+        case Lang.Accounts.Organization.create(%{
+               name: org_name,
+               slug: org_slug || String.downcase(String.replace(org_name, " ", "-"))
+             }) do
           {:ok, organization} ->
             changeset
             |> Ash.Changeset.change_attribute(:organization_id, organization.id)
@@ -185,7 +181,7 @@ defmodule Lang.Accounts.User do
         end
       end)
 
-      # Set monthly limits and create initial API key
+      # Set monthly limits
       change(fn changeset, _context ->
         tier = Ash.Changeset.get_attribute(changeset, :subscription_tier) || :free
         limit = Lang.Billing.Config.plan_request_limit(tier)
@@ -196,6 +192,19 @@ defmodule Lang.Accounts.User do
 
     update :update do
       primary?(true)
+    end
+
+    update :update_profile do
+      accept([:name, :email])
+
+      validate(present([:name, :email]))
+
+      validate match(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/) do
+        message("must be a valid email address")
+      end
+
+      validate(string_length(:name, min: 1, max: 100))
+      validate(string_length(:email, min: 3, max: 160))
     end
 
     update :confirm_email do
@@ -297,6 +306,7 @@ defmodule Lang.Accounts.User do
     define(:update)
     define(:confirm_email)
     define(:change_password)
+    define(:update_profile)
     define(:upgrade_subscription)
     define(:increment_request_count)
     define(:reset_monthly_usage)
@@ -353,5 +363,24 @@ defmodule Lang.Accounts.User do
   """
   def changeset_for_create(attrs \\ %{}) do
     Ash.Changeset.for_create(__MODULE__, :create, attrs)
+  end
+
+  @doc """
+  Authenticates a user and returns a proper session token.
+  """
+  def sign_in_with_token(email, password) do
+    case AshAuthentication.authenticate(__MODULE__, :password, %{
+           "email" => email,
+           "password" => password
+         }) do
+      {:ok, user} ->
+        case AshAuthentication.Plug.Helpers.store_in_session(user) do
+          {:ok, token} -> {:ok, user, token}
+          {:error, error} -> {:error, error}
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 end

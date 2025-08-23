@@ -128,7 +128,7 @@ defmodule Lang.Security.Secrets do
   def cors_config do
     allowed_origins =
       case get_env("CORS_ALLOWED_ORIGINS") do
-        nil -> ["http://localhost:3000", "http://localhost:4000"]
+        nil -> ["http://localhost:3000", "https://lang.nocsi.com"]
         origins -> String.split(origins, ",") |> Enum.map(&String.trim/1)
       end
 

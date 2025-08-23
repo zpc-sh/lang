@@ -1,9 +1,96 @@
 <div align="center">
-  <img src="priv/static/images/lang_logo.svg" alt="LANG Logo" width="600">
+  <img src="../../../priv/static/images/lang_logo.svg" alt="LANG Logo" width="600">
   <h1>LANG Production Deployment Guide 🚀</h1>
 </div>
 
 Complete guide for deploying LANG Universal Text Intelligence Platform to production using Fly.io, with Stripe billing, Rust NIFs, and comprehensive monitoring.
+
+## 🚀 Quick Deploy (15 minutes)
+
+### Step 1: Prerequisites Checklist
+
+- [ ] [Fly.io account](https://fly.io/app/sign-up) (free)
+- [ ] [Neon](https://neon.tech) or [Supabase](https://supabase.com) database (free tier)
+- [ ] [Stripe account](https://stripe.com) for billing
+- [ ] Domain ready (e.g., `lang.nocsi.com`)
+
+### Step 2: Environment Setup (3 minutes)
+```bash
+# 1. Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+fly auth login
+
+# 2. Copy environment template
+cp .env.production.template .env.production
+
+# 3. Set required variables in .env.production
+DATABASE_URL="postgresql://user:pass@hostname:5432/database"
+SECRET_KEY_BASE="$(mix phx.gen.secret)"
+PHX_HOST="lang.nocsi.com"
+STRIPE_SECRET_KEY="sk_live_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+
+### Step 3: Deploy (10 minutes)
+```bash
+# Load environment and deploy
+source .env.production
+make deploy-initial
+```
+
+### Step 4: Verify (2 minutes)
+```bash
+# Check health
+curl https://lang.nocsi.com/health
+
+# Run full verification
+./scripts/verify_deployment.sh
+```
+
+**⚡ One-liner deployment:**
+```bash
+cp .env.production.template .env.production && \
+nano .env.production && \
+source .env.production && \
+make deploy-initial
+```
+
+### What Gets Deployed
+
+Your deployment includes:
+
+✅ **Elixir/Phoenix** application with LiveView  
+✅ **4 Rust NIFs** for high-performance text processing  
+✅ **Ash Framework** for sophisticated data management  
+✅ **Stripe billing** with Pro ($29) and Enterprise ($99) plans  
+✅ **Oban job processing** for background tasks  
+✅ **File uploads** with persistent storage  
+✅ **Health monitoring** with comprehensive checks  
+✅ **Auto-scaling** and cost optimization  
+
+### Success URLs
+
+After deployment, your platform will be live at:
+
+- **Main App**: https://lang.nocsi.com
+- **Health Check**: https://lang.nocsi.com/health
+- **API Portal**: https://lang.nocsi.com/api-portal  
+- **Stripe Webhooks**: https://lang.nocsi.com/webhooks/stripe
+
+### Cost Breakdown
+
+```
+Fly.io VM (1GB):        $5.70/month
+Fly.io Volume (1GB):    $0.15/month  
+Neon Database (free):   $0.00/month
+Cloudflare DNS:         $0.00/month
+-------------------------
+Total: ~$6/month + Stripe fees (2.9% + $0.30)
+```
+
+**Revenue Example:** 100 customers × $29 = $2,807/month profit
+
+---
 
 ## 📋 Overview
 

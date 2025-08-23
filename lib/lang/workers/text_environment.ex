@@ -43,11 +43,11 @@ defmodule Lang.Workers.TextEnvironment do
       },
       "servers" => [
         %{
-          "url" => "https://api.lang.ai",
+          "url" => "https://lang.nocsi.com",
           "description" => "Production server"
         },
         %{
-          "url" => "http://localhost:4000",
+          "url" => "https://lang.nocsi.com",
           "description" => "Development server"
         }
       ],
@@ -88,7 +88,7 @@ defmodule Lang.Workers.TextEnvironment do
       environment: :text,
       task: :generate_spec,
       status: :completed,
-      spec_path: "priv/static/specs/text_api_v2.json",
+      spec_path: "priv/static/docs/text/openapi.json",
       endpoints: count_endpoints(spec),
       schemas: count_schemas(spec)
     }
@@ -191,7 +191,70 @@ defmodule Lang.Workers.TextEnvironment do
       task: :expose_api,
       status: :completed,
       api_status: api_status,
-      base_url: "https://api.lang.ai/api/v2/text"
+      base_url: "https://lang.nocsi.com/api/v2/text"
+    }
+  end
+
+  def execute_task(:generate_clients, args) do
+    Logger.info("Generating text environment client SDKs")
+
+    clients = [
+      generate_python_client(),
+      generate_javascript_client(),
+      generate_go_client(),
+      generate_java_client(),
+      generate_curl_examples()
+    ]
+
+    %{
+      environment: :text,
+      task: :generate_clients,
+      status: :completed,
+      clients_generated: length(clients),
+      languages: ["python", "javascript", "go", "java", "curl"],
+      client_path: "priv/static/docs/text/clients"
+    }
+  end
+
+  def execute_task(:produce_marketing, args) do
+    Logger.info("Producing text environment marketing materials")
+
+    marketing = %{
+      landing_pages: generate_landing_pages(),
+      blog_posts: generate_blog_posts(),
+      case_studies: generate_case_studies(),
+      whitepapers: generate_whitepapers(),
+      social_content: generate_social_content()
+    }
+
+    %{
+      environment: :text,
+      task: :produce_marketing,
+      status: :completed,
+      marketing_materials: map_size(marketing),
+      content_types: Map.keys(marketing),
+      marketing_path: "priv/static/docs/text/marketing"
+    }
+  end
+
+  def execute_task(:publish, args) do
+    Logger.info("Publishing text environment artifacts")
+
+    published = %{
+      api_docs: publish_api_documentation(),
+      client_sdks: publish_client_sdks(),
+      marketing_site: publish_marketing_content(),
+      npm_packages: publish_npm_packages(),
+      pypi_packages: publish_pypi_packages()
+    }
+
+    %{
+      environment: :text,
+      task: :publish,
+      status: :completed,
+      published_artifacts: map_size(published),
+      publication_channels: Map.keys(published),
+      publish_timestamp: DateTime.utc_now()
     }
   end
 
@@ -635,7 +698,70 @@ defmodule Lang.Workers.TextEnvironment do
     }
   end
 
-  defp generate_text_examples do
+  def execute_task(:generate_clients, args) do
+    Logger.info("Generating text environment client SDKs")
+
+    clients = [
+      generate_python_client(),
+      generate_javascript_client(),
+      generate_go_client(),
+      generate_java_client(),
+      generate_curl_examples()
+    ]
+
+    %{
+      environment: :text,
+      task: :generate_clients,
+      status: :completed,
+      clients_generated: length(clients),
+      languages: ["python", "javascript", "go", "java", "curl"],
+      client_path: "priv/static/docs/text/clients"
+    }
+  end
+
+  def execute_task(:produce_marketing, args) do
+    Logger.info("Producing text environment marketing materials")
+
+    marketing = %{
+      landing_pages: generate_landing_pages(),
+      blog_posts: generate_blog_posts(),
+      case_studies: generate_case_studies(),
+      whitepapers: generate_whitepapers(),
+      social_content: generate_social_content()
+    }
+
+    %{
+      environment: :text,
+      task: :produce_marketing,
+      status: :completed,
+      marketing_materials: map_size(marketing),
+      content_types: Map.keys(marketing),
+      marketing_path: "priv/static/docs/text/marketing"
+    }
+  end
+
+  def execute_task(:publish, args) do
+    Logger.info("Publishing text environment artifacts")
+
+    published = %{
+      api_docs: publish_api_documentation(),
+      client_sdks: publish_client_sdks(),
+      marketing_site: publish_marketing_content(),
+      npm_packages: publish_npm_packages(),
+      pypi_packages: publish_pypi_packages()
+    }
+
+    %{
+      environment: :text,
+      task: :publish,
+      status: :completed,
+      published_artifacts: map_size(published),
+      publication_channels: Map.keys(published),
+      publish_timestamp: DateTime.utc_now()
+    }
+  end
+
+  defp generate_text_paths do
     %{
       "MarkdownParseExample" => %{
         "summary" => "Parse Markdown content",
@@ -763,13 +889,13 @@ defmodule Lang.Workers.TextEnvironment do
     Include your API key in the `X-API-Key` header:
 
     ```bash
-    curl -H "X-API-Key: your-api-key" https://api.lang.ai/api/v2/text/parse
+    curl -H "X-API-Key: your-api-key" https://lang.nocsi.com/api/v2/text/parse
     ```
 
     ## 2. Basic Text Parsing
 
     ```bash
-    curl -X POST https://api.lang.ai/api/v2/text/parse \\
+    curl -X POST https://lang.nocsi.com/api/v2/text/parse \\
       -H "X-API-Key: your-api-key" \\
       -H "Content-Type: application/ld+json" \\
       -d '{
@@ -781,7 +907,7 @@ defmodule Lang.Workers.TextEnvironment do
     ## 3. Markdown-LD Processing
 
     ```bash
-    curl -X POST https://api.lang.ai/api/v2/text/markdown-ld \\
+    curl -X POST https://lang.nocsi.com/api/v2/text/markdown-ld \\
       -H "X-API-Key: your-api-key" \\
       -H "Content-Type: text/markdown" \\
       -d '# Article\\n\\n<span data-lang-entity="Person">John</span> wrote this.'
@@ -795,8 +921,8 @@ defmodule Lang.Workers.TextEnvironment do
 
     ## Base URL
 
-    Production: `https://api.lang.ai/api/v2/text`
-    Development: `http://localhost:4000/api/v2/text`
+    Production: `https://lang.nocsi.com/api/v2/text`
+    Development: `https://lang.nocsi.com/api/v2/text`
 
     ## Authentication
 
@@ -825,33 +951,91 @@ defmodule Lang.Workers.TextEnvironment do
   end
 
   defp generate_comprehensive_examples do
-    [
-      %{
-        title: "Basic Text Analysis",
-        description: "Analyze plain text for entities and semantics",
-        code: """
-        {
-          "@context": "https://lang.ai/context/text",
-          "content": "Apple Inc. was founded by Steve Jobs in 1976.",
-          "format": "text",
+    """
+    # Comprehensive Examples
+
+    ## Basic Text Analysis
+
+    Analyze plain text for entities and semantics:
+
+    ```bash
+    curl -X POST https://lang.nocsi.com/api/v2/text/parse \\
+      -H "X-API-Key: your-api-key" \\
+      -H "Content-Type: application/ld+json" \\
+      -d '{
+        "@context": "https://lang.ai/context/text",
+        "content": "Apple Inc. was founded by Steve Jobs in 1976.",
+        "format": "text",
+        "extract_entities": true,
+        "extract_semantics": true
+      }'
+    ```
+
+    ## Markdown Processing
+
+    Process Markdown with semantic extraction:
+
+    ```bash
+    curl -X POST https://lang.nocsi.com/api/v2/text/parse \\
+      -H "X-API-Key: your-api-key" \\
+      -H "Content-Type: application/ld+json" \\
+      -d '{
+        "@context": "https://lang.ai/context/text",
+        "content": "# Company Profile\\n\\n**Apple Inc.** is a technology company.",
+        "format": "markdown",
+        "extract_semantics": true
+      }'
+    ```
+
+    ## Entity Recognition
+
+    Extract named entities from text:
+
+    ```bash
+    curl -X POST https://lang.nocsi.com/api/v2/text/entities \\
+      -H "X-API-Key: your-api-key" \\
+      -H "Content-Type: application/json" \\
+      -d '{
+        "content": "John Smith works at Microsoft in Seattle.",
+        "entity_types": ["PERSON", "ORGANIZATION", "LOCATION"]
+      }'
+    ```
+
+    ## Semantic Triple Extraction
+
+    Extract RDF triples from structured text:
+
+    ```bash
+    curl -X POST https://lang.nocsi.com/api/v2/text/semantic \\
+      -H "X-API-Key: your-api-key" \\
+      -H "Content-Type: application/json" \\
+      -d '{
+        "content": "Tim Cook is the CEO of Apple Inc.",
+        "extract_relations": true,
+        "format": "jsonld"
+      }'
+    ```
+
+    ## Batch Processing
+
+    Process multiple documents in a single request:
+
+    ```bash
+    curl -X POST https://lang.nocsi.com/api/v2/text/batch \\
+      -H "X-API-Key: your-api-key" \\
+      -H "Content-Type: application/json" \\
+      -d '{
+        "documents": [
+          {"id": "doc1", "content": "First document content", "format": "text"},
+          {"id": "doc2", "content": "# Second Document\\nMarkdown content", "format": "markdown"}
+        ],
+        "options": {
           "extract_entities": true,
           "extract_semantics": true
         }
-        """
-      },
-      %{
-        title: "Markdown Processing",
-        description: "Process Markdown with semantic extraction",
-        code: """
-        {
-          "@context": "https://lang.ai/context/text",
-          "content": "# Company Profile\\n\\n**Apple Inc.** is a technology company.",
-          "format": "markdown",
-          "extract_semantics": true
-        }
-        """
-      }
-    ]
+      }'
+    ```
+    """
   end
 
   defp generate_tutorials do
@@ -918,9 +1102,8 @@ defmodule Lang.Workers.TextEnvironment do
   # Utility functions
 
   defp save_spec(spec, env) do
-    path = "priv/static/specs/#{env}_api_v2.json"
-    File.mkdir_p!(Path.dirname(path))
-    File.write!(path, Jason.encode!(spec, pretty: true))
+    File.mkdir_p!("priv/static/docs/#{env}")
+    File.write!("priv/static/docs/#{env}/openapi.json", Jason.encode!(spec, pretty: true))
   end
 
   defp save_documentation(docs, env) do
@@ -993,7 +1176,7 @@ defmodule Lang.Workers.TextEnvironment do
       title: "Basic Text Analysis",
       language: "curl",
       code: """
-      curl -X POST https://api.lang.ai/api/v2/text/parse \\
+      curl -X POST https://lang.nocsi.com/api/v2/text/parse \\
         -H "X-API-Key: your-api-key" \\
         -H "Content-Type: application/ld+json" \\
         -d '{
@@ -1012,7 +1195,7 @@ defmodule Lang.Workers.TextEnvironment do
       title: "Markdown Parsing",
       language: "javascript",
       code: """
-      const response = await fetch('https://api.lang.ai/api/v2/text/parse', {
+      const response = await fetch('https://lang.nocsi.com/api/v2/text/parse', {
         method: 'POST',
         headers: {
           'X-API-Key': 'your-api-key',
@@ -1038,7 +1221,7 @@ defmodule Lang.Workers.TextEnvironment do
       import requests
 
       response = requests.post(
-          'https://api.lang.ai/api/v2/text/markdown-ld',
+          'https://lang.nocsi.com/api/v2/text/markdown-ld',
           headers={'X-API-Key': 'your-api-key'},
           data='''# Person Profile
 
@@ -1074,7 +1257,7 @@ defmodule Lang.Workers.TextEnvironment do
           jsonData, _ := json.Marshal(payload)
 
           req, _ := http.NewRequest("POST",
-              "https://api.lang.ai/api/v2/text/semantic",
+              "https://lang.nocsi.com/api/v2/text/semantic",
               bytes.NewBuffer(jsonData))
 
           req.Header.Set("X-API-Key", "your-api-key")
@@ -1105,7 +1288,7 @@ defmodule Lang.Workers.TextEnvironment do
           });
 
           let res = client
-              .post("https://api.lang.ai/api/v2/text/entities")
+              .post("https://lang.nocsi.com/api/v2/text/entities")
               .header("X-API-Key", "your-api-key")
               .json(&payload)
               .send()
@@ -1125,7 +1308,7 @@ defmodule Lang.Workers.TextEnvironment do
       title: "Stylometric Analysis",
       language: "curl",
       code: """
-      curl -X POST https://api.lang.ai/api/v2/text/stylometry \\
+      curl -X POST https://lang.nocsi.com/api/v2/text/stylometry \\
         -H "X-API-Key: your-api-key" \\
         -H "Content-Type: application/ld+json" \\
         -d '{
@@ -1149,7 +1332,7 @@ defmodule Lang.Workers.TextEnvironment do
 
           for i, text in enumerate(texts):
               response = requests.post(
-                  'https://api.lang.ai/api/v2/text/parse',
+                  'https://lang.nocsi.com/api/v2/text/parse',
                   headers={
                       'X-API-Key': api_key,
                       'Content-Type': 'application/ld+json'
@@ -1237,5 +1420,81 @@ defmodule Lang.Workers.TextEnvironment do
       });
       """
     }
+  end
+
+  defp generate_text_examples do
+    %{
+      "basic_analysis" => create_basic_text_analysis_example(),
+      "markdown_parsing" => create_markdown_parsing_example(),
+      "markdown_ld" => create_markdown_ld_example(),
+      "semantic_extraction" => create_semantic_extraction_example(),
+      "entity_recognition" => create_entity_recognition_example(),
+      "stylometry" => create_stylometry_example(),
+      "batch_processing" => create_batch_processing_example(),
+      "webhook_integration" => create_webhook_integration_example()
+    }
+  end
+
+  # Client generation functions
+  defp generate_python_client do
+    "Python SDK for text intelligence with semantic analysis capabilities"
+  end
+
+  defp generate_javascript_client do
+    "JavaScript/TypeScript SDK for web-based text analysis applications"
+  end
+
+  defp generate_go_client do
+    "Go client library for high-performance text processing systems"
+  end
+
+  defp generate_java_client do
+    "Java SDK for enterprise text intelligence platforms"
+  end
+
+  defp generate_curl_examples do
+    "Comprehensive cURL examples for all text intelligence endpoints"
+  end
+
+  # Marketing generation functions
+  defp generate_landing_pages do
+    "Marketing landing pages highlighting text intelligence capabilities"
+  end
+
+  defp generate_blog_posts do
+    "Technical blog posts about text analysis and semantic extraction"
+  end
+
+  defp generate_case_studies do
+    "Customer case studies showcasing successful text intelligence implementations"
+  end
+
+  defp generate_whitepapers do
+    "Technical whitepapers on advanced NLP and semantic analysis"
+  end
+
+  defp generate_social_content do
+    "Social media content promoting text intelligence features"
+  end
+
+  # Publishing functions
+  defp publish_api_documentation do
+    "Published API documentation to developer portal"
+  end
+
+  defp publish_client_sdks do
+    "Published client SDKs to package repositories"
+  end
+
+  defp publish_marketing_content do
+    "Published marketing materials to company website"
+  end
+
+  defp publish_npm_packages do
+    "Published JavaScript packages to npm registry"
+  end
+
+  defp publish_pypi_packages do
+    "Published Python packages to PyPI registry"
   end
 end

@@ -37,6 +37,18 @@ LANG extends Language Server Protocol (LSP) and Tree-sitter parsing beyond code 
 - **Cross-Format Support** - Seamless experience across all supported formats
 - **Extensible Architecture** - Easy to add new formats and capabilities
 
+## 📚 Documentation
+
+Complete documentation is available in the [`priv/docs/`](priv/docs/) directory:
+
+- **[Getting Started Guide](priv/docs/guides/getting-started.md)** - Quick setup and first steps
+- **[Deployment Guide](priv/docs/guides/deployment.md)** - Production deployment with Fly.io
+- **[FAQ](priv/docs/guides/faq.md)** - Frequently asked questions
+- **[API Documentation](priv/docs/api/index.md)** - Complete API reference
+- **[Architecture](priv/docs/architecture/index.md)** - System architecture and components
+- **[Tutorials](priv/docs/tutorials/index.md)** - Step-by-step tutorials
+- **[Performance Guide](priv/docs/performance/optimization-guide.md)** - Optimization tips
+
 ## 🛠️ Quick Start
 
 ### Prerequisites
@@ -59,7 +71,7 @@ mix setup
 mix phx.server
 ```
 
-Visit `http://localhost:4000` to access the web interface.
+Visit `https://lang.nocsi.com` to access the web interface.
 
 ### LSP Server
 
@@ -86,7 +98,7 @@ require'lspconfig'.lang.setup{
 
 ```bash
 # Analyze a markdown document
-curl -X POST http://localhost:4000/api/analyze \
+curl -X POST https://lang.nocsi.com/api/analyze \
   -H "Content-Type: application/json" \
   -d '{
     "content": "# Project Overview\n\nThis document outlines...",
@@ -123,7 +135,7 @@ Response:
 
 ```bash
 # Start a job interview rehearsal
-curl -X POST http://localhost:4000/api/conversation/start \
+curl -X POST https://lang.nocsi.com/api/conversation/start \
   -H "Content-Type: application/json" \
   -d '{
     "scenario": "job_interview",
@@ -131,7 +143,7 @@ curl -X POST http://localhost:4000/api/conversation/start \
   }'
 
 # Add a conversation turn
-curl -X POST http://localhost:4000/api/conversation/{session_id}/turn \
+curl -X POST https://lang.nocsi.com/api/conversation/{session_id}/turn \
   -H "Content-Type: application/json" \
   -d '{
     "speaker": "interviewer",
@@ -296,14 +308,15 @@ Editor/Client → LSP Server → Analysis Engine → Parser Registry
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Run the test suite: `mix precommit`
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
+Please read our [Contributing Guide](CONTRIBUTING.md) for development guidelines and project architecture information.
 
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+Make sure to run `mix precommit` before submitting your PR to ensure all tests pass and code is properly formatted.
 ### Development Setup
 
 ```bash

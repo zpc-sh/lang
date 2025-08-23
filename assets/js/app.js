@@ -78,6 +78,107 @@ const langHooks = {
       
       type();
     }
+  },
+  
+  RotatingText: {
+    mounted() {
+      const words = [
+        'Text',
+        'Document',
+        'Contract',
+        'Code',
+        'Email',
+        'Recipe',
+        'Medical',
+        'Legal',
+        'Network',
+        'FileSystem',
+        'API',
+        'Database',
+        'Markdown',
+        'JSON',
+        'YAML',
+        'Config',
+        'Log',
+        'Chat',
+        'Report',
+        'Knowledge'
+      ];
+      
+      let currentIndex = 0;
+      const element = this.el;
+      
+      // Create wrapper for smooth transitions
+      const wrapper = document.createElement('span');
+      wrapper.className = 'rotating-text-wrapper';
+      wrapper.style.position = 'relative';
+      wrapper.style.display = 'inline-block';
+      wrapper.textContent = words[0];
+      
+      element.textContent = '';
+      element.appendChild(wrapper);
+      
+      setInterval(() => {
+        // Fade out
+        wrapper.style.opacity = '0';
+        wrapper.style.transform = 'translateY(-20px)';
+        wrapper.style.transition = 'all 0.5s ease-out';
+        
+        setTimeout(() => {
+          currentIndex = (currentIndex + 1) % words.length;
+          wrapper.textContent = words[currentIndex];
+          
+          // Reset position below
+          wrapper.style.transition = 'none';
+          wrapper.style.transform = 'translateY(20px)';
+          
+          // Force reflow
+          wrapper.offsetHeight;
+          
+          // Fade in
+          wrapper.style.transition = 'all 0.5s ease-out';
+          wrapper.style.opacity = '1';
+          wrapper.style.transform = 'translateY(0)';
+        }, 500);
+      }, 3000);
+    }
+  },
+
+  ClipboardHook: {
+    mounted() {
+      this.handleEvent("copy-to-clipboard", ({text}) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(() => {
+            console.log("Text copied to clipboard");
+          }).catch(err => {
+            console.error("Failed to copy text: ", err);
+            this.fallbackCopy(text);
+          });
+        } else {
+          this.fallbackCopy(text);
+        }
+      });
+    },
+
+    fallbackCopy(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        console.log("Text copied using fallback method");
+      } catch (err) {
+        console.error("Fallback copy failed: ", err);
+      }
+
+      textArea.remove();
+    }
   }
 };
 

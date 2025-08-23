@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <meta name="stripe-publishable-key" content={System.get_env("STRIPE_PUBLISHABLE_KEY", "pk_test_placeholder")} />
+    <meta
+      name="stripe-publishable-key"
+      content={System.get_env("STRIPE_PUBLISHABLE_KEY", "pk_test_placeholder")}
+    />
     <.live_title default="Lang" suffix=" · Phoenix Framework">
       {assigns[:page_title]}
     </.live_title>
@@ -52,22 +55,43 @@
       <div class="flex-none">
         <ul class="flex flex-column px-1 space-x-4 items-center">
           <li>
-            <a href="#features" class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium">Features</a>
+            <a
+              href="#features"
+              class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+            >
+              Features
+            </a>
           </li>
           <li>
-            <a href="/api-portal" class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium">Documentation</a>
+            <a
+              href="/api-portal"
+              class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+            >
+              Documentation
+            </a>
           </li>
           <li>
-            <a href="#pricing" class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium">Pricing</a>
+            <a
+              href="#pricing"
+              class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+            >
+              Pricing
+            </a>
           </li>
           <li>
-            <a href="/analyze" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5">Try Free</a>
+            <a
+              href="/analyze"
+              class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5"
+            >
+              Try Free
+            </a>
           </li>
         </ul>
       </div>
     </header>
     <main class="relative">
-      <div class="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-transparent to-purple-900/10"></div>
+      <div class="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-transparent to-purple-900/10">
+      </div>
       <div class="relative">
         {@inner_content}
       </div>

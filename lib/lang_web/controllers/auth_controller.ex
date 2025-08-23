@@ -8,6 +8,7 @@ defmodule LangWeb.AuthController do
 
   use LangWeb, :controller
   use AshAuthentication.Phoenix.Controller
+  import Phoenix.Component, only: [to_form: 1]
 
   alias Lang.Accounts.User
   alias Lang.Events
@@ -16,14 +17,17 @@ defmodule LangWeb.AuthController do
   @doc """
   Shows the authentication page with login/register forms.
   """
-  def show(conn, _params) do
-    if AshAuthentication.Phoenix.current_user(conn) do
+  def show(conn, params) do
+    mode = Map.get(params, "mode", "login")
+
+    if conn.assigns[:current_user] do
       redirect_after_login(conn)
     else
       render(conn, :show, %{
-        changeset: User.changeset_for_create(%{}),
-        login_changeset: AshPhoenix.Form.for_action(User, :sign_in_with_password, %{}),
-        page_title: "Sign In - LANG"
+        changeset: to_form(%{}),
+        login_changeset: to_form(%{}),
+        page_title: "Sign In - LANG",
+        mode: mode
       })
     end
   end
@@ -31,14 +35,23 @@ defmodule LangWeb.AuthController do
   @doc """
   Handles user sign-in with email and password using AshAuthentication.
   """
-  def sign_in(conn, %{"user" => user_params}, _resource) do
-    case AshAuthentication.authenticate(User, :password, user_params) do
+  def login(conn, %{"user" => user_params}) do
+    email = Map.get(user_params, "email", "")
+    password = Map.get(user_params, "password", "")
+
+    case AshAuthentication.authenticate(User, :password, %{
+           "email" => email,
+           "password" => password
+         }) do
       {:ok, user} ->
         Events.track_event(%{
           event_type: "user_login_success",
           user_id: user.id,
           metadata: %{email: user.email, ip_address: get_client_ip(conn)}
         })
+
+        # Create session using AshAuthentication
+        conn = AshAuthentication.Phoenix.sign_in(conn, user)
 
         conn
         |> put_flash(:info, "Welcome back, #{user.name}!")
@@ -48,7 +61,7 @@ defmodule LangWeb.AuthController do
         Events.track_event(%{
           event_type: "user_login_failed",
           metadata: %{
-            email: Map.get(user_params, "email"),
+            email: email,
             reason: "invalid_credentials",
             ip_address: get_client_ip(conn)
           }
@@ -57,9 +70,10 @@ defmodule LangWeb.AuthController do
         conn
         |> put_flash(:error, "Invalid email or password.")
         |> render(:show, %{
-          changeset: User.changeset_for_create(%{}),
-          login_changeset: AshPhoenix.Form.for_action(User, :sign_in_with_password, user_params),
-          page_title: "Sign In - LANG"
+          changeset: to_form(%{}),
+          login_changeset: to_form(user_params),
+          page_title: "Sign In - LANG",
+          mode: "login"
         })
     end
   end
@@ -67,8 +81,19 @@ defmodule LangWeb.AuthController do
   @doc """
   Handles user registration using AshAuthentication.
   """
-  def register(conn, %{"user" => user_params}, _resource) do
-    case User.register_with_password(user_params) do
+  def register(conn, %{"user" => user_params}) do
+    # Ensure required fields
+    enhanced_params =
+      Map.merge(user_params, %{
+        "organization_name" =>
+          Map.get(
+            user_params,
+            "organization_name",
+            "#{Map.get(user_params, "name", "User")}'s Organization"
+          )
+      })
+
+    case User.register_with_password(enhanced_params) do
       {:ok, user} ->
         Events.track_event(%{
           event_type: "user_registered",
@@ -79,17 +104,23 @@ defmodule LangWeb.AuthController do
           }
         })
 
+        # Create session using AshAuthentication
+        conn = AshAuthentication.Phoenix.sign_in(conn, user)
+
         conn
         |> put_flash(:info, "Welcome to LANG, #{user.name}! Your account has been created.")
         |> redirect(to: "/dashboard")
 
-      {:error, changeset} ->
+      {:error, error} ->
+        error_messages = format_ash_errors(error)
+
         conn
-        |> put_flash(:error, "Please fix the errors below.")
+        |> put_flash(:error, "Please fix the errors: #{Enum.join(error_messages, ", ")}")
         |> render(:show, %{
-          changeset: changeset,
-          login_changeset: AshPhoenix.Form.for_action(User, :sign_in_with_password, %{}),
-          page_title: "Sign In - LANG"
+          changeset: to_form(user_params),
+          login_changeset: to_form(%{}),
+          page_title: "Sign In - LANG",
+          mode: "register"
         })
     end
   end
@@ -97,8 +128,8 @@ defmodule LangWeb.AuthController do
   @doc """
   Handles user sign-out using AshAuthentication.
   """
-  def sign_out(conn, _params) do
-    user = AshAuthentication.Phoenix.current_user(conn)
+  def logout(conn, _params) do
+    user = conn.assigns[:current_user]
 
     if user do
       Events.track_event(%{
@@ -130,14 +161,16 @@ defmodule LangWeb.AuthController do
   Handles forgot password form submission using AshAuthentication.
   """
   def send_reset_email(conn, %{"user" => %{"email" => email}}) do
-    # For now, we'll implement a simple placeholder
-    # TODO: Implement proper AshAuthentication password reset
-    case User.by_email(email) do
-      {:ok, _user} ->
+    case AshAuthentication.Strategy.Password.request_password_reset(User, %{"email" => email}) do
+      {:ok, user} ->
         Events.track_event(%{
           event_type: "password_reset_requested",
-          metadata: %{email: email}
+          user_id: user.id,
+          metadata: %{email: email, ip_address: get_client_ip(conn)}
         })
+
+        # Send password reset email
+        send_password_reset_email(user)
 
         conn
         |> put_flash(
@@ -147,11 +180,13 @@ defmodule LangWeb.AuthController do
         |> redirect(to: "/auth")
 
       {:error, _reason} ->
+        # Always show the same message for security
         conn
-        |> put_flash(:error, "There was an error sending the reset email. Please try again.")
-        |> render(:forgot_password, %{
-          page_title: "Reset Password - LANG"
-        })
+        |> put_flash(
+          :info,
+          "If that email address is in our system, we've sent you a password reset link."
+        )
+        |> redirect(to: "/auth")
     end
   end
 
@@ -174,8 +209,11 @@ defmodule LangWeb.AuthController do
   Handles password reset form submission using AshAuthentication.
   """
   def update_password(conn, %{"token" => token, "user" => user_params}) do
-    # TODO: Implement proper AshAuthentication password reset
-    case User.change_password(%{}, user_params) do
+    case AshAuthentication.Strategy.Password.reset_password(User, %{
+           "reset_token" => token,
+           "password" => user_params["password"],
+           "password_confirmation" => user_params["password_confirmation"]
+         }) do
       {:ok, user} ->
         Events.track_event(%{
           event_type: "password_reset_completed",
@@ -186,14 +224,15 @@ defmodule LangWeb.AuthController do
         })
 
         conn
-        |> put_flash(:info, "Your password has been updated successfully.")
-        |> redirect(to: "/dashboard")
+        |> put_flash(:info, "Your password has been updated successfully. You can now sign in.")
+        |> redirect(to: "/auth")
 
       {:error, changeset} ->
-        render(conn, :reset_password, %{
-          user: %{},
-          token: token,
+        conn
+        |> put_flash(:error, "There was an error updating your password.")
+        |> render(:reset_password, %{
           changeset: changeset,
+          token: token,
           page_title: "Reset Password - LANG"
         })
     end
@@ -203,7 +242,7 @@ defmodule LangWeb.AuthController do
   API endpoint for checking authentication status.
   """
   def status(conn, _params) do
-    case AshAuthentication.Phoenix.current_user(conn) do
+    case conn.assigns[:current_user] do
       %{} = user ->
         json(conn, %{
           authenticated: true,
@@ -234,6 +273,15 @@ defmodule LangWeb.AuthController do
 
   # Private helper functions
 
+  defp format_ash_errors(%Ash.Error.Invalid{errors: errors}) do
+    Enum.map(errors, fn
+      %{message: message} -> message
+      error -> inspect(error)
+    end)
+  end
+
+  defp format_ash_errors(error), do: [inspect(error)]
+
   defp redirect_after_login(conn) do
     case get_session(conn, :return_to) do
       nil ->
@@ -257,5 +305,18 @@ defmodule LangWeb.AuthController do
           _ -> "unknown"
         end
     end
+  end
+
+  defp send_password_reset_email(user) do
+    # For now, we'll log the password reset email instead of sending it
+    # In production, you'd integrate with your email service (SendGrid, Postmark, etc.)
+    Logger.info("Password reset email would be sent to: #{user.email}")
+
+    # TODO: Integrate with actual email service
+    # Example implementation:
+    # LangWeb.Emails.password_reset_email(user)
+    # |> Lang.Mailer.deliver()
+
+    :ok
   end
 end

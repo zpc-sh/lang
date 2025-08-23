@@ -1,183 +1,82 @@
 <Layouts.app flash={@flash} current_scope={:public}>
   <.live_title suffix=" - LANG">
-    <%= @page_title %>
+    {@page_title}
   </.live_title>
 
   <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-  <div class="sm:mx-auto sm:w-full sm:max-w-md">
-    <!-- Logo and branding -->
-    <div class="text-center">
-      <h1 class="text-4xl font-bold text-gray-900 mb-2">LANG</h1>
-      <p class="text-lg text-gray-600">Universal Text Intelligence Platform</p>
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <!-- Logo and branding -->
+      <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">LANG</h1>
+        <p class="text-lg text-gray-600">Universal Text Intelligence Platform</p>
+      </div>
+      
+<!-- Action selector tabs -->
+      <div class="mt-8 flex justify-center">
+        <nav class="flex space-x-1 rounded-lg bg-white p-1 shadow-sm border">
+          <button
+            phx-click="toggle_auth_mode"
+            phx-value-mode="sign_in"
+            class={[
+              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              if(@action == "sign_in",
+                do: "bg-blue-600 text-white shadow",
+                else: "text-gray-500 hover:text-gray-700"
+              )
+            ]}
+          >
+            Sign In
+          </button>
+          <button
+            phx-click="toggle_auth_mode"
+            phx-value-mode="sign_up"
+            class={[
+              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              if(@action == "sign_up",
+                do: "bg-blue-600 text-white shadow",
+                else: "text-gray-500 hover:text-gray-700"
+              )
+            ]}
+          >
+            Sign Up
+          </button>
+        </nav>
+      </div>
     </div>
-    
-    <!-- Action selector tabs -->
-    <div class="mt-8 flex justify-center">
-      <nav class="flex space-x-1 rounded-lg bg-white p-1 shadow-sm border">
-        <button
-          phx-click="toggle_auth_mode"
-          phx-value-mode="sign_in"
-          class={[
-            "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            if(@action == "sign_in", do: "bg-blue-600 text-white shadow", else: "text-gray-500 hover:text-gray-700")
-          ]}
-        >
-          Sign In
-        </button>
-        <button
-          phx-click="toggle_auth_mode"
-          phx-value-mode="sign_up"
-          class={[
-            "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            if(@action == "sign_up", do: "bg-blue-600 text-white shadow", else: "text-gray-500 hover:text-gray-700")
-          ]}
-        >
-          Sign Up
-        </button>
-      </nav>
-    </div>
-  </div>
 
-  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 border">
-      <!-- Error messages -->
-      <%= if not Enum.empty?(@errors) do %>
-        <div class="rounded-md bg-red-50 p-4 mb-6 border border-red-200">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <.icon name="hero-x-circle" class="h-5 w-5 text-red-400" />
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-red-800">
-                <%= if length(@errors) == 1, do: "There was an error", else: "There were errors" %> with your submission
-              </h3>
-              <div class="mt-2 text-sm text-red-700">
-                <ul class="list-disc list-inside space-y-1">
-                  <%= for error <- @errors do %>
-                    <li><%= error %></li>
-                  <% end %>
-                </ul>
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 border">
+        <!-- Error messages -->
+        <%= if not Enum.empty?(@errors) do %>
+          <div class="rounded-md bg-red-50 p-4 mb-6 border border-red-200">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <.icon name="hero-x-circle" class="h-5 w-5 text-red-400" />
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">
+                  {if length(@errors) == 1, do: "There was an error", else: "There were errors"} with your submission
+                </h3>
+                <div class="mt-2 text-sm text-red-700">
+                  <ul class="list-disc list-inside space-y-1">
+                    <%= for error <- @errors do %>
+                      <li>{error}</li>
+                    <% end %>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      <% end %>
+        <% end %>
+        
+<!-- Sign In Form -->
+        <%= if @action == "sign_in" do %>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
+              Welcome back
+            </h2>
 
-      <!-- Sign In Form -->
-      <%= if @action == "sign_in" do %>
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
-            Welcome back
-          </h2>
-          
-          <.form for={@form} phx-submit="sign_in" class="space-y-6">
-            <div>
-              <.input
-                field={@form[:email]}
-                type="email"
-                label="Email address"
-                placeholder="you@example.com"
-                required
-                autocomplete="email"
-              />
-            </div>
-
-            <div>
-              <.input
-                field={@form[:password]}
-                type="password"
-                label="Password"
-                placeholder="Enter your password"
-                required
-                autocomplete="current-password"
-              />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <div class="text-sm">
-                <button
-                  type="button"
-                  phx-click="toggle_auth_mode"
-                  phx-value-mode="password_reset"
-                  class="font-medium text-blue-600 hover:text-blue-500"
-                >
-                  Forgot your password?
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={@loading}
-                class={[
-                  "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-                  if(@loading, do: "bg-gray-400 cursor-not-allowed", else: "bg-blue-600 hover:bg-blue-700")
-                ]}
-              >
-                <%= if @loading do %>
-                  <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
-                  Signing in...
-                <% else %>
-                  Sign in
-                <% end %>
-              </button>
-            </div>
-          </.form>
-        </div>
-      <% end %>
-
-      <!-- Sign Up Form -->
-      <%= if @action == "sign_up" do %>
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
-            Create your account
-          </h2>
-          
-          <!-- Organization Toggle -->
-          <div class="mb-6 p-4 bg-gray-50 rounded-lg border">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-medium text-gray-900">Organization Setup</h3>
-                <p class="text-xs text-gray-600 mt-1">
-                  <%= if @show_organization_form do %>
-                    Create a new organization and become its owner
-                  <% else %>
-                    Join an existing organization (requires invitation)
-                  <% end %>
-                </p>
-              </div>
-              <button
-                type="button"
-                phx-click="toggle_organization_form"
-                class={[
-                  "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                  if(@show_organization_form, do: "bg-blue-600", else: "bg-gray-200")
-                ]}
-                role="switch"
-              >
-                <span class={[
-                  "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                  if(@show_organization_form, do: "translate-x-5", else: "translate-x-0")
-                ]}>
-                </span>
-              </button>
-            </div>
-          </div>
-          
-          <.form for={@form} phx-submit="sign_up" class="space-y-6">
-            <!-- Personal Information -->
-            <div class="space-y-4">
-              <div>
-                <.input
-                  field={@form[:name]}
-                  type="text"
-                  label="Full name"
-                  placeholder="John Doe"
-                  autocomplete="name"
-                />
-              </div>
-
+            <.form for={@form} phx-submit="sign_in" class="space-y-6">
               <div>
                 <.input
                   field={@form[:email]}
@@ -194,7 +93,296 @@
                   field={@form[:password]}
                   type="password"
                   label="Password"
-                  placeholder="Create a strong password"
+                  placeholder="Enter your password"
+                  required
+                  autocomplete="current-password"
+                />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div class="text-sm">
+                  <button
+                    type="button"
+                    phx-click="toggle_auth_mode"
+                    phx-value-mode="password_reset"
+                    class="font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={@loading}
+                  class={[
+                    "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                    if(@loading,
+                      do: "bg-gray-400 cursor-not-allowed",
+                      else: "bg-blue-600 hover:bg-blue-700"
+                    )
+                  ]}
+                >
+                  <%= if @loading do %>
+                    <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
+                    Signing in...
+                  <% else %>
+                    Sign in
+                  <% end %>
+                </button>
+              </div>
+            </.form>
+          </div>
+        <% end %>
+        
+<!-- Sign Up Form -->
+        <%= if @action == "sign_up" do %>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
+              Create your account
+            </h2>
+            
+<!-- Organization Toggle -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg border">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-medium text-gray-900">Organization Setup</h3>
+                  <p class="text-xs text-gray-600 mt-1">
+                    <%= if @show_organization_form do %>
+                      Create a new organization and become its owner
+                    <% else %>
+                      Join an existing organization (requires invitation)
+                    <% end %>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  phx-click="toggle_organization_form"
+                  class={[
+                    "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                    if(@show_organization_form, do: "bg-blue-600", else: "bg-gray-200")
+                  ]}
+                  role="switch"
+                >
+                  <span class={[
+                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                    if(@show_organization_form, do: "translate-x-5", else: "translate-x-0")
+                  ]}>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <.form for={@form} phx-submit="sign_up" class="space-y-6">
+              <!-- Personal Information -->
+              <div class="space-y-4">
+                <div>
+                  <.input
+                    field={@form[:name]}
+                    type="text"
+                    label="Full name"
+                    placeholder="John Doe"
+                    autocomplete="name"
+                  />
+                </div>
+
+                <div>
+                  <.input
+                    field={@form[:email]}
+                    type="email"
+                    label="Email address"
+                    placeholder="you@example.com"
+                    required
+                    autocomplete="email"
+                  />
+                </div>
+
+                <div>
+                  <.input
+                    field={@form[:password]}
+                    type="password"
+                    label="Password"
+                    placeholder="Create a strong password"
+                    required
+                    autocomplete="new-password"
+                  />
+                </div>
+
+                <div>
+                  <.input
+                    field={@form[:password_confirmation]}
+                    type="password"
+                    label="Confirm password"
+                    placeholder="Confirm your password"
+                    required
+                    autocomplete="new-password"
+                  />
+                </div>
+              </div>
+              
+<!-- Organization Information -->
+              <%= if @show_organization_form do %>
+                <div class="space-y-4 pt-4 border-t border-gray-200">
+                  <h3 class="text-lg font-medium text-gray-900">Organization Details</h3>
+
+                  <div>
+                    <.input
+                      field={@form[:organization_name]}
+                      type="text"
+                      label="Organization name"
+                      placeholder="Acme Corporation"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <.input
+                      field={@form[:organization_slug]}
+                      type="text"
+                      label="Organization slug"
+                      placeholder="acme-corp"
+                      required
+                    />
+                    <p class="mt-1 text-xs text-gray-500">
+                      This will be used in your API endpoints and URLs
+                    </p>
+                  </div>
+                </div>
+              <% else %>
+                <div class="pt-4 border-t border-gray-200">
+                  <div>
+                    <.input
+                      field={@form[:organization_id]}
+                      type="text"
+                      label="Organization ID"
+                      placeholder="Contact your organization admin for this ID"
+                      required
+                    />
+                    <p class="mt-1 text-xs text-gray-500">
+                      You'll need an invitation or organization ID to join an existing organization
+                    </p>
+                  </div>
+
+                  <div>
+                    <.input
+                      field={@form[:role]}
+                      type="text"
+                      label="Your role (optional)"
+                      placeholder="Developer, Manager, etc."
+                    />
+                  </div>
+                </div>
+              <% end %>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={@loading}
+                  class={[
+                    "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                    if(@loading,
+                      do: "bg-gray-400 cursor-not-allowed",
+                      else: "bg-blue-600 hover:bg-blue-700"
+                    )
+                  ]}
+                >
+                  <%= if @loading do %>
+                    <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
+                    Creating account...
+                  <% else %>
+                    Create account
+                  <% end %>
+                </button>
+              </div>
+
+              <div class="text-xs text-gray-500 text-center">
+                By signing up, you agree to our
+                <a href="/terms" class="font-medium text-blue-600 hover:text-blue-500">
+                  Terms of Service
+                </a>
+                and
+                <a href="/privacy" class="font-medium text-blue-600 hover:text-blue-500">
+                  Privacy Policy
+                </a>
+              </div>
+            </.form>
+          </div>
+        <% end %>
+        
+<!-- Password Reset Form -->
+        <%= if @action == "password_reset" do %>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
+              Reset your password
+            </h2>
+            <p class="text-sm text-gray-600 text-center mb-6">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+
+            <.form for={@form} phx-submit="request_password_reset" class="space-y-6">
+              <div>
+                <.input
+                  field={@form[:email]}
+                  type="email"
+                  label="Email address"
+                  placeholder="you@example.com"
+                  required
+                  autocomplete="email"
+                />
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={@loading}
+                  class={[
+                    "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                    if(@loading,
+                      do: "bg-gray-400 cursor-not-allowed",
+                      else: "bg-blue-600 hover:bg-blue-700"
+                    )
+                  ]}
+                >
+                  <%= if @loading do %>
+                    <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
+                    Sending instructions...
+                  <% else %>
+                    Send reset instructions
+                  <% end %>
+                </button>
+              </div>
+
+              <div class="text-center">
+                <button
+                  type="button"
+                  phx-click="toggle_auth_mode"
+                  phx-value-mode="sign_in"
+                  class="text-sm font-medium text-blue-600 hover:text-blue-500"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </.form>
+          </div>
+        <% end %>
+        
+<!-- Reset Password Form (with token) -->
+        <%= if @action == "reset_password" do %>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
+              Set new password
+            </h2>
+
+            <.form for={@form} phx-submit="reset_password" class="space-y-6">
+              <input type="hidden" name="user[token]" value={@token || ""} />
+
+              <div>
+                <.input
+                  field={@form[:password]}
+                  type="password"
+                  label="New password"
+                  placeholder="Enter your new password"
                   required
                   autocomplete="new-password"
                 />
@@ -204,230 +392,64 @@
                 <.input
                   field={@form[:password_confirmation]}
                   type="password"
-                  label="Confirm password"
-                  placeholder="Confirm your password"
+                  label="Confirm new password"
+                  placeholder="Confirm your new password"
                   required
                   autocomplete="new-password"
                 />
               </div>
-            </div>
 
-            <!-- Organization Information -->
-            <%= if @show_organization_form do %>
-              <div class="space-y-4 pt-4 border-t border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900">Organization Details</h3>
-                
-                <div>
-                  <.input
-                    field={@form[:organization_name]}
-                    type="text"
-                    label="Organization name"
-                    placeholder="Acme Corporation"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <.input
-                    field={@form[:organization_slug]}
-                    type="text"
-                    label="Organization slug"
-                    placeholder="acme-corp"
-                    required
-                  />
-                  <p class="mt-1 text-xs text-gray-500">
-                    This will be used in your API endpoints and URLs
-                  </p>
-                </div>
+              <div>
+                <button
+                  type="submit"
+                  disabled={@loading}
+                  class={[
+                    "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                    if(@loading,
+                      do: "bg-gray-400 cursor-not-allowed",
+                      else: "bg-blue-600 hover:bg-blue-700"
+                    )
+                  ]}
+                >
+                  <%= if @loading do %>
+                    <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
+                    Updating password...
+                  <% else %>
+                    Update password
+                  <% end %>
+                </button>
               </div>
-            <% else %>
-              <div class="pt-4 border-t border-gray-200">
-                <div>
-                  <.input
-                    field={@form[:organization_id]}
-                    type="text"
-                    label="Organization ID"
-                    placeholder="Contact your organization admin for this ID"
-                    required
-                  />
-                  <p class="mt-1 text-xs text-gray-500">
-                    You'll need an invitation or organization ID to join an existing organization
-                  </p>
-                </div>
-
-                <div>
-                  <.input
-                    field={@form[:role]}
-                    type="text"
-                    label="Your role (optional)"
-                    placeholder="Developer, Manager, etc."
-                  />
-                </div>
-              </div>
-            <% end %>
-
-            <div>
-              <button
-                type="submit"
-                disabled={@loading}
-                class={[
-                  "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-                  if(@loading, do: "bg-gray-400 cursor-not-allowed", else: "bg-blue-600 hover:bg-blue-700")
-                ]}
-              >
-                <%= if @loading do %>
-                  <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
-                  Creating account...
-                <% else %>
-                  Create account
-                <% end %>
-              </button>
-            </div>
-
-            <div class="text-xs text-gray-500 text-center">
-              By signing up, you agree to our 
-              <a href="/terms" class="font-medium text-blue-600 hover:text-blue-500">Terms of Service</a>
-              and 
-              <a href="/privacy" class="font-medium text-blue-600 hover:text-blue-500">Privacy Policy</a>
-            </div>
-          </.form>
-        </div>
-      <% end %>
-
-      <!-- Password Reset Form -->
-      <%= if @action == "password_reset" do %>
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
-            Reset your password
-          </h2>
-          <p class="text-sm text-gray-600 text-center mb-6">
-            Enter your email address and we'll send you a link to reset your password.
-          </p>
-          
-          <.form for={@form} phx-submit="request_password_reset" class="space-y-6">
-            <div>
-              <.input
-                field={@form[:email]}
-                type="email"
-                label="Email address"
-                placeholder="you@example.com"
-                required
-                autocomplete="email"
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={@loading}
-                class={[
-                  "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-                  if(@loading, do: "bg-gray-400 cursor-not-allowed", else: "bg-blue-600 hover:bg-blue-700")
-                ]}
-              >
-                <%= if @loading do %>
-                  <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
-                  Sending instructions...
-                <% else %>
-                  Send reset instructions
-                <% end %>
-              </button>
-            </div>
-
-            <div class="text-center">
-              <button
-                type="button"
-                phx-click="toggle_auth_mode"
-                phx-value-mode="sign_in"
-                class="text-sm font-medium text-blue-600 hover:text-blue-500"
-              >
-                Back to sign in
-              </button>
-            </div>
-          </.form>
-        </div>
-      <% end %>
-
-      <!-- Reset Password Form (with token) -->
-      <%= if @action == "reset_password" do %>
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">
-            Set new password
-          </h2>
-          
-          <.form for={@form} phx-submit="reset_password" class="space-y-6">
-            <input type="hidden" name="user[token]" value={@token || ""}>
-
-            <div>
-              <.input
-                field={@form[:password]}
-                type="password"
-                label="New password"
-                placeholder="Enter your new password"
-                required
-                autocomplete="new-password"
-              />
-            </div>
-
-            <div>
-              <.input
-                field={@form[:password_confirmation]}
-                type="password"
-                label="Confirm new password"
-                placeholder="Confirm your new password"
-                required
-                autocomplete="new-password"
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={@loading}
-                class={[
-                  "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-                  if(@loading, do: "bg-gray-400 cursor-not-allowed", else: "bg-blue-600 hover:bg-blue-700")
-                ]}
-              >
-                <%= if @loading do %>
-                  <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-2" />
-                  Updating password...
-                <% else %>
-                  Update password
-                <% end %>
-              </button>
-            </div>
-          </.form>
-        </div>
-      <% end %>
-
-      <!-- Footer links -->
-      <div class="mt-6">
-        <div class="relative">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-300" />
+            </.form>
           </div>
-          <div class="relative flex justify-center text-sm">
-            <span class="px-2 bg-white text-gray-500">Need help?</span>
+        <% end %>
+        
+<!-- Footer links -->
+        <div class="mt-6">
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-gray-300" />
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-2 bg-white text-gray-500">Need help?</span>
+            </div>
           </div>
-        </div>
 
-        <div class="mt-4 text-center text-sm text-gray-600">
-          <a href="/contact" class="font-medium text-blue-600 hover:text-blue-500">
-            Contact support
-          </a>
-          <span class="mx-2">·</span>
-          <a href="/docs" class="font-medium text-blue-600 hover:text-blue-500">
-            Documentation
-          </a>
+          <div class="mt-4 text-center text-sm text-gray-600">
+            <a href="/contact" class="font-medium text-blue-600 hover:text-blue-500">
+              Contact support
+            </a>
+            <span class="mx-2">·</span>
+            <a href="/docs" class="font-medium text-blue-600 hover:text-blue-500">
+              Documentation
+            </a>
+          </div>
         </div>
       </div>
     </div>
+    
+<!-- Footer -->
+    <div class="mt-8 text-center text-sm text-gray-500">
+      <p>© 2024 LANG Platform. Built for developers who need powerful text intelligence.</p>
+    </div>
   </div>
-
-  <!-- Footer -->
-  <div class="mt-8 text-center text-sm text-gray-500">
-    <p>© 2024 LANG Platform. Built for developers who need powerful text intelligence.</p>
-  </div>
-</div>
 </Layouts.app>

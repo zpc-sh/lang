@@ -236,6 +236,7 @@ defmodule LangWeb.ApiPortalLive do
         success = Enum.count(usages, &(&1.status == :success))
         failed = Enum.count(usages, &(&1.status == :error))
         rate_limited = Enum.count(usages, &(&1.status == :rate_limited))
+
         avg_ms =
           usages
           |> Enum.map(&(&1.processing_time_ms || 0))
@@ -255,12 +256,21 @@ defmodule LangWeb.ApiPortalLive do
         }
 
       _ ->
-        %{total_requests: 0, successful_requests: 0, failed_requests: 0, rate_limited_requests: 0, avg_response_time: 0, daily_usage: generate_daily_api_usage(), top_endpoints: []}
+        %{
+          total_requests: 0,
+          successful_requests: 0,
+          failed_requests: 0,
+          rate_limited_requests: 0,
+          avg_response_time: 0,
+          daily_usage: generate_daily_api_usage(),
+          top_endpoints: []
+        }
     end
   end
 
   defp get_rate_limits(organization) do
     tier = organization.plan || organization.subscription_tier || :free
+
     case tier do
       :free ->
         %{requests_per_minute: 10, requests_per_hour: 100, requests_per_day: 1000}
@@ -425,7 +435,14 @@ defmodule LangWeb.ApiPortalLive do
          |> Ash.Query.filter(id == ^org_id)
          |> Ash.read_one() do
       {:ok, nil} ->
-        %{id: org_id, name: "Organization", plan: :free, subscription_tier: :free, monthly_request_limit: 1000, monthly_request_count: 0}
+        %{
+          id: org_id,
+          name: "Organization",
+          plan: :free,
+          subscription_tier: :free,
+          monthly_request_limit: 1000,
+          monthly_request_count: 0
+        }
 
       {:ok, org} ->
         %{
@@ -438,7 +455,14 @@ defmodule LangWeb.ApiPortalLive do
         }
 
       {:error, _} ->
-        %{id: org_id, name: "Organization", plan: :free, subscription_tier: :free, monthly_request_limit: 1000, monthly_request_count: 0}
+        %{
+          id: org_id,
+          name: "Organization",
+          plan: :free,
+          subscription_tier: :free,
+          monthly_request_limit: 1000,
+          monthly_request_count: 0
+        }
     end
   end
 

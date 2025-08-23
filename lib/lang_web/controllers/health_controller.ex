@@ -119,43 +119,46 @@ defmodule LangWeb.HealthController do
 
   defp check_memory do
     try do
-      case :memsup.get_system_memory_data() do
-        memory_data when is_list(memory_data) ->
-          total = Keyword.get(memory_data, :total_memory, 0)
-          free = Keyword.get(memory_data, :free_memory, 0)
+      memory_data = :erlang.memory()
+      total = Keyword.get(memory_data, :total, 0)
+      processes = Keyword.get(memory_data, :processes, 0)
+      system = Keyword.get(memory_data, :system, 0)
 
-          usage_percent =
-            if total > 0 do
-              round((total - free) / total * 100)
-            else
-              0
-            end
+      total_mb = div(total, 1024 * 1024)
 
-          cond do
-            usage_percent < 80 ->
-              %{
-                status: :ok,
-                message: "Memory usage: #{usage_percent}%",
-                details: %{total: total, free: free, usage_percent: usage_percent}
-              }
+      cond do
+        total_mb < 2048 ->
+          %{
+            status: :ok,
+            message: "Memory usage: #{total_mb}MB",
+            details: %{
+              total_mb: total_mb,
+              processes_mb: div(processes, 1024 * 1024),
+              system_mb: div(system, 1024 * 1024)
+            }
+          }
 
-            usage_percent < 90 ->
-              %{
-                status: :warning,
-                message: "Memory usage high: #{usage_percent}%",
-                details: %{total: total, free: free, usage_percent: usage_percent}
-              }
+        total_mb < 4096 ->
+          %{
+            status: :warning,
+            message: "High memory usage: #{total_mb}MB",
+            details: %{
+              total_mb: total_mb,
+              processes_mb: div(processes, 1024 * 1024),
+              system_mb: div(system, 1024 * 1024)
+            }
+          }
 
-            true ->
-              %{
-                status: :error,
-                message: "Memory usage critical: #{usage_percent}%",
-                details: %{total: total, free: free, usage_percent: usage_percent}
-              }
-          end
-
-        _ ->
-          %{status: :warning, message: "Could not determine memory usage"}
+        true ->
+          %{
+            status: :error,
+            message: "Critical memory usage: #{total_mb}MB",
+            details: %{
+              total_mb: total_mb,
+              processes_mb: div(processes, 1024 * 1024),
+              system_mb: div(system, 1024 * 1024)
+            }
+          }
       end
     rescue
       _ -> %{status: :warning, message: "Memory monitoring unavailable"}

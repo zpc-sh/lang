@@ -24,6 +24,7 @@ defmodule Lang.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Lang.DataCase
+      import Lang.Factory
     end
   end
 

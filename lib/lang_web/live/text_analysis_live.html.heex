@@ -5,8 +5,8 @@
       <h1 class="text-3xl font-bold text-gray-900">Text Intelligence Platform</h1>
       <p class="mt-2 text-lg text-gray-600">Real-time text analysis and insights</p>
     </div>
-
-    <!-- Controls -->
+    
+<!-- Controls -->
     <div class="bg-white shadow-sm border rounded-lg mb-6 p-4">
       <div class="flex flex-wrap items-center gap-4">
         <div class="flex-1 min-w-0">
@@ -20,7 +20,7 @@
             class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
             <%= for {label, value} <- @available_formats do %>
-              <option value={value} selected={@selected_format == value}><%= label %></option>
+              <option value={value} selected={@selected_format == value}>{label}</option>
             <% end %>
           </select>
         </div>
@@ -43,15 +43,18 @@
             disabled={@analysis.processing}
             class={[
               "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white",
-              if(@analysis.processing, do: "bg-gray-400 cursor-not-allowed", else: "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500")
+              if(@analysis.processing,
+                do: "bg-gray-400 cursor-not-allowed",
+                else:
+                  "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              )
             ]}
           >
             <%= if @analysis.processing do %>
               <.icon name="hero-arrow-path" class="animate-spin -ml-1 mr-2 h-4 w-4" />
               Analyzing...
             <% else %>
-              <.icon name="hero-magnifying-glass" class="-ml-1 mr-2 h-4 w-4" />
-              Analyze Now
+              <.icon name="hero-magnifying-glass" class="-ml-1 mr-2 h-4 w-4" /> Analyze Now
             <% end %>
           </button>
 
@@ -59,8 +62,7 @@
             phx-click="clear_content"
             class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <.icon name="hero-trash" class="-ml-1 mr-2 h-4 w-4" />
-            Clear
+            <.icon name="hero-trash" class="-ml-1 mr-2 h-4 w-4" /> Clear
           </button>
         </div>
       </div>
@@ -84,8 +86,8 @@
             ></textarea>
           </div>
         </div>
-
-        <!-- Basic Stats -->
+        
+<!-- Basic Stats -->
         <div class="bg-white shadow-sm border rounded-lg">
           <div class="px-4 py-3 border-b border-gray-200">
             <h3 class="text-lg font-medium text-gray-900">Statistics</h3>
@@ -94,32 +96,33 @@
             <dl class="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <dt class="font-medium text-gray-900">Words</dt>
-                <dd class="text-gray-600"><%= @analysis.word_count %></dd>
+                <dd class="text-gray-600">{@analysis.word_count}</dd>
               </div>
               <div>
                 <dt class="font-medium text-gray-900">Characters</dt>
-                <dd class="text-gray-600"><%= @analysis.character_count %></dd>
+                <dd class="text-gray-600">{@analysis.character_count}</dd>
               </div>
               <div>
                 <dt class="font-medium text-gray-900">Paragraphs</dt>
-                <dd class="text-gray-600"><%= @analysis.paragraph_count %></dd>
+                <dd class="text-gray-600">{@analysis.paragraph_count}</dd>
               </div>
               <div>
                 <dt class="font-medium text-gray-900">Sentences</dt>
-                <dd class="text-gray-600"><%= @analysis.sentence_count %></dd>
+                <dd class="text-gray-600">{@analysis.sentence_count}</dd>
               </div>
               <div class="col-span-2">
                 <dt class="font-medium text-gray-900">Reading Time</dt>
                 <dd class="text-gray-600">
-                  <%= @analysis.reading_time_minutes %> minute<%= if @analysis.reading_time_minutes != 1, do: "s" %>
+                  {@analysis.reading_time_minutes} minute{if @analysis.reading_time_minutes != 1,
+                    do: "s"}
                 </dd>
               </div>
             </dl>
           </div>
         </div>
       </div>
-
-      <!-- Analysis Results Section -->
+      
+<!-- Analysis Results Section -->
       <div class="space-y-6">
         <!-- Quality Score -->
         <%= if @analysis.quality_score do %>
@@ -137,7 +140,7 @@
                     true -> "bg-red-500"
                   end
                 ]}>
-                  <%= @analysis.quality_score %>
+                  {@analysis.quality_score}
                 </div>
                 <div class="ml-4">
                   <p class="text-sm text-gray-600">
@@ -155,8 +158,8 @@
             </div>
           </div>
         <% end %>
-
-        <!-- Readability -->
+        
+<!-- Readability -->
         <%= if @analysis.readability do %>
           <div class="bg-white shadow-sm border rounded-lg">
             <div class="px-4 py-3 border-b border-gray-200">
@@ -164,22 +167,25 @@
             </div>
             <div class="p-4">
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-900"><%= @analysis.readability.level %></span>
+                <span class="text-sm font-medium text-gray-900">
+                  {@analysis.readability.level}
+                </span>
                 <span class={["text-sm font-medium", "text-#{@analysis.readability.color}-600"]}>
-                  Score: <%= @analysis.readability.score %>
+                  Score: {@analysis.readability.score}
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2">
                 <div
                   class={["h-2 rounded-full", "bg-#{@analysis.readability.color}-500"]}
                   style={"width: #{@analysis.readability.score}%"}
-                ></div>
+                >
+                </div>
               </div>
             </div>
           </div>
         <% end %>
-
-        <!-- Language Detection -->
+        
+<!-- Language Detection -->
         <%= if @analysis.language do %>
           <div class="bg-white shadow-sm border rounded-lg">
             <div class="px-4 py-3 border-b border-gray-200">
@@ -187,16 +193,18 @@
             </div>
             <div class="p-4">
               <div class="flex items-center justify-between">
-                <span class="text-lg font-medium text-gray-900"><%= @analysis.language.language %></span>
+                <span class="text-lg font-medium text-gray-900">
+                  {@analysis.language.language}
+                </span>
                 <span class="text-sm text-gray-500">
-                  <%= round(@analysis.language.confidence * 100) %>% confidence
+                  {round(@analysis.language.confidence * 100)}% confidence
                 </span>
               </div>
             </div>
           </div>
         <% end %>
-
-        <!-- Sentiment Analysis -->
+        
+<!-- Sentiment Analysis -->
         <%= if @analysis.sentiment do %>
           <div class="bg-white shadow-sm border rounded-lg">
             <div class="px-4 py-3 border-b border-gray-200">
@@ -205,17 +213,17 @@
             <div class="p-4">
               <div class="flex items-center justify-between">
                 <span class={["text-lg font-medium", "text-#{@analysis.sentiment.color}-600"]}>
-                  <%= @analysis.sentiment.sentiment %>
+                  {@analysis.sentiment.sentiment}
                 </span>
                 <span class="text-sm text-gray-500">
-                  Score: <%= Float.round(@analysis.sentiment.score, 2) %>
+                  Score: {Float.round(@analysis.sentiment.score, 2)}
                 </span>
               </div>
             </div>
           </div>
         <% end %>
-
-        <!-- Suggestions -->
+        
+<!-- Suggestions -->
         <%= if length(@analysis.suggestions) > 0 do %>
           <div class="bg-white shadow-sm border rounded-lg">
             <div class="px-4 py-3 border-b border-gray-200">
@@ -244,15 +252,15 @@
                         end
                       ]}
                     />
-                    <span class="text-sm text-gray-700"><%= suggestion.text %></span>
+                    <span class="text-sm text-gray-700">{suggestion.text}</span>
                   </li>
                 <% end %>
               </ul>
             </div>
           </div>
         <% end %>
-
-        <!-- Processing Indicator -->
+        
+<!-- Processing Indicator -->
         <%= if @analysis.processing do %>
           <div class="bg-white shadow-sm border rounded-lg">
             <div class="p-4">
@@ -263,8 +271,8 @@
             </div>
           </div>
         <% end %>
-
-        <!-- Analysis History -->
+        
+<!-- Analysis History -->
         <%= if length(@analysis_history) > 0 do %>
           <div class="bg-white shadow-sm border rounded-lg">
             <div class="px-4 py-3 border-b border-gray-200">
@@ -277,16 +285,17 @@
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
                         <p class="text-gray-700 font-medium">
-                          <%= entry.content_preview %>
+                          {entry.content_preview}
                         </p>
                         <%= if entry.analysis.quality_score do %>
                           <p class="mt-1">
-                            Quality: <span class="font-medium"><%= entry.analysis.quality_score %>/100</span>
+                            Quality:
+                            <span class="font-medium">{entry.analysis.quality_score}/100</span>
                           </p>
                         <% end %>
                       </div>
                       <time class="text-gray-500 text-xs">
-                        <%= Calendar.strftime(entry.timestamp, "%H:%M") %>
+                        {Calendar.strftime(entry.timestamp, "%H:%M")}
                       </time>
                     </div>
                   </div>

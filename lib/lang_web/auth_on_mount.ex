@@ -18,7 +18,7 @@ defmodule LangWeb.AuthOnMount do
   """
   def mount_current_user(_params, session, socket) do
     socket =
-      case AshAuthentication.Phoenix.current_user(socket, session) do
+      case get_current_user_from_session(session) do
         {:ok, user} ->
           socket
           |> assign(:current_user, user)
@@ -28,12 +28,43 @@ defmodule LangWeb.AuthOnMount do
 
         {:error, _reason} ->
           assign_development_user(socket)
-
-        nil ->
-          assign_development_user(socket)
       end
 
     {:cont, socket}
+  end
+
+  defp get_current_user_from_session(session) do
+    # Try multiple session key formats for compatibility
+    token =
+      session["user_token"] || session[:user_token] ||
+        session["_ash_authentication_user_token"] || session[:_ash_authentication_user_token]
+
+    case token do
+      nil ->
+        {:error, :no_token}
+
+      token ->
+        try do
+          # Use AshAuthentication's subject_to_user function
+          case AshAuthentication.subject_to_user(token, Lang.Accounts.User) do
+            {:ok, user} ->
+              # Ensure user is loaded with associations
+              case Lang.Accounts.User.by_id(user.id)
+                   |> Ash.Query.load([:organization])
+                   |> Ash.read_one() do
+                {:ok, loaded_user} -> {:ok, loaded_user}
+                _ -> {:ok, user}
+              end
+
+            {:error, _} ->
+              {:error, :invalid_token}
+          end
+        rescue
+          error ->
+            Logger.warning("Token verification failed: #{inspect(error)}")
+            {:error, :token_verification_failed}
+        end
+    end
   end
 
   @doc """
@@ -41,20 +72,32 @@ defmodule LangWeb.AuthOnMount do
   """
   def require_authenticated(_params, _session, socket) do
     case socket.assigns do
-      %{authenticated?: true, current_user: %{}} ->
+      %{authenticated?: true, current_user: user} when not is_nil(user) ->
         {:cont, socket}
 
-      %{current_scope: :development} ->
-        if Application.get_env(:lang, :env) in [:dev, :test] do
+      %{current_scope: %{type: :development}} ->
+        if Mix.env() in [:dev, :test] do
           {:cont, socket}
         else
           Logger.info("Unauthenticated access to protected LiveView")
-          {:halt, redirect(socket, to: "/auth")}
+
+          socket =
+            socket
+            |> put_flash(:error, "You must be signed in to access this page.")
+            |> redirect(to: "/auth")
+
+          {:halt, socket}
         end
 
       _ ->
         Logger.info("Unauthenticated access to protected LiveView")
-        {:halt, redirect(socket, to: "/auth")}
+
+        socket =
+          socket
+          |> put_flash(:error, "You must be signed in to access this page.")
+          |> redirect(to: "/auth")
+
+        {:halt, socket}
     end
   end
 
@@ -125,19 +168,20 @@ defmodule LangWeb.AuthOnMount do
   end
 
   defp load_user_organization(%{organization_id: org_id}) when is_binary(org_id) do
-    import Ash.Query
+    require Ash.Query
 
     case Lang.Accounts.Organization
          |> Ash.Query.filter(id == ^org_id)
          |> Ash.read_one() do
       {:ok, org} -> {:ok, org}
-      error -> error
+      {:error, error} -> {:error, error}
+      nil -> {:error, :not_found}
     end
   end
 
   defp load_user_organization(%{id: user_id}) do
     # Load organization through user relationship
-    import Ash.Query
+    require Ash.Query
 
     case User
          |> Ash.Query.filter(id == ^user_id)
@@ -149,18 +193,31 @@ defmodule LangWeb.AuthOnMount do
       {:ok, user} ->
         create_default_organization(user)
 
-      error ->
-        error
+      {:error, error} ->
+        {:error, error}
+
+      nil ->
+        {:error, :user_not_found}
     end
   end
 
   defp create_default_organization(user) do
-    Lang.Accounts.Organization.create(%{
-      name: "#{user.name}'s Organization",
-      owner_id: user.id,
-      plan: :free,
-      subscription_status: :trial
-    })
+    case Lang.Accounts.Organization.create(%{
+           name: "#{user.name}'s Organization",
+           owner_id: user.id,
+           plan: :free,
+           subscription_status: :trial
+         }) do
+      {:ok, org} ->
+        {:ok, org}
+
+      {:error, error} ->
+        Logger.warning(
+          "Failed to create default organization for user #{user.id}: #{inspect(error)}"
+        )
+
+        {:error, error}
+    end
   end
 
   defp assign_development_user(socket) do

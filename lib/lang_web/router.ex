@@ -9,12 +9,12 @@ defmodule LangWeb.Router do
     plug :put_root_layout, html: {LangWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :load_from_session
+    plug LangWeb.Plugs.AuthPlug, :load_from_session
   end
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug :load_from_bearer
+    plug LangWeb.Plugs.AuthPlug, :load_from_bearer
   end
 
   pipeline :webhook do
@@ -32,16 +32,8 @@ defmodule LangWeb.Router do
     plug :ensure_authenticated
   end
 
-  pipeline :optional_auth do
-    plug :load_from_session
-  end
-
-  pipeline :optional_api_auth do
-    plug :load_from_bearer
-  end
-
   scope "/", LangWeb do
-    pipe_through [:browser, :optional_auth]
+    pipe_through :browser
 
     live "/", LandingLive, :index
     get "/health", HealthController, :check
@@ -49,6 +41,10 @@ defmodule LangWeb.Router do
     live "/demo", DemoLive, :index
     live "/font", FontShowcaseLive, :index
     live "/design-system", DesignSystemLive, :index
+
+    # Documentation routes
+    live "/docs", DocsLive, :index
+    live "/docs/*path", DocsLive, :show
   end
 
   # Authentication routes
@@ -59,6 +55,7 @@ defmodule LangWeb.Router do
     post "/login", AuthController, :login
     post "/register", AuthController, :register
     delete "/logout", AuthController, :logout
+    post "/sign-out", AuthController, :logout
     get "/forgot-password", AuthController, :forgot_password
     post "/forgot-password", AuthController, :send_reset_email
     get "/reset-password/:token", AuthController, :reset_password
@@ -66,9 +63,6 @@ defmodule LangWeb.Router do
     get "/status", AuthController, :status
     get "/oauth/:provider", AuthController, :oauth_callback
   end
-
-  # AshAuthentication routes
-  auth_routes_for(Lang.Accounts.User, to: LangWeb.AuthController, path: "/auth")
 
   # Authenticated live session (stubs current_user in dev/test)
   live_session :authenticated,
@@ -149,6 +143,7 @@ defmodule LangWeb.Router do
     case conn.assigns[:current_user] do
       nil ->
         conn
+        |> put_session(:return_to, conn.request_path)
         |> put_flash(:error, "You must be signed in to access this page.")
         |> redirect(to: "/auth")
         |> halt()

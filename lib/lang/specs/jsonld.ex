@@ -27,7 +27,7 @@ defmodule Lang.Specs.JsonLD do
           "description" => "Production"
         },
         %{
-          "url" => "http://localhost:4000/api",
+          "url" => "https://lang.nocsi.com/api",
           "description" => "Development"
         }
       ],

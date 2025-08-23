@@ -216,8 +216,8 @@ defmodule Lang.Workers.OrchestratorWorker do
         "x-environment" => env
       },
       "servers" => [
-        %{"url" => "https://api.lang.ai", "description" => "Production"},
-        %{"url" => "http://localhost:4000", "description" => "Development"}
+        %{"url" => "https://lang.nocsi.com", "description" => "Production"},
+        %{"url" => "https://lang.nocsi.com", "description" => "Development"}
       ],
       "security" => [%{"ApiKeyAuth" => []}],
       "components" => %{
@@ -502,7 +502,7 @@ defmodule Lang.Workers.OrchestratorWorker do
   defp generate_curl_example(path, method, _definition) do
     """
     curl -X #{String.upcase(method)} \\
-      https://api.lang.ai#{path} \\
+      https://lang.nocsi.com#{path} \\
       -H "X-API-Key: your-api-key" \\
       -H "Content-Type: application/ld+json"
     """
@@ -510,7 +510,7 @@ defmodule Lang.Workers.OrchestratorWorker do
 
   defp generate_js_example(path, method, _definition) do
     """
-    const response = await fetch('https://api.lang.ai#{path}', {
+    const response = await fetch('https://lang.nocsi.com#{path}', {
       method: '#{String.upcase(method)}',
       headers: {
         'X-API-Key': 'your-api-key',
@@ -525,7 +525,7 @@ defmodule Lang.Workers.OrchestratorWorker do
     import requests
 
     response = requests.#{method}(
-        'https://api.lang.ai#{path}',
+        'https://lang.nocsi.com#{path}',
         headers={'X-API-Key': 'your-api-key'}
     )
     """
@@ -574,7 +574,7 @@ defmodule Lang.Workers.OrchestratorWorker do
   defp generate_basic_curl_example(env) do
     """
     # Basic #{env} analysis example
-    curl -X POST https://api.lang.ai/api/v2/#{env}/analyze \\
+    curl -X POST https://lang.nocsi.com/api/v2/#{env}/analyze \\
       -H "X-API-Key: your-api-key" \\
       -H "Content-Type: application/ld+json" \\
       -d '{
