@@ -40,12 +40,16 @@ defmodule LangWeb.Layouts do
     <div class="min-h-screen bg-gray-950 text-gray-100">
       <!-- Navbar -->
       <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center justify-between h-16">
             <!-- Logo -->
             <div class="flex items-center">
-              <a href="/" class="flex items-center gap-3">
-                <svg class="w-8 h-8" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <a href="/" class="flex items-center gap-2 sm:gap-3">
+                <svg
+                  class="w-6 h-6 sm:w-8 sm:h-8"
+                  viewBox="0 0 120 120"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <defs>
                     <linearGradient id="navLogo" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
@@ -74,11 +78,35 @@ defmodule LangWeb.Layouts do
                     stroke-linecap="round"
                   />
                 </svg>
-                <span class="text-xl font-light text-white">LANG</span>
+                <span class="text-lg sm:text-xl font-light text-white">LANG</span>
               </a>
             </div>
             
-    <!-- Navigation Links -->
+    <!-- Mobile menu button -->
+            <div class="md:hidden">
+              <button
+                id="mobile-menu-button"
+                type="button"
+                class="text-gray-300 hover:text-white focus:outline-none focus:text-white"
+                aria-controls="mobile-menu"
+                aria-expanded="false"
+                onclick="document.getElementById('mobile-menu').classList.toggle('hidden'); this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') === 'false' ? 'true' : 'false');"
+              >
+                <span class="sr-only">Open main menu</span>
+                <!-- Hamburger icon -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  >
+                  </path>
+                </svg>
+              </button>
+            </div>
+            
+    <!-- Desktop Navigation Links -->
             <div class="hidden md:flex items-center space-x-8">
               <a
                 href="#features"
@@ -134,6 +162,68 @@ defmodule LangWeb.Layouts do
                   >
                     Try Free
                   </a>
+                </div>
+              <% end %>
+            </div>
+          </div>
+          
+    <!-- Mobile menu -->
+          <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 bg-gray-900 border-t border-gray-700">
+              <a
+                href="#features"
+                class="block px-3 py-2 text-gray-300 hover:text-blue-400 font-medium transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="/api-portal"
+                class="block px-3 py-2 text-gray-300 hover:text-blue-400 font-medium transition-colors"
+              >
+                Documentation
+              </a>
+              <a
+                href="#pricing"
+                class="block px-3 py-2 text-gray-300 hover:text-blue-400 font-medium transition-colors"
+              >
+                Pricing
+              </a>
+
+              <%= if @current_user do %>
+                <div class="border-t border-gray-700 pt-3 mt-3">
+                  <a
+                    href="/dashboard"
+                    class="block px-3 py-2 text-gray-300 hover:text-blue-400 font-medium transition-colors"
+                  >
+                    Dashboard
+                  </a>
+                  <div class="px-3 py-2">
+                    <span class="text-sm text-gray-400">Hello, {@current_user.name}</span>
+                  </div>
+                  <a
+                    href="/auth/sign-out"
+                    data-method="delete"
+                    class="block px-3 py-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    Sign Out
+                  </a>
+                </div>
+              <% else %>
+                <div class="border-t border-gray-700 pt-3 mt-3 space-y-2">
+                  <a
+                    href="/auth"
+                    class="block px-3 py-2 text-gray-300 hover:text-blue-400 font-medium transition-colors"
+                  >
+                    Sign In
+                  </a>
+                  <div class="px-3 py-2">
+                    <a
+                      href="/analyze"
+                      class="block w-full text-center px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+                    >
+                      Try Free
+                    </a>
+                  </div>
                 </div>
               <% end %>
             </div>

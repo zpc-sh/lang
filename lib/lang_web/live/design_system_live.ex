@@ -374,6 +374,9 @@ defmodule LangWeb.DesignSystemLive do
   end
 
   # Component helpers
+  attr :variant, :string, required: true
+  attr :title, :string, required: true
+
   def logo_card(assigns) do
     ~H"""
     <div class="logo-card">
@@ -424,6 +427,9 @@ defmodule LangWeb.DesignSystemLive do
     """
   end
 
+  attr :title, :string, required: true
+  attr :colors, :list, required: true
+
   def color_section(assigns) do
     ~H"""
     <div class="color-section">
@@ -436,6 +442,10 @@ defmodule LangWeb.DesignSystemLive do
     </div>
     """
   end
+
+  attr :name, :string, required: true
+  attr :hex, :string, required: true
+  attr :class, :string, required: true
 
   def color_card(assigns) do
     ~H"""
@@ -456,6 +466,10 @@ defmodule LangWeb.DesignSystemLive do
     """
   end
 
+  attr :label, :string, required: true
+  attr :text, :string, required: true
+  attr :class, :string, required: true
+
   def type_specimen(assigns) do
     ~H"""
     <div class="type-specimen">
@@ -468,17 +482,24 @@ defmodule LangWeb.DesignSystemLive do
     """
   end
 
+  attr :title, :string, required: true
+  attr :description, :string, required: true
+  slot :inner_block, required: true
+
   def component_preview(assigns) do
     ~H"""
     <div class="component-card">
       <div class="component-preview">
-        {@inner_block}
+        {render_slot(@inner_block)}
       </div>
       <h3 class="component-title">{@title}</h3>
       <p class="component-description">{@description}</p>
     </div>
     """
   end
+
+  attr :status, :string, required: true
+  attr :text, :string, required: true
 
   def status_badge(assigns) do
     ~H"""
@@ -488,6 +509,11 @@ defmodule LangWeb.DesignSystemLive do
     </div>
     """
   end
+
+  attr :type, :string, required: true
+  attr :title, :string, required: true
+  attr :description, :string, required: true
+  attr :features, :list, required: true
 
   def intelligence_card(assigns) do
     ~H"""
@@ -505,6 +531,10 @@ defmodule LangWeb.DesignSystemLive do
     </div>
     """
   end
+
+  attr :title, :string, required: true
+  attr :code, :string, required: true
+  attr :language, :string, default: "elixir"
 
   def code_example(assigns) do
     ~H"""

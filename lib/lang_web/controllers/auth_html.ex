@@ -62,12 +62,16 @@ defmodule LangWeb.AuthHTML do
       </div>
     </nav>
 
-    <div class="min-h-screen bg-gray-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-24">
-      <div class="max-w-md w-full space-y-8">
+    <div class="min-h-screen bg-gray-950 flex items-center justify-center py-8 px-3 sm:py-12 sm:px-6 lg:px-8 pt-20 sm:pt-24">
+      <div class="max-w-md w-full space-y-6 sm:space-y-8">
         <!-- Logo -->
         <div class="text-center">
-          <div class="flex items-center justify-center gap-3 mb-6">
-            <svg class="w-12 h-12" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <div class="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <svg
+              class="w-10 h-10 sm:w-12 sm:h-12"
+              viewBox="0 0 120 120"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <linearGradient id="authLogo" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
@@ -96,12 +100,12 @@ defmodule LangWeb.AuthHTML do
                 stroke-linecap="round"
               />
             </svg>
-            <span class="text-3xl font-light text-white">LANG</span>
+            <span class="text-2xl sm:text-3xl font-light text-white">LANG</span>
           </div>
-          <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
+          <h2 class="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-white">
             Welcome to LANG
           </h2>
-          <p class="mt-2 text-center text-sm text-gray-400">
+          <p class="mt-2 text-center text-xs sm:text-sm text-gray-400">
             Universal Text Intelligence Platform
           </p>
         </div>
@@ -138,7 +142,7 @@ defmodule LangWeb.AuthHTML do
                   type="email"
                   label="Email address"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -147,7 +151,7 @@ defmodule LangWeb.AuthHTML do
                   type="password"
                   label="Password"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -166,7 +170,7 @@ defmodule LangWeb.AuthHTML do
             <div>
               <button
                 type="submit"
-                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors touch-manipulation"
               >
                 Sign In
               </button>
@@ -190,7 +194,7 @@ defmodule LangWeb.AuthHTML do
                   type="text"
                   label="Full Name"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
               <div>
@@ -199,7 +203,7 @@ defmodule LangWeb.AuthHTML do
                   type="email"
                   label="Email address"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
               <div>
@@ -208,7 +212,7 @@ defmodule LangWeb.AuthHTML do
                   type="password"
                   label="Password"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
               <div>
@@ -217,7 +221,7 @@ defmodule LangWeb.AuthHTML do
                   type="password"
                   label="Confirm Password"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
               <div>
@@ -226,7 +230,7 @@ defmodule LangWeb.AuthHTML do
                   type="text"
                   label="Organization Name"
                   required
-                  class="block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  class="block w-full px-3 py-2 text-sm sm:text-base border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
             </div>
@@ -234,7 +238,7 @@ defmodule LangWeb.AuthHTML do
             <div>
               <button
                 type="submit"
-                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors touch-manipulation"
               >
                 Sign Up
               </button>
@@ -296,12 +300,16 @@ defmodule LangWeb.AuthHTML do
       </div>
     </nav>
 
-    <div class="min-h-screen bg-gray-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-24">
-      <div class="max-w-md w-full space-y-8">
+    <div class="min-h-screen bg-gray-950 flex items-center justify-center py-8 px-3 sm:py-12 sm:px-6 lg:px-8 pt-20 sm:pt-24">
+      <div class="max-w-md w-full space-y-6 sm:space-y-8">
         <!-- Logo -->
         <div class="text-center">
-          <div class="flex items-center justify-center gap-3 mb-6">
-            <svg class="w-12 h-12" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <div class="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <svg
+              class="w-10 h-10 sm:w-12 sm:h-12"
+              viewBox="0 0 120 120"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <linearGradient id="forgotLogo" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
@@ -330,9 +338,9 @@ defmodule LangWeb.AuthHTML do
                 stroke-linecap="round"
               />
             </svg>
-            <span class="text-3xl font-light text-white">LANG</span>
+            <span class="text-2xl sm:text-3xl font-light text-white">LANG</span>
           </div>
-          <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
+          <h2 class="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-white">
             Reset your password
           </h2>
           <p class="mt-2 text-center text-sm text-gray-400">
@@ -399,28 +407,28 @@ defmodule LangWeb.AuthHTML do
             <a href="/" class="flex items-center gap-3">
               <svg class="w-8 h-8" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="navLogoForgot" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <linearGradient id="navLogoReset" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
                     <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
                   </linearGradient>
                 </defs>
                 <path
                   d="M 35 35 L 25 60 L 35 85"
-                  stroke="url(#navLogoForgot)"
+                  stroke="url(#navLogoReset)"
                   stroke-width="3"
                   fill="none"
                   stroke-linecap="round"
                 />
                 <path
                   d="M 40 60 Q 50 52, 60 60 T 80 60"
-                  stroke="url(#navLogoForgot)"
+                  stroke="url(#navLogoReset)"
                   stroke-width="2.5"
                   fill="none"
                   stroke-linecap="round"
                 />
                 <path
                   d="M 85 35 L 95 60 L 85 85"
-                  stroke="url(#navLogoForgot)"
+                  stroke="url(#navLogoReset)"
                   stroke-width="3"
                   fill="none"
                   stroke-linecap="round"
@@ -433,35 +441,35 @@ defmodule LangWeb.AuthHTML do
       </div>
     </nav>
 
-    <div class="min-h-screen bg-gray-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-24">
-      <div class="max-w-md w-full space-y-8">
+    <div class="min-h-screen bg-gray-950 flex items-center justify-center py-8 px-3 sm:py-12 sm:px-6 lg:px-8 pt-20 sm:pt-24">
+      <div class="max-w-md w-full space-y-6 sm:space-y-8">
         <!-- Logo -->
         <div class="text-center">
           <div class="flex items-center justify-center gap-3 mb-6">
             <svg class="w-12 h-12" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="forgotLogo" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="resetLogo" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
                   <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
                 </linearGradient>
               </defs>
               <path
                 d="M 35 35 L 25 60 L 35 85"
-                stroke="url(#forgotLogo)"
+                stroke="url(#resetLogo)"
                 stroke-width="3"
                 fill="none"
                 stroke-linecap="round"
               />
               <path
                 d="M 40 60 Q 50 52, 60 60 T 80 60"
-                stroke="url(#forgotLogo)"
+                stroke="url(#resetLogo)"
                 stroke-width="2.5"
                 fill="none"
                 stroke-linecap="round"
               />
               <path
                 d="M 85 35 L 95 60 L 85 85"
-                stroke="url(#forgotLogo)"
+                stroke="url(#resetLogo)"
                 stroke-width="3"
                 fill="none"
                 stroke-linecap="round"
@@ -470,10 +478,10 @@ defmodule LangWeb.AuthHTML do
             <span class="text-3xl font-light text-white">LANG</span>
           </div>
           <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
-            Reset your password
+            Set new password
           </h2>
           <p class="mt-2 text-center text-sm text-gray-400">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your new password below.
           </p>
         </div>
 

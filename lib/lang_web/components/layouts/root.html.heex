@@ -8,9 +8,16 @@
       name="stripe-publishable-key"
       content={System.get_env("STRIPE_PUBLISHABLE_KEY", "pk_test_placeholder")}
     />
-    <.live_title default="Lang" suffix=" · Phoenix Framework">
-      {assigns[:page_title]}
-    </.live_title>
+    
+<!-- SEO Meta Tags -->
+    <LangWeb.SEO.meta_tags
+      title={assigns[:seo_title] || assigns[:page_title]}
+      description={assigns[:seo_description]}
+      keywords={assigns[:seo_keywords]}
+      image={assigns[:seo_image]}
+      canonical={assigns[:canonical_path]}
+      noindex={assigns[:noindex] || false}
+    />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
