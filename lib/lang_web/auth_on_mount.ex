@@ -2,39 +2,34 @@ defmodule LangWeb.AuthOnMount do
   @moduledoc """
   LiveView on_mount hooks for assigning current_user and enforcing authentication.
 
-  This module integrates with the AuthPlug system to provide consistent
-  authentication across LiveViews and regular controllers.
+  This module integrates with AshAuthentication to provide consistent
+  authentication across LiveViews using proper Ash patterns.
   """
 
   import Phoenix.LiveView
   import Phoenix.Component
 
-  alias LangWeb.Plugs.AuthPlug
   alias Lang.Accounts.User
   alias Lang.Events
   require Logger
 
   @doc """
-  Assigns current_user and current_scope from session or creates development user.
+  Assigns current_user and current_scope using AshAuthentication session helpers.
   """
   def mount_current_user(_params, session, socket) do
     socket =
-      case get_user_from_session(session) do
-        {:ok, user, org} ->
+      case AshAuthentication.Phoenix.current_user(socket, session) do
+        {:ok, user} ->
           socket
           |> assign(:current_user, user)
-          |> assign(:current_org, org)
-          |> assign(:current_scope, :user)
+          |> assign(:current_org, load_user_org(user))
+          |> assign(:current_scope, %{type: :user, id: user.id})
           |> assign(:authenticated?, true)
-
-        {:error, :not_found} ->
-          # Session references non-existent user, clear it
-          assign_development_user(socket)
 
         {:error, _reason} ->
           assign_development_user(socket)
 
-        :no_session ->
+        nil ->
           assign_development_user(socket)
       end
 
@@ -96,16 +91,11 @@ defmodule LangWeb.AuthOnMount do
 
   # Private helper functions
 
-  defp get_user_from_session(session) do
-    case Map.get(session, "current_user_id") do
-      nil ->
-        :no_session
-
-      user_id when is_binary(user_id) ->
-        load_user_with_org(user_id)
-
-      _ ->
-        {:error, :invalid_session}
+  defp load_user_org(user) do
+    case user.organization do
+      %{} = org -> org
+      nil -> create_default_organization(user)
+      _ -> nil
     end
   end
 
@@ -194,13 +184,13 @@ defmodule LangWeb.AuthOnMount do
       socket
       |> assign(:current_user, dev_user)
       |> assign(:current_org, dev_org)
-      |> assign(:current_scope, :development)
+      |> assign(:current_scope, %{type: :development, id: "dev"})
       |> assign(:authenticated?, false)
     else
       socket
       |> assign(:current_user, nil)
       |> assign(:current_org, nil)
-      |> assign(:current_scope, :guest)
+      |> assign(:current_scope, %{type: :guest, id: nil})
       |> assign(:authenticated?, false)
     end
   end

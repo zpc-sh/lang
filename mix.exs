@@ -74,7 +74,7 @@ defmodule Lang.MixProject do
       {:ash, "~> 3.0"},
       {:ash_postgres, "~> 2.0"},
       {:ash_phoenix, "~> 2.0"},
-      {:ash_json_api, "~> 1.0"},
+      {:ash_json_api, "~> 1.4.42"},
       {:ash_authentication, "~> 4.0"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:ash_oban, "~> 0.2"},

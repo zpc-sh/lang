@@ -1,51 +1,57 @@
 defmodule Lang.Api do
-  use AshJsonApi, domain: Lang.Accounts
+  @moduledoc """
+  API configuration for LANG Universal Text Intelligence Platform.
 
-  json_api "/api/v1" do
-    # User authentication and management endpoints
-    resource "/users", Lang.Accounts.User do
-      # Public registration endpoint
-      post(:register)
+  This module provides JSON API endpoints for resource management.
+  Currently simplified while AshJsonApi integration is being completed.
+  """
 
-      # User profile management (authenticated)
-      get(:show, route: "/:id")
-      patch(:update, route: "/:id")
-      delete(:destroy, route: "/:id")
+  # Placeholder for AshJsonApi integration
+  # TODO: Implement proper AshJsonApi routes once auth system is complete
 
-      # Get current user info
-      get(:me, route: "/me")
-    end
-
-    # Organization management endpoints
-    resource "/organizations", Lang.Accounts.Organization do
-      get(:show, route: "/:id")
-      patch(:update, route: "/:id")
-      delete(:destroy, route: "/:id")
-
-      # Organization users
-      get(:users, route: "/:id/users")
-    end
-
-    # API Key management endpoints
-    resource "/api-keys", Lang.Accounts.ApiKey do
-      index(:list_by_user)
-      post(:create)
-      patch(:update, route: "/:id")
-      delete(:destroy, route: "/:id")
-
-      # API key actions
-      patch(:revoke, route: "/:id/revoke")
-      patch(:activate, route: "/:id/activate")
-    end
+  @doc """
+  Returns available API versions and endpoints.
+  """
+  def versions do
+    %{
+      v1: %{
+        base_url: "/api/v1",
+        resources: [
+          "users",
+          "organizations",
+          "api-keys"
+        ],
+        auth_required: true
+      }
+    }
   end
 
-  # Authentication endpoints (separate from JSON:API spec)
-  json_api "/auth" do
-    # These follow a more REST-like pattern for auth
-    post("/sign-in", to: LangWeb.AuthController, action: :sign_in)
-    post("/sign-out", to: LangWeb.AuthController, action: :sign_out)
-    post("/register", to: LangWeb.AuthController, action: :register)
-    post("/forgot-password", to: LangWeb.AuthController, action: :forgot_password)
-    post("/reset-password", to: LangWeb.AuthController, action: :reset_password)
+  @doc """
+  Returns API documentation structure.
+  """
+  def docs do
+    %{
+      title: "LANG API",
+      version: "1.0.0",
+      description: "Universal Text Intelligence Platform API",
+      endpoints: %{
+        users: %{
+          post: "/api/v1/users",
+          get: "/api/v1/users/:id",
+          patch: "/api/v1/users/:id",
+          delete: "/api/v1/users/:id"
+        },
+        organizations: %{
+          get: "/api/v1/organizations/:id",
+          patch: "/api/v1/organizations/:id"
+        },
+        api_keys: %{
+          get: "/api/v1/api-keys",
+          post: "/api/v1/api-keys",
+          patch: "/api/v1/api-keys/:id",
+          delete: "/api/v1/api-keys/:id"
+        }
+      }
+    }
   end
 end

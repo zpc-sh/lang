@@ -31,11 +31,61 @@ import "./stripe"
 // Get Stripe publishable key from environment
 window.stripePublishableKey = document.querySelector("meta[name='stripe-publishable-key']")?.getAttribute("content");
 
+// Custom hooks for LANG landing page
+const langHooks = {
+  MatrixRain: {
+    mounted() {
+      this.createMatrixRain();
+    },
+    
+    createMatrixRain() {
+      const container = this.el;
+      const chars = '⟨~⟩▷⇒🎯✅⚠️💡LANG01';
+      const columns = Math.floor(container.offsetWidth / 20);
+      
+      for (let i = 0; i < columns; i++) {
+        const column = document.createElement('div');
+        column.className = 'matrix-column';
+        column.style.left = `${i * 20}px`;
+        column.style.animationDuration = `${Math.random() * 10 + 5}s`;
+        column.style.animationDelay = `${Math.random() * 5}s`;
+        
+        // Generate random characters
+        let text = '';
+        for (let j = 0; j < 50; j++) {
+          text += chars[Math.floor(Math.random() * chars.length)] + '\n';
+        }
+        column.textContent = text;
+        
+        container.appendChild(column);
+      }
+    }
+  },
+  
+  TypeWriter: {
+    mounted() {
+      const text = this.el.dataset.text;
+      const speed = parseInt(this.el.dataset.speed) || 50;
+      let index = 0;
+      
+      const type = () => {
+        if (index < text.length) {
+          this.el.textContent = text.substring(0, index + 1);
+          index++;
+          setTimeout(type, speed);
+        }
+      };
+      
+      type();
+    }
+  }
+};
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ...langHooks},
 })
 
 // Show progress bar on live navigation and form submits

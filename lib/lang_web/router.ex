@@ -25,15 +25,19 @@ defmodule LangWeb.Router do
 
   # Authentication pipelines
   pipeline :require_authenticated_user do
-    plug LangWeb.Plugs.AuthPlug, strategy: :session, required: true
+    plug :ensure_authenticated
   end
 
   pipeline :require_authenticated_api do
-    plug LangWeb.Plugs.AuthPlug, strategy: :api_key, required: true
+    plug :ensure_authenticated
   end
 
   pipeline :optional_auth do
-    plug LangWeb.Plugs.AuthPlug, strategy: :optional, required: false
+    plug :load_from_session
+  end
+
+  pipeline :optional_api_auth do
+    plug :load_from_bearer
   end
 
   scope "/", LangWeb do
@@ -43,6 +47,7 @@ defmodule LangWeb.Router do
     get "/health", HealthController, :check
     live "/analyze", TextAnalysisLive, :index
     live "/demo", DemoLive, :index
+    live "/font", FontShowcaseLive, :index
     live "/design-system", DesignSystemLive, :index
   end
 
@@ -62,6 +67,9 @@ defmodule LangWeb.Router do
     get "/oauth/:provider", AuthController, :oauth_callback
   end
 
+  # AshAuthentication routes
+  auth_routes_for(Lang.Accounts.User, to: LangWeb.AuthController, path: "/auth")
+
   # Authenticated live session (stubs current_user in dev/test)
   live_session :authenticated,
     on_mount: [
@@ -76,13 +84,6 @@ defmodule LangWeb.Router do
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
     end
-  end
-
-  # Public marketing pages
-  scope "/", LangWeb do
-    pipe_through :browser
-
-    live "/font", FontShowcaseLive, :index
   end
 
   # API routes
@@ -140,6 +141,20 @@ defmodule LangWeb.Router do
 
       live_dashboard "/dashboard", metrics: LangWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+  end
+
+  # Authentication helper plugs
+  defp ensure_authenticated(conn, _opts) do
+    case conn.assigns[:current_user] do
+      nil ->
+        conn
+        |> put_flash(:error, "You must be signed in to access this page.")
+        |> redirect(to: "/auth")
+        |> halt()
+
+      _user ->
+        conn
     end
   end
 end

@@ -16,13 +16,16 @@ defmodule Lang.Accounts.User do
         hashed_password_field(:hashed_password)
         sign_in_tokens_enabled?(true)
         confirmation_required?(false)
+        register_action_name(:register_with_password)
       end
     end
 
     tokens do
       enabled?(true)
       token_resource(Lang.Accounts.Token)
-      signing_secret(&Lang.Secrets.secret_key_base/0)
+      signing_secret(Lang.Secrets)
+      require_token_presence_for_authentication?(true)
+      session_identifier(:jti)
     end
   end
 
@@ -126,14 +129,9 @@ defmodule Lang.Accounts.User do
       validate(confirm(:password, :password_confirmation))
       validate(present([:email, :name, :password, :organization_name]))
 
-      change(fn changeset, _context ->
-        if password = Ash.Changeset.get_argument(changeset, :password) do
-          hashed = Bcrypt.hash_pwd_salt(password)
-          Ash.Changeset.change_attribute(changeset, :hashed_password, hashed)
-        else
-          changeset
-        end
-      end)
+      # Hash password change required by AshAuthentication
+      change(AshAuthentication.Strategy.Password.HashPasswordChange)
+      change(AshAuthentication.GenerateTokenChange)
 
       # Set monthly limits based on subscription tier
       change(fn changeset, _context ->
@@ -144,7 +142,7 @@ defmodule Lang.Accounts.User do
       end)
     end
 
-    create :register do
+    create :register_with_password do
       argument :password, :string do
         sensitive?(true)
       end
@@ -158,6 +156,10 @@ defmodule Lang.Accounts.User do
 
       validate(confirm(:password, :password_confirmation))
       validate(present([:email, :name, :password, :organization_name]))
+
+      # Hash password change required by AshAuthentication
+      change(AshAuthentication.Strategy.Password.HashPasswordChange)
+      change(AshAuthentication.GenerateTokenChange)
 
       change(fn changeset, context ->
         org_name = Ash.Changeset.get_argument(changeset, :organization_name)
@@ -183,17 +185,8 @@ defmodule Lang.Accounts.User do
         end
       end)
 
-      change(fn changeset, _context ->
-        if password = Ash.Changeset.get_argument(changeset, :password) do
-          hashed = Bcrypt.hash_pwd_salt(password)
-          Ash.Changeset.change_attribute(changeset, :hashed_password, hashed)
-        else
-          changeset
-        end
-      end)
-
       # Set monthly limits and create initial API key
-      change(fn changeset, context ->
+      change(fn changeset, _context ->
         tier = Ash.Changeset.get_attribute(changeset, :subscription_tier) || :free
         limit = Lang.Billing.Config.plan_request_limit(tier)
 
@@ -212,6 +205,8 @@ defmodule Lang.Accounts.User do
     end
 
     update :change_password do
+      require_atomic?(false)
+
       argument :current_password, :string do
         sensitive?(true)
       end
@@ -248,6 +243,8 @@ defmodule Lang.Accounts.User do
     end
 
     update :upgrade_subscription do
+      require_atomic?(false)
+
       argument :tier, :atom do
         constraints(one_of: [:free, :professional, :enterprise])
       end
@@ -267,6 +264,8 @@ defmodule Lang.Accounts.User do
     end
 
     update :increment_request_count do
+      require_atomic?(false)
+
       change(fn changeset, _context ->
         current_count = changeset.data.monthly_request_count || 0
         Ash.Changeset.change_attribute(changeset, :monthly_request_count, current_count + 1)
@@ -274,6 +273,8 @@ defmodule Lang.Accounts.User do
     end
 
     update :reset_monthly_usage do
+      require_atomic?(false)
+
       change(fn changeset, _context ->
         changeset
         |> Ash.Changeset.change_attribute(:monthly_request_count, 0)
@@ -291,6 +292,8 @@ defmodule Lang.Accounts.User do
     define(:by_id, get_by: [:id], action: :read)
     define(:by_email, get_by: [:email], action: :read)
     define(:list_all, action: :read)
+    define(:create, action: :create)
+    define(:register_with_password, action: :register_with_password)
     define(:update)
     define(:confirm_email)
     define(:change_password)
@@ -343,5 +346,12 @@ defmodule Lang.Accounts.User do
 
   def subscription_price(tier) do
     Lang.Billing.Config.plan_price_string(tier)
+  end
+
+  @doc """
+  Creates a changeset for user creation with default attributes.
+  """
+  def changeset_for_create(attrs \\ %{}) do
+    Ash.Changeset.for_create(__MODULE__, :create, attrs)
   end
 end

@@ -987,4 +987,7 @@
 }
 
 .footer-copyright {
-  color: var(--lang-text-m
+  color: var(--lang-text-muted);
+  font-size: 0.875rem;
+  margin: var(--space-xs) 0 0 0;
+}
