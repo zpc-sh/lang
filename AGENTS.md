@@ -17,6 +17,7 @@ This is a sophisticated web application built with Phoenix, Ash Framework, and n
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
+- **ALWAYS compile after file changes** - Run `mix compile` after creating/updating any file to catch errors immediately
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 - **Always** use native Rust NIFs for filesystem operations via `Lang.Native.FSScanner` instead of pure Elixir file operations
 - **Always** use Ash resources for data operations instead of raw Ecto queries
@@ -719,6 +720,7 @@ end
 ```bash
 # Development
 mix setup                 # Initial setup
+mix compile              # Check compilation after file changes ⚠️ ALWAYS RUN THIS
 mix precommit            # Run all checks before commit
 mix compile.native       # Compile Rust NIFs
 mix phx.server          # Start development server

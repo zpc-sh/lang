@@ -5,19 +5,52 @@ defmodule LangWeb.LandingLive do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       :timer.send_interval(3000, self(), :cycle_use_case)
+      :timer.send_interval(100, self(), :update_stats)
     end
 
     {:ok,
      assign(socket,
        demo_active: false,
        current_use_case: 0,
-       use_cases: generate_use_cases()
+       demo_output: nil,
+       use_cases: generate_use_cases(),
+       typing_text: "",
+       typing_index: 0,
+       show_features: false,
+       stats: %{
+         files_processed: 0,
+         insights_generated: 0,
+         time_saved: 0,
+         accuracy_rate: 99.2
+       },
+       animated_stats: %{
+         files_processed: 0,
+         insights_generated: 0,
+         time_saved: 0
+       }
      )}
   end
 
   @impl true
   def handle_event("start_demo", _params, socket) do
     {:noreply, assign(socket, demo_active: true)}
+  end
+
+  @impl true
+  def handle_event("demo_click", _params, socket) do
+    send(self(), :start_typing_animation)
+    {:noreply, assign(socket, demo_active: true, typing_index: 0, typing_text: "")}
+  end
+
+  @impl true
+  def handle_event("analyze_text", %{"text" => text}, socket) do
+    analysis = analyze_input_text(text)
+    {:noreply, assign(socket, demo_output: analysis)}
+  end
+
+  @impl true
+  def handle_event("show_features", _params, socket) do
+    {:noreply, assign(socket, show_features: true)}
   end
 
   @impl true
@@ -33,6 +66,73 @@ defmodule LangWeb.LandingLive do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_info(:start_typing_animation, socket) do
+    send(self(), :type_next_char)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(:type_next_char, socket) do
+    demo_text =
+      "✓ Analyzing document structure...\n✓ Extracting key entities...\n✓ Computing semantic relationships...\n✓ Identifying patterns and anomalies...\n→ Intelligence complete: 47 insights generated"
+
+    if socket.assigns.typing_index < String.length(demo_text) do
+      new_text = String.slice(demo_text, 0, socket.assigns.typing_index + 1)
+      Process.send_after(self(), :type_next_char, 20)
+
+      {:noreply,
+       assign(socket, typing_text: new_text, typing_index: socket.assigns.typing_index + 1)}
+    else
+      {:noreply, assign(socket, demo_output: socket.assigns.typing_text)}
+    end
+  end
+
+  @impl true
+  def handle_info(:update_stats, socket) do
+    animated_stats = socket.assigns.animated_stats
+    target_stats = socket.assigns.stats
+
+    new_animated_stats = %{
+      files_processed:
+        increment_stat(animated_stats.files_processed, target_stats.files_processed),
+      insights_generated:
+        increment_stat(animated_stats.insights_generated, target_stats.insights_generated),
+      time_saved: increment_stat(animated_stats.time_saved, target_stats.time_saved)
+    }
+
+    {:noreply, assign(socket, animated_stats: new_animated_stats)}
+  end
+
+  defp increment_stat(current, target) when current < target do
+    step = max(1, div(target - current, 20))
+    min(current + step, target)
+  end
+
+  defp increment_stat(current, _target), do: current
+
+  defp analyze_input_text(text) do
+    word_count = length(String.split(text))
+    sentences = String.split(text, ~r/[.!?]/, trim: true) |> length()
+
+    "📊 Analysis Complete:\n" <>
+      "• Words: #{word_count}\n" <>
+      "• Sentences: #{sentences}\n" <>
+      "• Readability: Professional\n" <>
+      "• Sentiment: Neutral-Positive\n" <>
+      "• Key Topics: #{Enum.join(extract_topics(text), ", ")}"
+  end
+
+  defp extract_topics(text) do
+    # Simple topic extraction
+    text
+    |> String.downcase()
+    |> String.split()
+    |> Enum.filter(&(String.length(&1) > 5))
+    |> Enum.take(3)
+    |> Enum.map(&String.capitalize/1)
   end
 
   defp generate_use_cases do

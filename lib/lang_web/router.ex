@@ -43,6 +43,7 @@ defmodule LangWeb.Router do
     get "/health", HealthController, :check
     live "/analyze", TextAnalysisLive, :index
     live "/demo", DemoLive, :index
+    live "/design-system", DesignSystemLive, :index
   end
 
   # Authentication routes

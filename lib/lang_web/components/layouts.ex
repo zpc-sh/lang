@@ -36,14 +36,65 @@ defmodule LangWeb.Layouts do
   def app(assigns) do
     ~H"""
     <div class="min-h-screen bg-gray-950 text-gray-100">
-      <div class="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-transparent to-purple-900/10">
-      </div>
-
-      <div class="relative">
-        <main class="px-6 py-8 sm:px-12 lg:px-16">
-          <.flash_group flash={@flash} />
-          {@inner_block}
-        </main>
+      <!-- Navbar -->
+      <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div class="flex items-center justify-between h-16">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3">
+              <a href="/" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                <svg
+                  class="w-8 h-8 text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  >
+                  </path>
+                </svg>
+              </a>
+            </div>
+            
+    <!-- Navigation Links -->
+            <div class="hidden md:flex items-center space-x-8">
+              <a
+                href="#features"
+                class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="/api-portal"
+                class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
+              >
+                Documentation
+              </a>
+              <a
+                href="#pricing"
+                class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
+              >
+                Pricing
+              </a>
+              <a
+                href="/analyze"
+                class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5"
+              >
+                Try Free
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+    <!-- Main Content -->
+      <div class="pt-16">
+        <.flash_group flash={@flash} />
+        {render_slot(@inner_block)}
       </div>
     </div>
     """

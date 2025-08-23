@@ -1,256 +1,347 @@
 defmodule Lang.Accounts.User do
-  @moduledoc """
-  User resource for authentication and account management.
-
-  This module defines the core User resource with authentication capabilities,
-  subscription management, and API usage tracking.
-  """
-
   use Ash.Resource,
     domain: Lang.Accounts,
-    extensions: [
-      AshAuthentication,
-      AshPostgres.DataLayer
-    ]
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshAuthentication]
 
   postgres do
     table("users")
     repo(Lang.Repo)
   end
 
-  # Authentication configuration
   authentication do
     strategies do
       password :password do
         identity_field(:email)
         hashed_password_field(:hashed_password)
-        hash_provider(AshAuthentication.BcryptProvider)
-        confirmation_required?(true)
+        sign_in_tokens_enabled?(true)
+        confirmation_required?(false)
       end
     end
 
     tokens do
       enabled?(true)
       token_resource(Lang.Accounts.Token)
-      signing_secret(Lang.Secrets)
+      signing_secret(&Lang.Secrets.secret_key_base/0)
     end
-
-    session_identifier(:jti)
   end
 
-  # Resource attributes
   attributes do
     uuid_primary_key(:id)
-    attribute(:email, :ci_string, allow_nil?: false, public?: true)
-    attribute(:hashed_password, :string, allow_nil?: false, sensitive?: true)
-    attribute(:confirmed_at, :utc_datetime)
 
-    # Organization relationship
-    attribute(:organization_id, :uuid, allow_nil?: false, public?: true)
+    attribute :email, :string do
+      allow_nil?(false)
+      public?(true)
+    end
 
-    # Profile information
-    attribute(:name, :string, public?: true)
-    attribute(:role, :string, public?: true)
-    attribute(:is_organization_admin, :boolean, default: false, allow_nil?: false)
-    attribute(:permissions, {:array, :atom}, default: [:basic_access], allow_nil?: false)
+    attribute :name, :string do
+      allow_nil?(false)
+      public?(true)
+    end
 
-    # User status
-    attribute(:is_active, :boolean, default: true, allow_nil?: false)
-    attribute(:last_login_at, :utc_datetime)
+    attribute :hashed_password, :string do
+      allow_nil?(false)
+      sensitive?(true)
+    end
+
+    attribute :confirmed_at, :utc_datetime do
+      public?(true)
+    end
+
+    attribute :is_active, :boolean do
+      default(true)
+      public?(true)
+    end
+
+    # Billing fields
+    attribute :subscription_tier, :atom do
+      constraints(one_of: [:free, :professional, :enterprise])
+      default(:free)
+      public?(true)
+    end
+
+    attribute :monthly_request_count, :integer do
+      default(0)
+      public?(true)
+    end
+
+    attribute :monthly_request_limit, :integer do
+      default(1000)
+      public?(true)
+    end
+
+    attribute :last_request_reset, :utc_datetime do
+      default(&DateTime.utc_now/0)
+      public?(true)
+    end
+
+    attribute :stripe_customer_id, :string do
+      public?(true)
+    end
+
+    attribute :stripe_subscription_id, :string do
+      public?(true)
+    end
+
+    attribute :subscription_status, :atom do
+      constraints(one_of: [:active, :canceled, :past_due, :unpaid, :trialing])
+      default(:active)
+      public?(true)
+    end
 
     timestamps()
   end
 
-  # Identities
+  relationships do
+    belongs_to :organization, Lang.Accounts.Organization do
+      public?(true)
+    end
+
+    has_many :api_keys, Lang.Accounts.ApiKey do
+      public?(true)
+    end
+  end
+
   identities do
     identity(:unique_email, [:email])
-    identity(:organization_user, [:organization_id, :email])
   end
 
-  # Relationships
-  relationships do
-    belongs_to(:organization, Lang.Accounts.Organization)
-  end
-
-  # Actions
   actions do
-    defaults([:create, :read, :update, :destroy])
+    defaults([:read])
 
-    create :register do
-      argument(:email, :ci_string, allow_nil?: false)
-      argument(:password, :string, allow_nil?: false)
-      argument(:password_confirmation, :string, allow_nil?: false)
-      argument(:organization_id, :uuid, allow_nil?: false)
-      argument(:name, :string)
-      argument(:role, :string)
+    create :create do
+      primary?(true)
 
-      change(AshAuthentication.PasswordStrategy.Actions.PasswordConfirmationChange)
-      change(AshAuthentication.GenerateTokenChange)
+      argument :password, :string do
+        sensitive?(true)
+      end
+
+      argument :password_confirmation, :string do
+        sensitive?(true)
+      end
+
+      argument(:organization_name, :string)
+      argument(:organization_slug, :string)
+
+      validate(confirm(:password, :password_confirmation))
+      validate(present([:email, :name, :password, :organization_name]))
 
       change(fn changeset, _context ->
-        organization_id = Ash.Changeset.get_argument(changeset, :organization_id)
-        name = Ash.Changeset.get_argument(changeset, :name)
-        role = Ash.Changeset.get_argument(changeset, :role)
+        if password = Ash.Changeset.get_argument(changeset, :password) do
+          hashed = Bcrypt.hash_pwd_salt(password)
+          Ash.Changeset.change_attribute(changeset, :hashed_password, hashed)
+        else
+          changeset
+        end
+      end)
 
-        changeset
-        |> Ash.Changeset.change_attribute(:organization_id, organization_id)
-        |> Ash.Changeset.change_attribute(:name, name)
-        |> Ash.Changeset.change_attribute(:role, role)
+      # Set monthly limits based on subscription tier
+      change(fn changeset, _context ->
+        tier = Ash.Changeset.get_attribute(changeset, :subscription_tier) || :free
+        limit = Lang.Billing.Config.plan_request_limit(tier)
+
+        Ash.Changeset.change_attribute(changeset, :monthly_request_limit, limit)
       end)
     end
 
-    create :register_with_organization do
-      argument(:email, :ci_string, allow_nil?: false)
-      argument(:password, :string, allow_nil?: false)
-      argument(:password_confirmation, :string, allow_nil?: false)
-      argument(:organization_name, :string, allow_nil?: false)
-      argument(:organization_slug, :string, allow_nil?: false)
-      argument(:name, :string)
-      argument(:role, :string, default: "Owner")
+    create :register do
+      argument :password, :string do
+        sensitive?(true)
+      end
 
-      change(AshAuthentication.PasswordStrategy.Actions.PasswordConfirmationChange)
-      change(AshAuthentication.GenerateTokenChange)
+      argument :password_confirmation, :string do
+        sensitive?(true)
+      end
+
+      argument(:organization_name, :string)
+      argument(:organization_slug, :string)
+
+      validate(confirm(:password, :password_confirmation))
+      validate(present([:email, :name, :password, :organization_name]))
 
       change(fn changeset, context ->
         org_name = Ash.Changeset.get_argument(changeset, :organization_name)
         org_slug = Ash.Changeset.get_argument(changeset, :organization_slug)
-        user_name = Ash.Changeset.get_argument(changeset, :name)
-        user_role = Ash.Changeset.get_argument(changeset, :role)
-        email = Ash.Changeset.get_argument(changeset, :email)
 
         # Create organization first
-        case Lang.Accounts.Organization.register(
+        case Lang.Accounts.Organization.create(
                %{
                  name: org_name,
-                 slug: org_slug,
-                 contact_email: email,
-                 billing_email: email
+                 slug: org_slug || String.downcase(String.replace(org_name, " ", "-"))
                },
                context
              ) do
           {:ok, organization} ->
             changeset
             |> Ash.Changeset.change_attribute(:organization_id, organization.id)
-            |> Ash.Changeset.change_attribute(:name, user_name)
-            |> Ash.Changeset.change_attribute(:role, user_role)
-            |> Ash.Changeset.change_attribute(:is_organization_admin, true)
-            |> Ash.Changeset.change_attribute(:permissions, [
-              :basic_access,
-              :admin_access,
-              :billing_access,
-              :user_management
-            ])
 
           {:error, error} ->
-            Ash.Changeset.add_error(changeset, error)
+            Ash.Changeset.add_error(changeset,
+              field: :organization_name,
+              message: "Failed to create organization: #{inspect(error)}"
+            )
+        end
+      end)
+
+      change(fn changeset, _context ->
+        if password = Ash.Changeset.get_argument(changeset, :password) do
+          hashed = Bcrypt.hash_pwd_salt(password)
+          Ash.Changeset.change_attribute(changeset, :hashed_password, hashed)
+        else
+          changeset
+        end
+      end)
+
+      # Set monthly limits and create initial API key
+      change(fn changeset, context ->
+        tier = Ash.Changeset.get_attribute(changeset, :subscription_tier) || :free
+        limit = Lang.Billing.Config.plan_request_limit(tier)
+
+        Ash.Changeset.change_attribute(changeset, :monthly_request_limit, limit)
+      end)
+    end
+
+    update :update do
+      primary?(true)
+    end
+
+    update :confirm_email do
+      accept([:confirmed_at])
+
+      change(set_attribute(:confirmed_at, &DateTime.utc_now/0))
+    end
+
+    update :change_password do
+      argument :current_password, :string do
+        sensitive?(true)
+      end
+
+      argument :password, :string do
+        sensitive?(true)
+      end
+
+      argument :password_confirmation, :string do
+        sensitive?(true)
+      end
+
+      validate(confirm(:password, :password_confirmation))
+      validate(present([:current_password, :password]))
+
+      validate(fn changeset, _context ->
+        current_password = Ash.Changeset.get_argument(changeset, :current_password)
+
+        if Bcrypt.verify_pass(current_password, changeset.data.hashed_password) do
+          :ok
+        else
+          {:error, field: :current_password, message: "is incorrect"}
+        end
+      end)
+
+      change(fn changeset, _context ->
+        if password = Ash.Changeset.get_argument(changeset, :password) do
+          hashed = Bcrypt.hash_pwd_salt(password)
+          Ash.Changeset.change_attribute(changeset, :hashed_password, hashed)
+        else
+          changeset
         end
       end)
     end
 
-    update :confirm do
-      argument(:token, :string, allow_nil?: false)
-      change(AshAuthentication.PasswordStrategy.Actions.ConfirmChange)
-    end
+    update :upgrade_subscription do
+      argument :tier, :atom do
+        constraints(one_of: [:free, :professional, :enterprise])
+      end
 
-    update :update_profile do
-      argument(:name, :string)
-      argument(:role, :string)
+      argument(:stripe_customer_id, :string)
+      argument(:stripe_subscription_id, :string)
 
       change(fn changeset, _context ->
-        name = Ash.Changeset.get_argument(changeset, :name)
-        role = Ash.Changeset.get_argument(changeset, :role)
+        tier = Ash.Changeset.get_argument(changeset, :tier)
+        limit = Lang.Billing.Config.plan_request_limit(tier)
 
         changeset
-        |> Ash.Changeset.change_attribute(:name, name)
-        |> Ash.Changeset.change_attribute(:role, role)
+        |> Ash.Changeset.change_attribute(:subscription_tier, tier)
+        |> Ash.Changeset.change_attribute(:monthly_request_limit, limit)
+        |> Ash.Changeset.change_attribute(:subscription_status, :active)
       end)
     end
 
-    update :grant_admin_access do
+    update :increment_request_count do
       change(fn changeset, _context ->
-        current_permissions = Ash.Changeset.get_attribute(changeset, :permissions) || []
-        admin_permissions = [:basic_access, :admin_access, :user_management]
-        new_permissions = Enum.uniq(current_permissions ++ admin_permissions)
+        current_count = changeset.data.monthly_request_count || 0
+        Ash.Changeset.change_attribute(changeset, :monthly_request_count, current_count + 1)
+      end)
+    end
 
+    update :reset_monthly_usage do
+      change(fn changeset, _context ->
         changeset
-        |> Ash.Changeset.change_attribute(:is_organization_admin, true)
-        |> Ash.Changeset.change_attribute(:permissions, new_permissions)
+        |> Ash.Changeset.change_attribute(:monthly_request_count, 0)
+        |> Ash.Changeset.change_attribute(:last_request_reset, DateTime.utc_now())
       end)
     end
 
-    update :revoke_admin_access do
-      change(fn changeset, _context ->
-        current_permissions = Ash.Changeset.get_attribute(changeset, :permissions) || []
-        basic_permissions = [:basic_access]
-
-        changeset
-        |> Ash.Changeset.change_attribute(:is_organization_admin, false)
-        |> Ash.Changeset.change_attribute(:permissions, basic_permissions)
-      end)
-    end
-
-    update :deactivate do
-      change(fn changeset, _context ->
-        Ash.Changeset.change_attribute(changeset, :is_active, false)
-      end)
-    end
-
-    update :reactivate do
-      change(fn changeset, _context ->
-        Ash.Changeset.change_attribute(changeset, :is_active, true)
-      end)
-    end
-
-    update :update_last_login do
-      change(fn changeset, _context ->
-        Ash.Changeset.change_attribute(changeset, :last_login_at, DateTime.utc_now())
-      end)
-    end
-
-    read :active do
-      filter(expr(is_active == true))
-    end
-
-    read :by_organization do
-      argument(:organization_id, :uuid, allow_nil?: false)
-      filter(expr(organization_id == ^arg(:organization_id)))
-    end
-
-    read :organization_admins do
-      argument(:organization_id, :uuid, allow_nil?: false)
-      filter(expr(organization_id == ^arg(:organization_id) and is_organization_admin == true))
+    destroy :destroy do
+      primary?(true)
     end
   end
 
-  # Validations
-  validations do
-    validate(present([:email, :organization_id]))
-    validate(match(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/), message: "must be a valid email")
+  code_interface do
+    define(:read)
+    define(:by_id, get_by: [:id], action: :read)
+    define(:by_email, get_by: [:email], action: :read)
+    define(:list_all, action: :read)
+    define(:update)
+    define(:confirm_email)
+    define(:change_password)
+    define(:upgrade_subscription)
+    define(:increment_request_count)
+    define(:reset_monthly_usage)
+    define(:destroy)
   end
 
-  # Calculations
-  calculations do
-    calculate(:display_name, :string, fn records, _context ->
-      Enum.map(records, fn record ->
-        case record.name do
-          nil -> String.split(record.email, "@") |> List.first() |> String.capitalize()
-          name -> name
-        end
-      end)
-    end)
-
-    calculate(:can_access_feature, :boolean, fn records, context ->
-      feature = Map.get(context, :feature, :basic_access)
-
-      Enum.map(records, fn record ->
-        permissions = record.permissions || []
-        feature in permissions
-      end)
-    end)
-  end
-
-  # Preparations
   preparations do
-    prepare(build(load: [:confirmed_at, :organization]))
+    prepare(build(load: [:organization]))
+  end
+
+  validations do
+    validate match(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/) do
+      message("must be a valid email address")
+    end
+
+    validate(string_length(:name, min: 1, max: 100))
+    validate(string_length(:email, min: 3, max: 160))
+  end
+
+  # Helper functions - authentication is now handled by AshAuthentication
+  def authenticate(email, password) do
+    AshAuthentication.authenticate(__MODULE__, :password, %{
+      "email" => email,
+      "password" => password
+    })
+  end
+
+  def confirmed?(user) do
+    !is_nil(user.confirmed_at)
+  end
+
+  def over_limit?(user, additional_requests \\ 1) do
+    user.monthly_request_count + additional_requests > user.monthly_request_limit
+  end
+
+  def usage_percentage(user) do
+    if user.monthly_request_limit > 0 do
+      min(user.monthly_request_count / user.monthly_request_limit * 100, 100)
+    else
+      0
+    end
+  end
+
+  def subscription_name(tier) do
+    Lang.Billing.Config.plan_name(tier)
+  end
+
+  def subscription_price(tier) do
+    Lang.Billing.Config.plan_price_string(tier)
   end
 end

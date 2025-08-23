@@ -21,8 +21,8 @@ defmodule LangWeb.AuthController do
       redirect_after_login(conn)
     else
       render(conn, :show, %{
-        changeset: User.changeset_for_create(%{}),
-        login_changeset: User.changeset_for_login(%{}),
+        changeset: User.changeset_to_create(%{}),
+        login_changeset: AshPhoenix.Form.for_create(User, :create),
         page_title: "Sign In - LANG"
       })
     end
@@ -50,8 +50,8 @@ defmodule LangWeb.AuthController do
         conn
         |> put_flash(:error, "Invalid email or password.")
         |> render(:show, %{
-          changeset: User.changeset_for_create(%{}),
-          login_changeset: User.changeset_for_login(user_params, action: :validate),
+          changeset: User.changeset_to_create(%{}),
+          login_changeset: AshPhoenix.Form.for_create(User, :create, user_params),
           page_title: "Sign In - LANG"
         })
 
@@ -61,8 +61,8 @@ defmodule LangWeb.AuthController do
         conn
         |> put_flash(:error, "An error occurred during login. Please try again.")
         |> render(:show, %{
-          changeset: User.changeset_for_create(%{}),
-          login_changeset: User.changeset_for_login(user_params),
+          changeset: User.changeset_to_create(%{}),
+          login_changeset: AshPhoenix.Form.for_create(User, :create, user_params),
           page_title: "Sign In - LANG"
         })
     end
@@ -93,7 +93,7 @@ defmodule LangWeb.AuthController do
         |> put_flash(:error, "Please fix the errors below.")
         |> render(:show, %{
           changeset: changeset,
-          login_changeset: User.changeset_for_login(%{}),
+          login_changeset: AshPhoenix.Form.for_create(User, :create),
           page_title: "Sign In - LANG"
         })
     end
@@ -158,7 +158,7 @@ defmodule LangWeb.AuthController do
   def reset_password(conn, %{"token" => token}) do
     case verify_reset_token(token) do
       {:ok, user} ->
-        changeset = User.changeset_for_password_reset(user, %{})
+        changeset = AshPhoenix.Form.for_update(user, :change_password)
 
         render(conn, :reset_password, %{
           user: user,
@@ -185,7 +185,7 @@ defmodule LangWeb.AuthController do
   def update_password(conn, %{"token" => token, "user" => user_params}) do
     case verify_reset_token(token) do
       {:ok, user} ->
-        case User.update_password(user, user_params) do
+        case User.change_password(user, user_params) do
           {:ok, updated_user} ->
             # Clear reset token
             User.update(updated_user, %{

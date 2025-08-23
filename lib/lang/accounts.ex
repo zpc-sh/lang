@@ -12,7 +12,9 @@ defmodule Lang.Accounts do
   resources do
     resource(Lang.Accounts.Organization)
     resource(Lang.Accounts.User)
+    resource(Lang.Accounts.ApiKey)
     resource(Lang.Accounts.Token)
+    resource(Lang.Accounts.TokenRevocation)
     resource(Lang.Accounts.APIUsage)
   end
 
@@ -53,7 +55,7 @@ defmodule Lang.Accounts do
   Find user by API key
   """
   def get_user_by_api_key(api_key) do
-    case User.read_all() do
+    case User.list_all() do
       {:ok, users} ->
         case Enum.find(users, fn user -> user.api_key == api_key end) do
           nil -> {:error, :user_not_found}
