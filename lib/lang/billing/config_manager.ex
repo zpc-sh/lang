@@ -238,11 +238,12 @@ defmodule Lang.Billing.ConfigManager do
     end
   end
 
-  @doc """
-  Gets Stripe configuration settings.
-  """
+  # Gets Stripe configuration settings.
   defp stripe_config do
-    billing_config() |> Keyword.get(:stripe, %{})
+    case billing_config() |> Keyword.get(:stripe, %{}) do
+      stripe_config when is_map(stripe_config) -> stripe_config
+      _ -> %{}
+    end
   end
 
   @doc """
