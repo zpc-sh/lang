@@ -64,6 +64,12 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Swoosh API client is needed for adapters other than SMTP.
+config :swoosh, :api_client, Swoosh.ApiClient.Finch
+
+# Configure the mailer
+config :lang, Lang.Mailer, adapter: Swoosh.Adapters.Local
+
 # Force local compilation of Rust NIFs instead of downloading precompiled binaries
 config :rustler_precompiled, :force_build,
   lang_parser: true,

@@ -86,14 +86,15 @@ defmodule Lang.Events do
   end
 
   defp create_user_activity_event(resource, attrs) do
-    event_attrs = %{
-      event_type: Map.get(attrs, :event_type),
+    event_attrs = [
       user_id: Map.get(attrs, :user_id),
-      metadata: Map.get(attrs, :metadata, %{}),
-      occurred_at: DateTime.utc_now()
-    }
+      organization_id: Map.get(attrs, :organization_id),
+      activity_type: String.to_atom(Map.get(attrs, :event_type, "unknown")),
+      activity_name: Map.get(attrs, :event_type),
+      metadata: Map.get(attrs, :metadata, %{})
+    ]
 
-    case resource.create(event_attrs) do
+    case Ash.create(resource, event_attrs, action: :log_activity) do
       {:ok, event} ->
         # Broadcast via PubSub
         Phoenix.PubSub.broadcast(
@@ -116,15 +117,16 @@ defmodule Lang.Events do
   end
 
   defp create_api_usage_event(resource, attrs) do
-    event_attrs = %{
-      event_type: Map.get(attrs, :event_type),
+    event_attrs = [
       user_id: Map.get(attrs, :user_id),
       organization_id: Map.get(attrs, :organization_id),
+      operation_type: String.to_atom(Map.get(attrs, :event_type, "unknown")),
+      operation_name: Map.get(attrs, :event_type),
       metadata: Map.get(attrs, :metadata, %{}),
-      occurred_at: DateTime.utc_now()
-    }
+      success: Map.get(attrs, :success, true)
+    ]
 
-    case resource.create(event_attrs) do
+    case Ash.create(resource, event_attrs, action: :log_usage) do
       {:ok, event} ->
         # Broadcast via PubSub
         if event.user_id do

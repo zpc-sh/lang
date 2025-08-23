@@ -18,6 +18,59 @@ defmodule Lang.Accounts.User do
         confirmation_required?(false)
         register_action_name(:register_with_password)
       end
+
+      github :github do
+        client_id(fn _, _ -> System.get_env("GITHUB_CLIENT_ID") end)
+        client_secret(fn _, _ -> System.get_env("GITHUB_CLIENT_SECRET") end)
+
+        redirect_uri(fn _, _ ->
+          System.get_env("GITHUB_REDIRECT_URI", "http://localhost:4000/auth/github/callback")
+        end)
+
+        register_action_name(:register_with_oauth)
+        identity_resource(Lang.Accounts.UserIdentity)
+      end
+
+      google :google do
+        client_id(fn _, _ -> System.get_env("GOOGLE_CLIENT_ID") end)
+        client_secret(fn _, _ -> System.get_env("GOOGLE_CLIENT_SECRET") end)
+
+        redirect_uri(fn _, _ ->
+          System.get_env("GOOGLE_REDIRECT_URI", "http://localhost:4000/auth/google/callback")
+        end)
+
+        register_action_name(:register_with_oauth)
+        identity_resource(Lang.Accounts.UserIdentity)
+      end
+
+      oauth2 :apple do
+        client_id(fn _, _ -> System.get_env("APPLE_CLIENT_ID") end)
+        client_secret(fn _, _ -> System.get_env("APPLE_CLIENT_SECRET") end)
+
+        redirect_uri(fn _, _ ->
+          System.get_env("APPLE_REDIRECT_URI", "http://localhost:4000/auth/apple/callback")
+        end)
+
+        base_url("https://appleid.apple.com")
+        authorize_url("/auth/authorize")
+        token_url("/auth/token")
+        user_url("/auth/userinfo")
+        authorization_params(scope: "openid email name", response_mode: "form_post")
+
+        register_action_name(:register_with_oauth)
+        identity_resource(Lang.Accounts.UserIdentity)
+      end
+    end
+
+    add_ons do
+      confirmation :confirm do
+        monitor_fields([:email])
+        confirm_on_create?(false)
+        confirm_on_update?(false)
+        inhibit_updates?(false)
+        require_interaction?(true)
+        sender(Lang.Emails)
+      end
     end
 
     tokens do
@@ -43,8 +96,25 @@ defmodule Lang.Accounts.User do
     end
 
     attribute :hashed_password, :string do
-      allow_nil?(false)
+      allow_nil?(true)
       sensitive?(true)
+    end
+
+    # OAuth2 attributes
+    attribute :provider, :string do
+      public?(true)
+    end
+
+    attribute :provider_uid, :string do
+      public?(true)
+    end
+
+    attribute :avatar_url, :string do
+      public?(true)
+    end
+
+    attribute :github_username, :string do
+      public?(true)
     end
 
     attribute :confirmed_at, :utc_datetime do
@@ -103,10 +173,15 @@ defmodule Lang.Accounts.User do
     has_many :api_keys, Lang.Accounts.ApiKey do
       public?(true)
     end
+
+    has_many :user_identities, Lang.Accounts.UserIdentity do
+      public?(true)
+    end
   end
 
   identities do
     identity(:unique_email, [:email])
+    identity(:unique_provider_uid, [:provider, :provider_uid])
   end
 
   actions do
@@ -136,6 +211,69 @@ defmodule Lang.Accounts.User do
         limit = Lang.Billing.Config.plan_request_limit(tier)
 
         Ash.Changeset.change_attribute(changeset, :monthly_request_limit, limit)
+      end)
+    end
+
+    create :register_with_oauth do
+      argument(:user_info, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false)
+      upsert?(true)
+      upsert_identity(:unique_email)
+
+      change(AshAuthentication.GenerateTokenChange)
+      change(AshAuthentication.Strategy.OAuth2.IdentityChange)
+
+      change(fn changeset, _context ->
+        user_info = Ash.Changeset.get_argument(changeset, :user_info)
+
+        # Extract name from different OAuth providers
+        name =
+          case user_info do
+            %{"name" => name} when is_binary(name) -> name
+            # GitHub
+            %{"login" => login} -> login
+            # Microsoft
+            %{"displayName" => display_name} -> display_name
+            _ -> "User"
+          end
+
+        # Extract email
+        email =
+          case user_info do
+            %{"email" => email} when is_binary(email) -> email
+            # Microsoft alternative
+            %{"mail" => mail} -> mail
+            # Microsoft alternative
+            %{"userPrincipalName" => upn} -> upn
+            _ -> nil
+          end
+
+        if email do
+          org_name = "#{name}'s Organization"
+
+          # Create organization
+          case Lang.Accounts.Organization.create(%{
+                 name: org_name,
+                 slug: String.downcase(String.replace(org_name, " ", "-"))
+               }) do
+            {:ok, organization} ->
+              changeset
+              |> Ash.Changeset.change_attribute(:email, email)
+              |> Ash.Changeset.change_attribute(:name, name)
+              |> Ash.Changeset.change_attribute(:organization_id, organization.id)
+              |> Ash.Changeset.change_attribute(:subscription_tier, :free)
+              |> Ash.Changeset.change_attribute(:monthly_request_limit, 1000)
+
+            {:error, _error} ->
+              changeset
+              |> Ash.Changeset.change_attribute(:email, email)
+              |> Ash.Changeset.change_attribute(:name, name)
+              |> Ash.Changeset.change_attribute(:subscription_tier, :free)
+              |> Ash.Changeset.change_attribute(:monthly_request_limit, 1000)
+          end
+        else
+          Ash.Changeset.add_error(changeset, field: :email, message: "Email is required")
+        end
       end)
     end
 
@@ -328,10 +466,14 @@ defmodule Lang.Accounts.User do
 
   # Helper functions - authentication is now handled by AshAuthentication
   def authenticate(email, password) do
-    AshAuthentication.authenticate(__MODULE__, :password, %{
-      "email" => email,
-      "password" => password
-    })
+    case Ash.ActionInput.for_action(__MODULE__, :sign_in_with_password, %{
+           "email" => email,
+           "password" => password
+         })
+         |> Ash.run_action() do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, error} -> {:error, error}
+    end
   end
 
   def confirmed?(user) do
@@ -369,13 +511,11 @@ defmodule Lang.Accounts.User do
   Authenticates a user and returns a proper session token.
   """
   def sign_in_with_token(email, password) do
-    case AshAuthentication.authenticate(__MODULE__, :password, %{
-           "email" => email,
-           "password" => password
-         }) do
+    case authenticate(email, password) do
       {:ok, user} ->
-        case AshAuthentication.Plug.Helpers.store_in_session(user) do
-          {:ok, token} -> {:ok, user, token}
+        # Generate a token for the user
+        case AshAuthentication.Jwt.token_for_user(user) do
+          {:ok, token, _claims} -> {:ok, user, token}
           {:error, error} -> {:error, error}
         end
 

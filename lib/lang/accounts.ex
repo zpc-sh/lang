@@ -12,6 +12,7 @@ defmodule Lang.Accounts do
   resources do
     resource(Lang.Accounts.Organization)
     resource(Lang.Accounts.User)
+    resource(Lang.Accounts.UserIdentity)
     resource(Lang.Accounts.ApiKey)
     resource(Lang.Accounts.Token)
     resource(Lang.Accounts.TokenRevocation)

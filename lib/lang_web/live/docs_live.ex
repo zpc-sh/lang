@@ -11,6 +11,7 @@ defmodule LangWeb.DocsLive do
 
   use LangWeb, :live_view
   alias LangWeb.Components.Footer
+  import LangWeb.NavbarComponent
 
   @docs_path Application.app_dir(:lang, "priv/docs")
   @orchestrated_docs_path Application.app_dir(:lang, "priv/static/docs")
@@ -87,81 +88,7 @@ defmodule LangWeb.DocsLive do
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-gray-950 text-gray-100">
-      <!-- Navigation -->
-      <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div class="flex items-center justify-between h-16">
-            <!-- Logo -->
-            <div class="flex items-center">
-              <a href="/" class="flex items-center gap-3">
-                <svg class="w-8 h-8" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="docLogo" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M 35 35 L 25 60 L 35 85"
-                    stroke="url(#docLogo)"
-                    stroke-width="3"
-                    fill="none"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M 40 60 Q 50 52, 60 60 T 80 60"
-                    stroke="url(#docLogo)"
-                    stroke-width="2.5"
-                    fill="none"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M 85 35 L 95 60 L 85 85"
-                    stroke="url(#docLogo)"
-                    stroke-width="3"
-                    fill="none"
-                    stroke-linecap="round"
-                  />
-                </svg>
-                <span class="text-xl font-light text-white">LANG</span>
-              </a>
-            </div>
-            
-    <!-- Navigation Links -->
-            <div class="hidden md:flex items-center space-x-8">
-              <a href="/" class="text-gray-300 hover:text-blue-400 font-medium transition-colors">
-                Home
-              </a>
-              <a
-                href="/api-portal"
-                class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
-              >
-                API Portal
-              </a>
-              <a
-                href="/analyze"
-                class="text-gray-300 hover:text-blue-400 font-medium transition-colors"
-              >
-                Try Now
-              </a>
-              <a
-                href="/auth"
-                class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5"
-              >
-                Sign In
-              </a>
-            </div>
-            
-    <!-- Mobile menu button -->
-            <button
-              phx-click="toggle_sidebar"
-              class="md:hidden p-2 text-gray-400 hover:text-white focus:outline-none"
-            >
-              <.icon name="hero-bars-3" class="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      </nav>
+      <.navbar current_user={assigns[:current_user]} current_page={:docs} />
       
     <!-- Main Content -->
       <div class="flex pt-16">
@@ -1287,5 +1214,35 @@ defmodule LangWeb.DocsLive do
     datetime
     |> DateTime.to_date()
     |> Date.to_string()
+  end
+
+  defp load_markdown_file(path) do
+    docs_path = Path.join(["docs", path])
+
+    case File.read(docs_path) do
+      {:ok, content} ->
+        {:ok, content}
+
+      {:error, _} ->
+        # Try without docs prefix if it's an absolute path
+        case File.read(path) do
+          {:ok, content} -> {:ok, content}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  defp handle_doc_selection(socket, path) do
+    case load_markdown_file(path) do
+      {:ok, content} ->
+        socket
+        |> assign(:doc_content, content)
+        |> assign(:current_doc, path)
+        |> assign(:show_doc, true)
+
+      {:error, _} ->
+        socket
+        |> put_flash(:error, "Could not load documentation file")
+    end
   end
 end

@@ -27,7 +27,7 @@ defmodule LangWeb.Api.AnalysisView do
     }
   end
 
-  def render("project.json", %{translate_errorproject: project}) do
+  def render("project.json", %{project: project}) do
     %{
       data: %{
         project: render_one(project, __MODULE__, "project_detail.json", as: :project)

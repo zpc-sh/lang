@@ -1,113 +1,29 @@
 <Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
-  <!-- Navigation -->
-  <nav class="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-gray-800">
-    <div class="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16">
-      <div class="flex items-center justify-between h-16">
-        <div class="flex items-center">
-          <a href="/" class="flex items-center gap-3">
-            <svg class="w-8 h-8" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="navLogo" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 35 35 L 25 60 L 35 85"
-                stroke="url(#navLogo)"
-                stroke-width="3"
-                fill="none"
-                stroke-linecap="round"
-              />
-              <path
-                d="M 40 60 Q 50 52, 60 60 T 80 60"
-                stroke="url(#navLogo)"
-                stroke-width="2.5"
-                fill="none"
-                stroke-linecap="round"
-              />
-              <path
-                d="M 85 35 L 95 60 L 85 85"
-                stroke="url(#navLogo)"
-                stroke-width="3"
-                fill="none"
-                stroke-linecap="round"
-              />
-            </svg>
-            <span class="text-xl font-light text-white">LANG</span>
-          </a>
-        </div>
-        <div class="hidden md:flex items-center gap-8">
-          <a href="#features" class="text-gray-300 hover:text-white transition-colors">
-            Features
-          </a>
-          <a href="#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
-          <a href="/api-portal" class="text-gray-300 hover:text-white transition-colors">Docs</a>
-          <a href="/design-system" class="text-gray-300 hover:text-white transition-colors">
-            Design
-          </a>
-          <a
-            href="/auth"
-            class="text-gray-300 hover:text-white transition-colors"
-          >
-            Login
-          </a>
-          <a
-            href="/auth?mode=register"
-            class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
-          >
-            Sign Up
-          </a>
-        </div>
-        
-<!-- Mobile menu button -->
-        <div class="md:hidden">
-          <button
-            type="button"
-            class="text-gray-300 hover:text-white p-2"
-            phx-click="toggle_mobile_menu"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              >
-              </path>
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-<!-- Mobile menu -->
-      <div :if={@show_mobile_menu} class="md:hidden border-t border-gray-800">
-        <div class="px-4 py-4 space-y-3">
-          <a href="#features" class="block text-gray-300 hover:text-white transition-colors">
-            Features
-          </a>
-          <a href="#pricing" class="block text-gray-300 hover:text-white transition-colors">
-            Pricing
-          </a>
-          <a href="/api-portal" class="block text-gray-300 hover:text-white transition-colors">
-            Docs
-          </a>
-          <a href="/design-system" class="block text-gray-300 hover:text-white transition-colors">
-            Design
-          </a>
-          <a href="/auth" class="block text-gray-300 hover:text-white transition-colors">
-            Login
-          </a>
-          <a
-            href="/auth?mode=register"
-            class="block w-full text-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
-          >
-            Sign Up
-          </a>
-        </div>
-      </div>
-    </div>
-  </nav>
+  <!-- Structured Data for SEO -->
+  <LangWeb.SEO.structured_data type={:organization} data={%{}} />
+  <LangWeb.SEO.structured_data
+    type={:software}
+    data={
+      %{
+        "description" =>
+          "Universal Text Intelligence Platform that transforms any text into actionable intelligence",
+        "screenshot" => "https://lang.ai/images/screenshots/dashboard.png",
+        "featureList" => [
+          "Text Analysis",
+          "Code Intelligence",
+          "Document Processing",
+          "Log Analysis",
+          "API Access"
+        ],
+        "offers" => [
+          %{"@type" => "Offer", "price" => "0", "priceCurrency" => "USD", "name" => "Free Plan"},
+          %{"@type" => "Offer", "price" => "19", "priceCurrency" => "USD", "name" => "Plus Plan"},
+          %{"@type" => "Offer", "price" => "49", "priceCurrency" => "USD", "name" => "Pro Plan"}
+        ]
+      }
+    }
+  />
+  
 
   <style>
     @keyframes float {

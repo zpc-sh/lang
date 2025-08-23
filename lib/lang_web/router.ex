@@ -44,7 +44,11 @@ defmodule LangWeb.Router do
 
     # Documentation routes
     live "/docs", DocsLive, :index
-    live "/docs/*path", DocsLive, :show
+    get "/docs/*path", DocsController, :show
+
+    # SEO routes
+    get "/sitemap.xml", SitemapController, :index
+    get "/robots.txt", RobotsController, :index
   end
 
   # Authentication routes
@@ -59,9 +63,13 @@ defmodule LangWeb.Router do
     get "/forgot-password", AuthController, :forgot_password
     post "/forgot-password", AuthController, :send_reset_email
     get "/reset-password/:token", AuthController, :reset_password
-    post "/reset-password/:token", AuthController, :update_password
     get "/status", AuthController, :status
-    get "/oauth/:provider", AuthController, :oauth_callback
+
+    # OAuth authentication routes
+    sign_in_route()
+    sign_out_route(AuthController)
+    auth_routes_for(Lang.Accounts.User, to: AuthController)
+    reset_route()
   end
 
   # Authenticated live session (stubs current_user in dev/test)

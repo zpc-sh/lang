@@ -35,230 +35,230 @@ defmodule LangWeb.Api.AnalysisController do
     end
   end
 
-  # def create_project(conn, %{"project" => project_params}) do
-  #   user_id = conn.assigns.current_user.id
+  def create_project(conn, %{"project" => project_params}) do
+    user_id = conn.assigns.current_user.id
 
-  #   project_attrs =
-  #     project_params
-  #     |> Map.put("user_id", user_id)
-  #     |> Map.put(
-  #       "settings",
-  #       Map.merge(Project.default_settings(), project_params["settings"] || %{})
-  #     )
+    project_attrs =
+      project_params
+      |> Map.put("user_id", user_id)
+      |> Map.put(
+        "settings",
+        Map.merge(Project.default_settings(), project_params["settings"] || %{})
+      )
 
-  #   case Analysis.create_project(project_attrs) do
-  #     {:ok, project} ->
-  #       conn
-  #       |> put_status(:created)
-  #       |> render("project.json", project: project)
+    case Analysis.create_project(project_attrs) do
+      {:ok, project} ->
+        conn
+        |> put_status(:created)
+        |> render("project.json", project: project)
 
-  #     {:error, changeset} ->
-  #       conn
-  #       |> put_status(:unprocessable_entity)
-  #       |> render("errors.json", changeset: changeset)
-  #   end
-  # end
+      {:error, changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render("errors.json", changeset: changeset)
+    end
+  end
 
-  # def update_project(conn, %{"id" => id, "project" => project_params}) do
-  #   user_id = conn.assigns.current_user.id
+  def update_project(conn, %{"id" => id, "project" => project_params}) do
+    user_id = conn.assigns.current_user.id
 
-  #   case Analysis.get_user_project(user_id, id) do
-  #     nil ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Project not found"})
+    case Analysis.get_user_project(user_id, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Project not found"})
 
-  #     project ->
-  #       case Analysis.update_project(project, project_params) do
-  #         {:ok, project} ->
-  #           render(conn, "project.json", project: project)
+      project ->
+        case Analysis.update_project(project, project_params) do
+          {:ok, project} ->
+            render(conn, "project.json", project: project)
 
-  #         {:error, changeset} ->
-  #           conn
-  #           |> put_status(:unprocessable_entity)
-  #           |> render("errors.json", changeset: changeset)
-  #       end
-  #   end
-  # end
+          {:error, changeset} ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> render("errors.json", changeset: changeset)
+        end
+    end
+  end
 
-  # def delete_project(conn, %{"id" => id}) do
-  #   user_id = conn.assigns.current_user.id
+  def delete_project(conn, %{"id" => id}) do
+    user_id = conn.assigns.current_user.id
 
-  #   case Analysis.get_user_project(user_id, id) do
-  #     nil ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Project not found"})
+    case Analysis.get_user_project(user_id, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Project not found"})
 
-  #     project ->
-  #       case Analysis.delete_project(project) do
-  #         {:ok, _project} ->
-  #           send_resp(conn, :no_content, "")
+      project ->
+        case Analysis.delete_project(project) do
+          {:ok, _project} ->
+            send_resp(conn, :no_content, "")
 
-  #         {:error, changeset} ->
-  #           conn
-  #           |> put_status(:unprocessable_entity)
-  #           |> render("errors.json", changeset: changeset)
-  #       end
-  #   end
-  # end
+          {:error, changeset} ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> render("errors.json", changeset: changeset)
+        end
+    end
+  end
 
-  # def archive_project(conn, %{"id" => id}) do
-  #   user_id = conn.assigns.current_user.id
+  def archive_project(conn, %{"id" => id}) do
+    user_id = conn.assigns.current_user.id
 
-  #   case Analysis.get_user_project(user_id, id) do
-  #     nil ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Project not found"})
+    case Analysis.get_user_project(user_id, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Project not found"})
 
-  #     project ->
-  #       case Analysis.archive_project(project) do
-  #         {:ok, project} ->
-  #           render(conn, "project.json", project: project)
+      project ->
+        case Analysis.archive_project(project) do
+          {:ok, project} ->
+            render(conn, "project.json", project: project)
 
-  #         {:error, changeset} ->
-  #           conn
-  #           |> put_status(:unprocessable_entity)
-  #           |> render("errors.json", changeset: changeset)
-  #       end
-  #   end
-  # end
+          {:error, changeset} ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> render("errors.json", changeset: changeset)
+        end
+    end
+  end
 
-  # # Analysis Sessions
+  # Analysis Sessions
 
-  # def list_sessions(conn, %{"project_id" => project_id} = params) do
-  #   user_id = conn.assigns.current_user.id
+  def list_sessions(conn, %{"project_id" => project_id} = params) do
+    user_id = conn.assigns.current_user.id
 
-  #   case Analysis.get_user_project(user_id, project_id) do
-  #     nil ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Project not found"})
+    case Analysis.get_user_project(user_id, project_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Project not found"})
 
-  #     _project ->
-  #       opts = [
-  #         limit: min(String.to_integer(params["limit"] || "50"), 100),
-  #         offset: String.to_integer(params["offset"] || "0"),
-  #         status: params["status"]
-  #       ]
+      _project ->
+        opts = [
+          limit: min(String.to_integer(params["limit"] || "50"), 100),
+          offset: String.to_integer(params["offset"] || "0"),
+          status: params["status"]
+        ]
 
-  #       sessions = Analysis.list_analysis_sessions(project_id, opts)
-  #       render(conn, "sessions.json", sessions: sessions)
-  #   end
-  # end
+        sessions = Analysis.list_analysis_sessions(project_id, opts)
+        render(conn, "sessions.json", sessions: sessions)
+    end
+  end
 
-  # def show_session(conn, %{"id" => id}) do
-  #   # TODO: Add user authorization check
-  #   # case Analysis.get_analysis_session!(id) do
-  #   #   session ->
-  #   #     render(conn, "session.json", session: session)
-  #   # rescue
-  #   #   Ecto.NoResultsError ->
-  #   #     conn
-  #   #     |> put_status(:not_found)
-  #   #     |> json(%{error: "Analysis session not found"})
-  #   # end
-  # end
+  def show_session(conn, %{"id" => id}) do
+    # TODO: Add user authorization check
+    case Analysis.get_analysis_session!(id) do
+      session ->
+        render(conn, "session.json", session: session)
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Analysis session not found"})
+    end
+  end
 
-  # def create_session(conn, %{"project_id" => project_id} = params) do
-  #   user_id = conn.assigns.current_user.id
+  def create_session(conn, %{"project_id" => project_id} = params) do
+    user_id = conn.assigns.current_user.id
 
-  #   case Analysis.get_user_project(user_id, project_id) do
-  #     nil ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Project not found"})
+    case Analysis.get_user_project(user_id, project_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Project not found"})
 
-  #     project ->
-  #       unless Project.active?(project) do
-  #         conn
-  #         |> put_status(:unprocessable_entity)
-  #         |> json(%{error: "Project is not active"})
-  #       else
-  #         session_attrs = %{
-  #           project_id: project_id,
-  #           metadata: params["metadata"] || %{}
-  #         }
+      project ->
+        unless Project.active?(project) do
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: "Project is not active"})
+        else
+          session_attrs = %{
+            project_id: project_id,
+            metadata: params["metadata"] || %{}
+          }
 
-  #         case Analysis.create_analysis_session(session_attrs) do
-  #           {:ok, session} ->
-  #             conn
-  #             |> put_status(:created)
-  #             |> render("session.json", session: session)
+          case Analysis.create_analysis_session(session_attrs) do
+            {:ok, session} ->
+              conn
+              |> put_status(:created)
+              |> render("session.json", session: session)
 
-  #           {:error, changeset} ->
-  #             conn
-  #             |> put_status(:unprocessable_entity)
-  #             |> render("errors.json", changeset: changeset)
-  #         end
-  #       end
-  #   end
-  # end
+            {:error, changeset} ->
+              conn
+              |> put_status(:unprocessable_entity)
+              |> render("errors.json", changeset: changeset)
+          end
+        end
+    end
+  end
 
-  # def cancel_session(conn, %{"id" => id}) do
-  #   # TODO: Add user authorization check
-  #   case Analysis.get_analysis_session!(id) do
-  #     session ->
-  #       unless AnalysisSession.in_progress?(session) do
-  #         conn
-  #         |> put_status(:unprocessable_entity)
-  #         |> json(%{error: "Cannot cancel session that is not in progress"})
-  #       else
-  #         case Analysis.cancel_analysis_session(session) do
-  #           {:ok, session} ->
-  #             render(conn, "session.json", session: session)
+  def cancel_session(conn, %{"id" => id}) do
+    # TODO: Add user authorization check
+    case Analysis.get_analysis_session!(id) do
+      session ->
+        unless AnalysisSession.in_progress?(session) do
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: "Cannot cancel session that is not in progress"})
+        else
+          case Analysis.cancel_analysis_session(session) do
+            {:ok, session} ->
+              render(conn, "session.json", session: session)
 
-  #           {:error, changeset} ->
-  #             conn
-  #             |> put_status(:unprocessable_entity)
-  #             |> render("errors.json", changeset: changeset)
-  #         end
-  #       end
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Analysis session not found"})
-  #   end
-  # end
+            {:error, changeset} ->
+              conn
+              |> put_status(:unprocessable_entity)
+              |> render("errors.json", changeset: changeset)
+          end
+        end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Analysis session not found"})
+    end
+  end
 
-  # # File Upload and Analysis
+  # File Upload and Analysis
 
-  # def upload_files(conn, %{"session_id" => session_id} = params) do
-  #   # TODO: Add user authorization check
-  #   case Analysis.get_analysis_session!(session_id) do
-  #     session ->
-  #       unless session.status == "pending" do
-  #         conn
-  #         |> put_status(:unprocessable_entity)
-  #         |> json(%{error: "Session is not in pending state"})
-  #       else
-  #         case extract_files_from_upload(params) do
-  #           {:ok, files} ->
-  #             case Analysis.process_analysis_session(session, files) do
-  #               {:ok, updated_session} ->
-  #                 render(conn, "session.json", session: updated_session)
+  def upload_files(conn, %{"session_id" => session_id} = params) do
+    # TODO: Add user authorization check
+    case Analysis.get_analysis_session!(session_id) do
+      session ->
+        unless session.status == "pending" do
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: "Session is not in pending state"})
+        else
+          case extract_files_from_upload(params) do
+            {:ok, files} ->
+              case Analysis.process_analysis_session(session, files) do
+                {:ok, updated_session} ->
+                  render(conn, "session.json", session: updated_session)
 
-  #               {:error, changeset} ->
-  #                 conn
-  #                 |> put_status(:unprocessable_entity)
-  #                 |> render("errors.json", changeset: changeset)
-  #             end
+                {:error, changeset} ->
+                  conn
+                  |> put_status(:unprocessable_entity)
+                  |> render("errors.json", changeset: changeset)
+              end
 
-  #           {:error, reason} ->
-  #             conn
-  #             |> put_status(:bad_request)
-  #             |> json(%{error: reason})
-  #         end
-  #       end
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Analysis session not found"})
-  #   end
-  # end
+            {:error, reason} ->
+              conn
+              |> put_status(:bad_request)
+              |> json(%{error: reason})
+          end
+        end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Analysis session not found"})
+    end
+  end
 
   # def analyze_text(conn, %{"session_id" => session_id} = params) do
   #   # For direct text analysis without file upload
@@ -444,40 +444,40 @@ defmodule LangWeb.Api.AnalysisController do
   #   end
   # end
 
-  # # Private functions
+  # Private functions
 
-  # defp extract_files_from_upload(params) do
-  #   case params["files"] do
-  #     nil ->
-  #       {:error, "No files provided"}
+  defp extract_files_from_upload(params) do
+    case params["files"] do
+      nil ->
+        {:error, "No files provided"}
 
-  #     files when is_list(files) ->
-  #       extracted_files =
-  #         files
-  #         |> Enum.map(&extract_file_data/1)
-  #         |> Enum.filter(&(&1 != nil))
+      files when is_list(files) ->
+        extracted_files =
+          files
+          |> Enum.map(&extract_file_data/1)
+          |> Enum.filter(&(&1 != nil))
 
-  #       if length(extracted_files) == 0 do
-  #         {:error, "No valid files found"}
-  #       else
-  #         {:ok, extracted_files}
-  #       end
+        if length(extracted_files) == 0 do
+          {:error, "No valid files found"}
+        else
+          {:ok, extracted_files}
+        end
 
-  #     _ ->
-  #       {:error, "Invalid file format"}
-  #   end
-  # end
+      _ ->
+        {:error, "Invalid file format"}
+    end
+  end
 
-  # defp extract_file_data(%{"content" => content, "name" => name} = file_data)
-  #      when is_binary(content) and is_binary(name) do
-  #   %{
-  #     file_name: name,
-  #     file_path: file_data["path"] || name,
-  #     content: content,
-  #     file_size_bytes: byte_size(content),
-  #     content_type: file_data["content_type"] || "text/plain"
-  #   }
-  # end
+  defp extract_file_data(%{"content" => content, "name" => name} = file_data)
+       when is_binary(content) and is_binary(name) do
+    %{
+      file_name: name,
+      file_path: file_data["path"] || name,
+      content: content,
+      file_size_bytes: byte_size(content),
+      content_type: file_data["content_type"] || "text/plain"
+    }
+  end
 
-  # defp extract_file_data(_), do: nil
+  defp extract_file_data(_), do: nil
 end

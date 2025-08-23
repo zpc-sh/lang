@@ -11,6 +11,7 @@ defmodule LangWeb.AuthController do
   import Phoenix.Component, only: [to_form: 1]
 
   alias Lang.Accounts.User
+
   alias Lang.Events
   require Logger
 
@@ -260,15 +261,53 @@ defmodule LangWeb.AuthController do
   end
 
   @doc """
-  Handles OAuth callbacks (placeholder for future implementation).
+  Success callback for OAuth authentication.
   """
-  def oauth_callback(conn, %{"provider" => provider} = _params) do
-    # Placeholder for OAuth integration (Google, GitHub, etc.)
-    Logger.info("OAuth callback received for provider: #{provider}")
+  def success(conn, _activity, user, _token) do
+    # Track successful OAuth login
+    Events.track_event(%{
+      event_type: "user_oauth_login_success",
+      user_id: user.id,
+      metadata: %{
+        provider: user.provider || "unknown",
+        ip_address: get_client_ip(conn)
+      }
+    })
 
     conn
-    |> put_flash(:error, "OAuth authentication is not yet available.")
+    |> put_flash(:info, "Welcome back, #{user.name}!")
+    |> redirect_after_login()
+  end
+
+  @doc """
+  Failure callback for OAuth authentication.
+  """
+  def failure(conn, activity, reason) do
+    provider = activity[:strategy_name] || "unknown"
+
+    Events.track_event(%{
+      event_type: "user_oauth_login_failed",
+      metadata: %{
+        provider: provider,
+        reason: inspect(reason),
+        ip_address: get_client_ip(conn)
+      }
+    })
+
+    Logger.warning("OAuth authentication failed for provider #{provider}: #{inspect(reason)}")
+
+    conn
+    |> put_flash(:error, "Authentication failed. Please try again.")
     |> redirect(to: "/auth")
+  end
+
+  @doc """
+  OAuth sign-out success callback.
+  """
+  def sign_out_success(conn) do
+    conn
+    |> put_flash(:info, "You have been signed out successfully.")
+    |> redirect(to: "/")
   end
 
   # Private helper functions

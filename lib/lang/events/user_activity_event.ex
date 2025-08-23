@@ -20,7 +20,7 @@ defmodule Lang.Events.UserActivityEvent do
 
     # User and organization context
     attribute(:user_id, :uuid, allow_nil?: false)
-    attribute(:organization_id, :uuid, allow_nil?: false)
+    attribute(:organization_id, :uuid, allow_nil?: true)
 
     # Activity details
     attribute(:activity_type, :atom, allow_nil?: false)
@@ -84,7 +84,7 @@ defmodule Lang.Events.UserActivityEvent do
   end
 
   actions do
-    defaults([:read])
+    defaults([:read, :create])
 
     create :log_activity do
       accept([

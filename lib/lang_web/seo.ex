@@ -28,6 +28,7 @@ defmodule LangWeb.SEO do
   def meta_tags(assigns) do
     assigns =
       assigns
+      |> assign_new(:site_url, fn -> @site_url end)
       |> assign_new(:full_title, fn ->
         if assigns[:title], do: "#{assigns.title} | LANG", else: @default_title
       end)
@@ -84,11 +85,12 @@ defmodule LangWeb.SEO do
   attr :data, :map, default: %{}
 
   def structured_data(assigns) do
-    json_ld = build_structured_data(assigns.type, assigns.data)
+    assigns =
+      assign_new(assigns, :json_ld, fn -> build_structured_data(assigns.type, assigns.data) end)
 
     ~H"""
     <script type="application/ld+json">
-      <%= raw(Jason.encode!(json_ld)) %>
+      <%= raw(Jason.encode!(@json_ld)) %>
     </script>
     """
   end

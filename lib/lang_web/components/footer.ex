@@ -110,9 +110,15 @@ defmodule LangWeb.Components.Footer do
           </div>
         </div>
 
-        <div class="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-          <p>&copy; 2025 NOCSI. All rights reserved.</p>
-          <p>Built with ❤️ using Elixir, Phoenix, and Rust</p>
+        <div class="border-t border-gray-800 pt-8">
+          <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+            <p>&copy; 2025 NOCSI. All rights reserved.</p>
+            <p class="flex items-center gap-2">
+              Built with ❤️ using <span class="text-gray-300 font-medium">Kyozo</span>
+              <span class="text-gray-600">—</span>
+              <span class="text-gray-400">Lang, Build, Proc, Edit, Stor</span>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

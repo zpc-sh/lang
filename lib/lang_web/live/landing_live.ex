@@ -13,6 +13,15 @@ defmodule LangWeb.LandingLive do
 
     {:ok,
      assign(socket,
+       # SEO
+       page_title: "LANG - Universal Text Intelligence Platform",
+       seo_title: "Universal Text Intelligence Platform for AI Agents",
+       seo_description:
+         "Transform any text into actionable intelligence. LANG extends LSP and Tree-sitter beyond code to provide semantic understanding for documents, logs, databases, and more. Zero-code AI enhancement.",
+       seo_keywords:
+         "text intelligence, AI text analysis, code analysis, document intelligence, LSP extension, tree-sitter, semantic analysis, AI agents, zero-code enhancement",
+       canonical_path: "/",
+       # Page state
        demo_active: false,
        current_use_case: 0,
        demo_output: nil,
@@ -38,7 +47,6 @@ defmodule LangWeb.LandingLive do
        example_index: 0,
        plans: plans,
        examples: generate_examples(),
-       show_mobile_menu: false,
        current_user: nil,
        current_scope: nil
      )}
@@ -95,11 +103,6 @@ defmodule LangWeb.LandingLive do
   @impl true
   def handle_event("clear_demo", _params, socket) do
     {:noreply, assign(socket, live_demo_output: nil, demo_text: "")}
-  end
-
-  @impl true
-  def handle_event("toggle_mobile_menu", _params, socket) do
-    {:noreply, assign(socket, show_mobile_menu: !socket.assigns.show_mobile_menu)}
   end
 
   @impl true

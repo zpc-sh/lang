@@ -67,7 +67,7 @@ defmodule Lang.Events.ApiUsageEvent do
   end
 
   actions do
-    defaults([:read])
+    defaults([:read, :create])
 
     create :log_usage do
       accept([
