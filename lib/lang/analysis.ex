@@ -325,6 +325,29 @@ defmodule Lang.Analysis do
     |> Repo.update()
   end
 
+  @doc """
+  Updates an analyzed file with analysis results.
+
+  ## Examples
+
+      iex> update_analyzed_file(file_id, %{semantic_features: %{...}})
+      {:ok, %AnalyzedFile{}}
+
+      iex> update_analyzed_file(file_id, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_analyzed_file(file_id, attrs) when is_binary(file_id) do
+    file = get_analyzed_file!(file_id)
+    update_analyzed_file(file, attrs)
+  end
+
+  def update_analyzed_file(%AnalyzedFile{} = file, attrs) do
+    file
+    |> AnalyzedFile.update_analysis_changeset(attrs)
+    |> Repo.update()
+  end
+
   # Violations
 
   @doc """

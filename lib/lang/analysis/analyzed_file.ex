@@ -100,6 +100,18 @@ defmodule Lang.Analysis.AnalyzedFile do
     |> put_change(:analysis_result, %{skipped_reason: reason})
   end
 
+  @doc """
+  Creates a changeset for updating file analysis results.
+  """
+  def update_analysis_changeset(file, attrs) do
+    current_analysis_result = file.analysis_result || %{}
+    updated_analysis_result = Map.merge(current_analysis_result, attrs)
+
+    file
+    |> cast(%{analysis_result: updated_analysis_result}, [:analysis_result])
+    |> validate_required([:analysis_result])
+  end
+
   # Private functions
 
   defp generate_content_hash(changeset) do

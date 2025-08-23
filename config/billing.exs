@@ -36,7 +36,7 @@ config :lang, :billing,
       price_cents: 0,
       price_dollars: 0,
       billing_interval: "month",
-      documents_per_month: 100,
+      requests_per_month: 100,
       description: "Perfect for getting started with text intelligence",
       stripe_metadata: %{
         plan_type: "free",
@@ -83,7 +83,7 @@ config :lang, :billing,
       price_cents: 1900,
       price_dollars: 19,
       billing_interval: "month",
-      documents_per_month: 2_500,
+      requests_per_month: 2_500,
       description: "More access to text intelligence",
       stripe_metadata: %{
         plan_type: "plus",
@@ -131,7 +131,7 @@ config :lang, :billing,
       price_cents: 4900,
       price_dollars: 49,
       billing_interval: "month",
-      documents_per_month: 10_000,
+      requests_per_month: 10_000,
       description: "Universal intelligence beyond text",
       # Show "Most Popular" badge
       popular: true,
@@ -184,7 +184,7 @@ config :lang, :billing,
       billing_interval: "month",
       billing_type: "per_user",
       minimum_users: 2,
-      documents_per_month: :unlimited,
+      requests_per_month: 999_999_999,
       description: "Secure team workspace with collaboration",
       stripe_metadata: %{
         plan_type: "business",
@@ -281,19 +281,19 @@ case config_env() do
         free: %{
           name: "Test Free",
           price_cents: 0,
-          documents_per_month: 10,
+          requests_per_month: 10,
           limits: %{documents_per_month: 10, requests_per_minute: 2}
         },
         plus: %{
           name: "Test Plus",
           price_cents: 100,
-          documents_per_month: 50,
+          requests_per_month: 50,
           limits: %{documents_per_month: 50, requests_per_minute: 5}
         },
         pro: %{
           name: "Test Pro",
           price_cents: 200,
-          documents_per_month: 100,
+          requests_per_month: 100,
           limits: %{documents_per_month: 100, requests_per_minute: 10}
         }
       }

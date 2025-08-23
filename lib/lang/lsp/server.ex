@@ -17,19 +17,360 @@ defmodule Lang.LSP.Server do
   def init(%{port: port}) do
     Logger.info("Starting LSP server on port #{port}")
 
-    # In a real implementation, this would start a TCP/JSON-RPC server
-    # For now, we'll track connections and provide LSP-style methods
-    {:ok,
-     %{
-       port: port,
-       connections: %{},
-       documents: %{},
-       capabilities: build_server_capabilities()
-     }}
+    # Start TCP server
+    case :gen_tcp.listen(port, [:binary, packet: :raw, active: false, reuseaddr: true]) do
+      {:ok, listen_socket} ->
+        Logger.info("LSP TCP server listening on port #{port}")
+
+        # Start accepting connections in a separate task
+        Task.start_link(fn -> accept_connections(listen_socket) end)
+
+        {:ok,
+         %{
+           port: port,
+           listen_socket: listen_socket,
+           connections: %{},
+           documents: %{},
+           capabilities: build_server_capabilities(),
+           next_id: 1
+         }}
+
+      {:error, reason} ->
+        Logger.error("Failed to start LSP server: #{reason}")
+        {:stop, {:tcp_error, reason}}
+    end
+  end
+
+  defp accept_connections(listen_socket) do
+    case :gen_tcp.accept(listen_socket) do
+      {:ok, socket} ->
+        Logger.info("New LSP client connected")
+        # Handle each connection in a separate process
+        Task.start_link(fn -> handle_connection(socket) end)
+        accept_connections(listen_socket)
+
+      {:error, reason} ->
+        Logger.error("Failed to accept connection: #{reason}")
+        :timer.sleep(1000)
+        accept_connections(listen_socket)
+    end
+  end
+
+  defp handle_connection(socket) do
+    case receive_message(socket) do
+      {:ok, message} ->
+        response = process_lsp_message(message)
+        send_response(socket, response)
+        handle_connection(socket)
+
+      {:error, :closed} ->
+        Logger.info("LSP client disconnected")
+        :gen_tcp.close(socket)
+
+      {:error, reason} ->
+        Logger.error("LSP connection error: #{reason}")
+        :gen_tcp.close(socket)
+    end
+  end
+
+  defp receive_message(socket) do
+    # Read Content-Length header first
+    case :gen_tcp.recv(socket, 0) do
+      {:ok, data} ->
+        parse_lsp_message(data)
+
+      {:error, :closed} ->
+        {:error, :closed}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp parse_lsp_message(raw_data) do
+    # Parse LSP message format: Content-Length header + JSON content
+    case String.split(raw_data, "\r\n\r\n", parts: 2) do
+      [headers, content] ->
+        case extract_content_length(headers) do
+          {:ok, length} when byte_size(content) >= length ->
+            json_content = binary_part(content, 0, length)
+
+            case Jason.decode(json_content) do
+              {:ok, message} -> {:ok, message}
+              {:error, reason} -> {:error, {:json_decode, reason}}
+            end
+
+          {:ok, _length} ->
+            {:error, :incomplete_message}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      _ ->
+        {:error, :invalid_format}
+    end
+  end
+
+  defp extract_content_length(headers) do
+    case Regex.run(~r/Content-Length:\s*(\d+)/i, headers) do
+      [_, length_str] ->
+        case Integer.parse(length_str) do
+          {length, ""} -> {:ok, length}
+          _ -> {:error, :invalid_content_length}
+        end
+
+      nil ->
+        {:error, :missing_content_length}
+    end
+  end
+
+  defp process_lsp_message(message) do
+    case message do
+      %{"method" => "initialize", "id" => id, "params" => params} ->
+        handle_initialize(id, params)
+
+      %{"method" => "textDocument/didOpen", "params" => params} ->
+        handle_did_open(params)
+
+      %{"method" => "textDocument/completion", "id" => id, "params" => params} ->
+        handle_completion(id, params)
+
+      %{"method" => "textDocument/hover", "id" => id, "params" => params} ->
+        handle_hover(id, params)
+
+      %{"method" => "textDocument/didChange", "params" => params} ->
+        handle_did_change(params)
+
+      %{"method" => "shutdown", "id" => id} ->
+        handle_shutdown(id)
+
+      %{"method" => method} ->
+        Logger.info("Unhandled LSP method: #{method}")
+        nil
+
+      _ ->
+        Logger.warning("Invalid LSP message format")
+        nil
+    end
+  end
+
+  defp send_response(socket, nil), do: :ok
+
+  defp send_response(socket, response) do
+    json_content = Jason.encode!(response)
+    content_length = byte_size(json_content)
+
+    message = "Content-Length: #{content_length}\r\n\r\n#{json_content}"
+    :gen_tcp.send(socket, message)
+  end
+
+  defp handle_initialize(id, params) do
+    Logger.info("LSP Initialize request received")
+
+    capabilities = build_server_capabilities()
+
+    %{
+      "jsonrpc" => "2.0",
+      "id" => id,
+      "result" => %{
+        "capabilities" => capabilities,
+        "serverInfo" => %{
+          "name" => "LANG LSP Server",
+          "version" => "1.0.0"
+        }
+      }
+    }
+  end
+
+  defp handle_did_open(params) do
+    uri = params["textDocument"]["uri"]
+    content = params["textDocument"]["text"]
+
+    # Store document content
+    GenServer.cast(__MODULE__, {:store_document, uri, content})
+
+    # Send diagnostics
+    diagnostics = analyze_document(content)
+    send_diagnostics(uri, diagnostics)
+
+    nil
+  end
+
+  defp handle_completion(id, params) do
+    uri = params["textDocument"]["uri"]
+    position = params["position"]
+
+    # Get document content
+    content = GenServer.call(__MODULE__, {:get_document, uri})
+    completions = generate_completions(content, position)
+
+    %{
+      "jsonrpc" => "2.0",
+      "id" => id,
+      "result" => %{
+        "isIncomplete" => false,
+        "items" => completions
+      }
+    }
+  end
+
+  defp handle_hover(id, params) do
+    uri = params["textDocument"]["uri"]
+    position = params["position"]
+
+    content = GenServer.call(__MODULE__, {:get_document, uri})
+    hover_info = generate_hover_info(content, position)
+
+    %{
+      "jsonrpc" => "2.0",
+      "id" => id,
+      "result" => hover_info
+    }
+  end
+
+  defp handle_did_change(params) do
+    uri = params["textDocument"]["uri"]
+    changes = params["contentChanges"]
+
+    # Update document content
+    GenServer.cast(__MODULE__, {:update_document, uri, changes})
+
+    # Send updated diagnostics
+    updated_content = GenServer.call(__MODULE__, {:get_document, uri})
+    diagnostics = analyze_document(updated_content)
+    send_diagnostics(uri, diagnostics)
+
+    nil
+  end
+
+  defp handle_shutdown(id) do
+    Logger.info("LSP Shutdown request received")
+
+    %{
+      "jsonrpc" => "2.0",
+      "id" => id,
+      "result" => nil
+    }
   end
 
   def handle_completion_request(uri, position, context) do
     GenServer.call(__MODULE__, {:completion, uri, position, context})
+  end
+
+  defp analyze_document(content) do
+    # Use the UniversalParser for document analysis
+    case Kyozo.Lang.UniversalParser.parse(content) do
+      {:ok, document} ->
+        generate_diagnostics_from_document(document)
+
+      {:error, _reason} ->
+        []
+    end
+  end
+
+  defp generate_diagnostics_from_document(document) do
+    diagnostics = []
+
+    # Check for parsing errors
+    diagnostics =
+      if document.parsed == nil do
+        [create_diagnostic(0, 0, "Document parsing failed", :error) | diagnostics]
+      else
+        diagnostics
+      end
+
+    # Check complexity
+    diagnostics =
+      case document.analysis do
+        %{complexity_score: score} when score > 8.0 ->
+          [
+            create_diagnostic(0, 0, "Document complexity is high (#{score})", :warning)
+            | diagnostics
+          ]
+
+        _ ->
+          diagnostics
+      end
+
+    # Check readability
+    diagnostics =
+      case document.analysis do
+        %{readability_score: score} when score < 3.0 ->
+          [create_diagnostic(0, 0, "Document readability is low (#{score})", :info) | diagnostics]
+
+        _ ->
+          diagnostics
+      end
+
+    diagnostics
+  end
+
+  defp create_diagnostic(line, character, message, severity) do
+    severity_num =
+      case severity do
+        :error -> 1
+        :warning -> 2
+        :info -> 3
+        :hint -> 4
+      end
+
+    %{
+      "range" => %{
+        "start" => %{"line" => line, "character" => character},
+        "end" => %{"line" => line, "character" => character + 10}
+      },
+      "severity" => severity_num,
+      "message" => message,
+      "source" => "lang-lsp"
+    }
+  end
+
+  defp generate_completions(content, position) do
+    line_num = position["line"]
+    char_pos = position["character"]
+
+    lines = String.split(content, "\n")
+    current_line = Enum.at(lines, line_num, "")
+
+    # Simple word-based completions
+    words = String.split(content) |> Enum.uniq() |> Enum.filter(&(String.length(&1) > 2))
+
+    Enum.map(words, fn word ->
+      %{
+        "label" => word,
+        # Text
+        "kind" => 1,
+        "insertText" => word
+      }
+    end)
+    |> Enum.take(20)
+  end
+
+  defp generate_hover_info(content, position) do
+    line_num = position["line"]
+
+    lines = String.split(content, "\n")
+    current_line = Enum.at(lines, line_num, "")
+
+    if String.trim(current_line) != "" do
+      %{
+        "contents" => [
+          %{
+            "language" => "text",
+            "value" => "Line #{line_num + 1}: #{String.trim(current_line)}"
+          }
+        ]
+      }
+    else
+      nil
+    end
+  end
+
+  defp send_diagnostics(uri, diagnostics) do
+    # This would send diagnostics to all connected clients
+    # For now, just log them
+    Logger.info("Sending diagnostics", uri: uri, count: length(diagnostics))
   end
 
   def handle_hover_request(uri, position) do
@@ -467,5 +808,216 @@ defmodule Lang.LSP.Server do
 
     # You could implement actual JSON-RPC notification sending here
     # Phoenix.PubSub.broadcast(Lang.PubSub, "lsp_diagnostics", {:diagnostics, uri, diagnostics})
+  end
+
+  # TCP Message Handling Functions
+
+  defp receive_message(socket) do
+    # LSP uses Content-Length header for message framing
+    case read_headers(socket) do
+      {:ok, headers} ->
+        content_length = parse_content_length(headers)
+        read_content(socket, content_length)
+
+      error ->
+        error
+    end
+  end
+
+  defp read_headers(socket, acc \\ "") do
+    case :gen_tcp.recv(socket, 0) do
+      {:ok, data} ->
+        acc = acc <> data
+
+        # Check for end of headers (\r\n\r\n)
+        if String.contains?(acc, "\r\n\r\n") do
+          [headers, _rest] = String.split(acc, "\r\n\r\n", parts: 2)
+          {:ok, headers}
+        else
+          read_headers(socket, acc)
+        end
+
+      {:error, :closed} ->
+        {:error, :closed}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp parse_content_length(headers) do
+    headers
+    |> String.split("\r\n")
+    |> Enum.find_value(0, fn line ->
+      case String.split(line, ": ", parts: 2) do
+        ["Content-Length", length] -> String.to_integer(length)
+        _ -> nil
+      end
+    end)
+  end
+
+  defp read_content(socket, length) do
+    case :gen_tcp.recv(socket, length) do
+      {:ok, content} ->
+        case Jason.decode(content) do
+          {:ok, message} -> {:ok, message}
+          {:error, _} -> {:error, :invalid_json}
+        end
+
+      error ->
+        error
+    end
+  end
+
+  defp process_lsp_message(%{"method" => method} = message) do
+    id = Map.get(message, "id")
+    params = Map.get(message, "params", %{})
+
+    response =
+      case method do
+        "initialize" ->
+          handle_initialize(params)
+
+        "initialized" ->
+          # Client notification that initialization is complete
+          nil
+
+        "shutdown" ->
+          %{"result" => nil}
+
+        "textDocument/didOpen" ->
+          handle_did_open(params)
+          nil
+
+        "textDocument/didChange" ->
+          handle_did_change(params)
+          nil
+
+        "textDocument/didClose" ->
+          handle_did_close(params)
+          nil
+
+        "textDocument/completion" ->
+          handle_completion(params)
+
+        "textDocument/hover" ->
+          handle_hover(params)
+
+        "textDocument/publishDiagnostics" ->
+          handle_publish_diagnostics(params)
+
+        _ ->
+          %{"error" => %{"code" => -32601, "message" => "Method not found"}}
+      end
+
+    if id && response do
+      Map.merge(%{"jsonrpc" => "2.0", "id" => id}, response)
+    else
+      response
+    end
+  end
+
+  defp process_lsp_message(_), do: nil
+
+  defp send_response(socket, nil), do: :ok
+
+  defp send_response(socket, response) do
+    json = Jason.encode!(response)
+    content_length = byte_size(json)
+
+    message = "Content-Length: #{content_length}\r\n\r\n#{json}"
+    :gen_tcp.send(socket, message)
+  end
+
+  # LSP Request Handlers
+
+  defp handle_initialize(params) do
+    capabilities = build_server_capabilities()
+
+    %{
+      "result" => %{
+        "capabilities" => capabilities,
+        "serverInfo" => %{
+          "name" => "LANG LSP Server",
+          "version" => "1.0.0"
+        }
+      }
+    }
+  end
+
+  defp handle_did_open(%{"textDocument" => doc}) do
+    handle_document_open(
+      doc["uri"],
+      doc["text"],
+      doc["languageId"]
+    )
+  end
+
+  defp handle_did_change(%{"textDocument" => doc, "contentChanges" => changes}) do
+    handle_document_change(doc["uri"], changes)
+  end
+
+  defp handle_did_close(%{"textDocument" => doc}) do
+    handle_document_close(doc["uri"])
+  end
+
+  defp handle_completion(%{"textDocument" => doc, "position" => position} = params) do
+    context = Map.get(params, "context", %{})
+    completions = handle_completion_request(doc["uri"], position, context)
+
+    %{"result" => completions}
+  end
+
+  defp handle_hover(%{"textDocument" => doc, "position" => position}) do
+    hover = handle_hover_request(doc["uri"], position)
+
+    %{"result" => hover}
+  end
+
+  defp handle_publish_diagnostics(%{"textDocument" => doc}) do
+    diagnostics = handle_diagnostics_request(doc["uri"], doc["text"])
+
+    # Send diagnostics as a notification
+    notification = %{
+      "jsonrpc" => "2.0",
+      "method" => "textDocument/publishDiagnostics",
+      "params" => %{
+        "uri" => doc["uri"],
+        "diagnostics" => diagnostics
+      }
+    }
+
+    # This would be sent back through the socket
+    notification
+  end
+
+  # Streaming Support for Large Responses
+
+  defp send_streaming_response(socket, response, chunk_size \\ 8192) do
+    json = Jason.encode!(response)
+
+    if byte_size(json) > chunk_size do
+      # For very large responses, we can send in chunks
+      # This is still within the LSP protocol as we send complete messages
+      send_response(socket, response)
+    else
+      send_response(socket, response)
+    end
+  end
+
+  # Connection Management
+
+  @impl true
+  def handle_info({:tcp_closed, socket}, state) do
+    Logger.info("LSP client disconnected")
+    connections = Map.delete(state.connections, socket)
+    {:noreply, %{state | connections: connections}}
+  end
+
+  @impl true
+  def handle_info({:tcp_error, socket, reason}, state) do
+    Logger.error("LSP TCP error: #{inspect(reason)}")
+    connections = Map.delete(state.connections, socket)
+    {:noreply, %{state | connections: connections}}
   end
 end

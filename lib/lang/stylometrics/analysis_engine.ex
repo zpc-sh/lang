@@ -539,44 +539,251 @@ defmodule Lang.Stylometrics.AnalysisEngine do
     end)
   end
 
-  # Simple transformation implementations (would be more sophisticated in production)
+  # Real stylometric transformation implementations
   defp apply_synonym_replacement(content, intensity) do
-    # Placeholder - would implement actual synonym replacement
-    if :rand.uniform() < intensity do
-      String.replace(content, ~r/\bgood\b/, "excellent")
-    else
+    # Apply synonym replacement based on intensity level
+    replacements = get_synonym_replacements(intensity)
+
+    Enum.reduce(replacements, content, fn {pattern, replacement}, acc ->
+      if :rand.uniform() < intensity do
+        String.replace(acc, pattern, replacement)
+      else
+        acc
+      end
+    end)
+  end
+
+  defp apply_vocabulary_elevation(content, intensity) do
+    # Replace simple words with more sophisticated alternatives
+    elevations = [
+      {~r/\buse\b/i, "utilize"},
+      {~r/\bhelp\b/i, "assist"},
+      {~r/\bshow\b/i, "demonstrate"},
+      {~r/\bbig\b/i, "substantial"},
+      {~r/\bsmall\b/i, "minute"},
+      {~r/\bstart\b/i, "commence"},
+      {~r/\bend\b/i, "conclude"},
+      {~r/\bmake\b/i, "generate"},
+      {~r/\bget\b/i, "acquire"},
+      {~r/\btell\b/i, "inform"}
+    ]
+
+    Enum.reduce(elevations, content, fn {pattern, replacement}, acc ->
+      if :rand.uniform() < intensity do
+        String.replace(acc, pattern, replacement)
+      else
+        acc
+      end
+    end)
+  end
+
+  defp apply_complexity_increase(content, intensity) do
+    # Add complexity by introducing subordinate clauses and conjunctions
+    sentences = String.split(content, ~r/\.\s+/, trim: true)
+
+    complex_sentences =
+      Enum.map(sentences, fn sentence ->
+        if :rand.uniform() < intensity and String.length(sentence) > 20 do
+          add_complexity_to_sentence(sentence)
+        else
+          sentence
+        end
+      end)
+
+    Enum.join(complex_sentences, ". ") <> if String.ends_with?(content, "."), do: ".", else: ""
+  end
+
+  defp apply_passive_voice_addition(content, intensity) do
+    # Transform active voice to passive voice patterns
+    active_patterns = [
+      {~r/(\w+)\s+creates?\s+(\w+)/i, "\\2 is created by \\1"},
+      {~r/(\w+)\s+makes?\s+(\w+)/i, "\\2 is made by \\1"},
+      {~r/(\w+)\s+develops?\s+(\w+)/i, "\\2 is developed by \\1"},
+      {~r/(\w+)\s+builds?\s+(\w+)/i, "\\2 is built by \\1"},
+      {~r/(\w+)\s+writes?\s+(\w+)/i, "\\2 is written by \\1"}
+    ]
+
+    Enum.reduce(active_patterns, content, fn {pattern, replacement}, acc ->
+      if :rand.uniform() < intensity do
+        String.replace(acc, pattern, replacement)
+      else
+        acc
+      end
+    end)
+  end
+
+  defp apply_formality_adjustment(content, intensity) do
+    # Increase formality by replacing informal expressions
+    formal_replacements = [
+      {~r/\bcan't\b/i, "cannot"},
+      {~r/\bwon't\b/i, "will not"},
+      {~r/\bisn't\b/i, "is not"},
+      {~r/\baren't\b/i, "are not"},
+      {~r/\bI think\b/i, "It is my opinion that"},
+      {~r/\bI believe\b/i, "It is believed that"},
+      {~r/\ba lot of\b/i, "numerous"},
+      {~r/\bkind of\b/i, "somewhat"},
+      {~r/\bpretty\s+(\w+)/i, "rather \\1"},
+      {~r/\breally\s+(\w+)/i, "particularly \\1"}
+    ]
+
+    Enum.reduce(formal_replacements, content, fn {pattern, replacement}, acc ->
+      if :rand.uniform() < intensity do
+        String.replace(acc, pattern, replacement)
+      else
+        acc
+      end
+    end)
+  end
+
+  defp apply_tone_change(content, intensity) do
+    # Adjust tone based on intensity (0.0 = casual, 1.0 = professional)
+    if intensity > 0.7 do
+      # Professional tone
       content
+      |> String.replace(~r/\bawesome\b/i, "excellent")
+      |> String.replace(~r/\bgreat\b/i, "outstanding")
+      |> String.replace(~r/\bcool\b/i, "impressive")
+      |> String.replace(~r/\bstuff\b/i, "materials")
+      |> String.replace(~r/\bthings\b/i, "items")
+    else
+      # Keep casual tone or make more casual
+      content
+      |> String.replace(~r/\butilize\b/i, "use")
+      |> String.replace(~r/\bassist\b/i, "help")
+      |> String.replace(~r/\bcommence\b/i, "start")
     end
   end
 
-  defp apply_vocabulary_elevation(content, _intensity) do
-    # Placeholder - would implement vocabulary elevation
-    content
+  defp verify_meaning_preservation(original, transformed) do
+    # Basic semantic similarity check using word overlap and sentence structure
+    original_words = extract_content_words(original)
+    transformed_words = extract_content_words(transformed)
+
+    # Calculate Jaccard similarity
+    intersection = MapSet.intersection(original_words, transformed_words)
+    union = MapSet.union(original_words, transformed_words)
+
+    similarity =
+      if MapSet.size(union) > 0 do
+        MapSet.size(intersection) / MapSet.size(union)
+      else
+        1.0
+      end
+
+    # Check sentence count preservation
+    original_sentences = count_sentences(original)
+    transformed_sentences = count_sentences(transformed)
+
+    sentence_ratio =
+      min(original_sentences, transformed_sentences) /
+        max(original_sentences, transformed_sentences)
+
+    # Combined score (word similarity + structure similarity)
+    combined_score = similarity * 0.7 + sentence_ratio * 0.3
+
+    if combined_score > 0.6 do
+      {:ok, true}
+    else
+      {:error, :meaning_too_altered}
+    end
   end
 
-  defp apply_complexity_increase(content, _intensity) do
-    # Placeholder - would implement sentence complexity increase
-    content
+  # Helper functions for stylometric analysis
+  defp get_synonym_replacements(intensity) do
+    base_replacements = [
+      {~r/\bgood\b/i, "excellent"},
+      {~r/\bbad\b/i, "poor"},
+      {~r/\bfast\b/i, "rapid"},
+      {~r/\bslow\b/i, "gradual"},
+      {~r/\beasy\b/i, "straightforward"},
+      {~r/\bhard\b/i, "challenging"}
+    ]
+
+    if intensity > 0.5 do
+      base_replacements ++
+        [
+          {~r/\bvery\s+(\w+)/i, "extremely \\1"},
+          {~r/\bquite\s+(\w+)/i, "considerably \\1"},
+          {~r/\bsomewhat\s+(\w+)/i, "moderately \\1"}
+        ]
+    else
+      base_replacements
+    end
   end
 
-  defp apply_passive_voice_addition(content, _intensity) do
-    # Placeholder - would implement passive voice transformation
-    content
+  defp add_complexity_to_sentence(sentence) do
+    # Add subordinate clauses or conjunctive phrases
+    complexity_additions = [
+      ", which demonstrates that",
+      ", thereby indicating that",
+      ", consequently resulting in",
+      ", furthermore establishing",
+      ", subsequently leading to"
+    ]
+
+    addition = Enum.random(complexity_additions)
+
+    # Split sentence roughly in half and add complexity
+    words = String.split(sentence)
+
+    if length(words) > 5 do
+      {first_half, second_half} = Enum.split(words, div(length(words), 2))
+      Enum.join(first_half, " ") <> addition <> " " <> Enum.join(second_half, " ")
+    else
+      sentence
+    end
   end
 
-  defp apply_formality_adjustment(content, _intensity) do
-    # Placeholder - would implement formality adjustment
-    content
+  defp extract_content_words(text) do
+    # Extract meaningful words (excluding stop words)
+    stop_words =
+      MapSet.new([
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should"
+      ])
+
+    text
+    |> String.downcase()
+    |> String.replace(~r/[^\w\s]/, " ")
+    |> String.split()
+    |> Enum.reject(&(String.length(&1) < 3))
+    |> Enum.reject(&MapSet.member?(stop_words, &1))
+    |> MapSet.new()
   end
 
-  defp apply_tone_change(content, _intensity) do
-    # Placeholder - would implement tone modification
-    content
-  end
-
-  defp verify_meaning_preservation(_original, _transformed) do
-    # Placeholder - would implement semantic similarity check
-    {:ok, true}
+  defp count_sentences(text) do
+    text
+    |> String.split(~r/[.!?]+/)
+    |> Enum.count(&(String.trim(&1) != ""))
   end
 
   # Feature extraction helper functions (simplified implementations)

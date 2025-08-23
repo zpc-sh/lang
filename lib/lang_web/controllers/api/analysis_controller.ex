@@ -150,9 +150,11 @@ defmodule LangWeb.Api.AnalysisController do
 
   def show_session(conn, %{"id" => id}) do
     # TODO: Add user authorization check
-    case Analysis.get_analysis_session!(id) do
-      session ->
-        render(conn, "session.json", session: session)
+    try do
+      case Analysis.get_analysis_session!(id) do
+        session ->
+          render(conn, "session.json", session: session)
+      end
     rescue
       Ecto.NoResultsError ->
         conn
@@ -215,43 +217,45 @@ defmodule LangWeb.Api.AnalysisController do
               |> render("errors.json", changeset: changeset)
           end
         end
-    rescue
-      Ecto.NoResultsError ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Analysis session not found"})
     end
+  rescue
+    Ecto.NoResultsError ->
+      conn
+      |> put_status(:not_found)
+      |> json(%{error: "Analysis session not found"})
   end
 
   # File Upload and Analysis
 
   def upload_files(conn, %{"session_id" => session_id} = params) do
     # TODO: Add user authorization check
-    case Analysis.get_analysis_session!(session_id) do
-      session ->
-        unless session.status == "pending" do
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{error: "Session is not in pending state"})
-        else
-          case extract_files_from_upload(params) do
-            {:ok, files} ->
-              case Analysis.process_analysis_session(session, files) do
-                {:ok, updated_session} ->
-                  render(conn, "session.json", session: updated_session)
+    try do
+      case Analysis.get_analysis_session!(session_id) do
+        session ->
+          unless session.status == "pending" do
+            conn
+            |> put_status(:unprocessable_entity)
+            |> json(%{error: "Session is not in pending state"})
+          else
+            case extract_files_from_upload(params) do
+              {:ok, files} ->
+                case Analysis.process_analysis_session(session, files) do
+                  {:ok, updated_session} ->
+                    render(conn, "session.json", session: updated_session)
 
-                {:error, changeset} ->
-                  conn
-                  |> put_status(:unprocessable_entity)
-                  |> render("errors.json", changeset: changeset)
-              end
+                  {:error, changeset} ->
+                    conn
+                    |> put_status(:unprocessable_entity)
+                    |> render("errors.json", changeset: changeset)
+                end
 
-            {:error, reason} ->
-              conn
-              |> put_status(:bad_request)
-              |> json(%{error: reason})
+              {:error, reason} ->
+                conn
+                |> put_status(:bad_request)
+                |> json(%{error: reason})
+            end
           end
-        end
+      end
     rescue
       Ecto.NoResultsError ->
         conn
@@ -260,189 +264,196 @@ defmodule LangWeb.Api.AnalysisController do
     end
   end
 
-  # def analyze_text(conn, %{"session_id" => session_id} = params) do
-  #   # For direct text analysis without file upload
-  #   case Analysis.get_analysis_session!(session_id) do
-  #     session ->
-  #       unless session.status == "pending" do
-  #         conn
-  #         |> put_status(:unprocessable_entity)
-  #         |> json(%{error: "Session is not in pending state"})
-  #       else
-  #         text_content = params["content"]
-  #         file_name = params["file_name"] || "untitled.txt"
-  #         language = params["language"]
+  def analyze_text(conn, %{"session_id" => session_id} = params) do
+    # For direct text analysis without file upload
+    try do
+      case Analysis.get_analysis_session!(session_id) do
+        session ->
+          unless session.status == "pending" do
+            conn
+            |> put_status(:unprocessable_entity)
+            |> json(%{error: "Session is not in pending state"})
+          else
+            text_content = params["content"]
+            file_name = params["file_name"] || "untitled.txt"
+            language = params["language"]
 
-  #         unless text_content do
-  #           conn
-  #           |> put_status(:bad_request)
-  #           |> json(%{error: "Content is required"})
-  #         else
-  #           file_attrs = %{
-  #             file_name: file_name,
-  #             file_path: file_name,
-  #             content: text_content,
-  #             file_size_bytes: byte_size(text_content),
-  #             language_detected: language,
-  #             analysis_session_id: session_id
-  #           }
+            unless text_content do
+              conn
+              |> put_status(:bad_request)
+              |> json(%{error: "Content is required"})
+            else
+              file_attrs = %{
+                file_name: file_name,
+                file_path: file_name,
+                content: text_content,
+                file_size_bytes: byte_size(text_content),
+                language_detected: language,
+                analysis_session_id: session_id
+              }
 
-  #           case Analysis.create_analyzed_file(file_attrs) do
-  #             {:ok, file} ->
-  #               # Queue for analysis
-  #               Analysis.update_analyzed_file_status(file, "processing")
+              case Analysis.create_analyzed_file(file_attrs) do
+                {:ok, file} ->
+                  # Update file status to processing
+                  {:ok, updated_file} = Analysis.update_analyzed_file_status(file, "processing")
+                  render(conn, "file.json", file: updated_file)
 
-  #               # In a real implementation, this would trigger actual analysis
-  #               # For now, return success
-  #               render(conn, "file.json", file: file)
+                {:error, changeset} ->
+                  conn
+                  |> put_status(:unprocessable_entity)
+                  |> render("errors.json", changeset: changeset)
+              end
+            end
+          end
+      end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Analysis session not found"})
+    end
+  end
 
-  #             {:error, changeset} ->
-  #               conn
-  #               |> put_status(:unprocessable_entity)
-  #               |> render("errors.json", changeset: changeset)
-  #           end
-  #         end
-  #       end
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Analysis session not found"})
-  #   end
-  # end
+  # Results
 
-  # # Results
+  def list_files(conn, %{"session_id" => session_id} = params) do
+    opts = [
+      limit: min(String.to_integer(params["limit"] || "100"), 500),
+      offset: String.to_integer(params["offset"] || "0"),
+      status: params["status"],
+      language: params["language"]
+    ]
 
-  # def list_files(conn, %{"session_id" => session_id} = params) do
-  #   opts = [
-  #     limit: min(String.to_integer(params["limit"] || "100"), 500),
-  #     offset: String.to_integer(params["offset"] || "0"),
-  #     status: params["status"],
-  #     language: params["language"]
-  #   ]
+    files = Analysis.list_analyzed_files(session_id, opts)
+    render(conn, "files.json", files: files)
+  end
 
-  #   files = Analysis.list_analyzed_files(session_id, opts)
-  #   render(conn, "files.json", files: files)
-  # end
+  def show_file(conn, %{"id" => id}) do
+    try do
+      case Analysis.get_analyzed_file!(id) do
+        file ->
+          render(conn, "file.json", file: file)
+      end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "File not found"})
+    end
+  end
 
-  # def show_file(conn, %{"id" => id}) do
-  #   case Analysis.get_analyzed_file!(id) do
-  #     file ->
-  #       render(conn, "file.json", file: file)
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "File not found"})
-  #   end
-  # end
+  def list_violations(conn, %{"session_id" => session_id} = params) do
+    opts = [
+      limit: min(String.to_integer(params["limit"] || "100"), 500),
+      offset: String.to_integer(params["offset"] || "0"),
+      severity: params["severity"],
+      status: params["status"],
+      category: params["category"]
+    ]
 
-  # def list_violations(conn, %{"session_id" => session_id} = params) do
-  #   opts = [
-  #     limit: min(String.to_integer(params["limit"] || "100"), 500),
-  #     offset: String.to_integer(params["offset"] || "0"),
-  #     severity: params["severity"],
-  #     status: params["status"],
-  #     category: params["category"]
-  #   ]
+    violations = Analysis.list_violations(session_id, opts)
+    stats = Analysis.get_violation_stats(session_id)
 
-  #   violations = Analysis.list_violations(session_id, opts)
-  #   stats = Analysis.get_violation_stats(session_id)
+    render(conn, "violations.json", violations: violations, stats: stats)
+  end
 
-  #   render(conn, "violations.json", violations: violations, stats: stats)
-  # end
+  def show_violation(conn, %{"id" => id}) do
+    try do
+      case Analysis.get_violation!(id) do
+        violation ->
+          render(conn, "violation.json", violation: violation)
+      end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Violation not found"})
+    end
+  end
 
-  # def show_violation(conn, %{"id" => id}) do
-  #   case Analysis.get_violation!(id) do
-  #     violation ->
-  #       render(conn, "violation.json", violation: violation)
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Violation not found"})
-  #   end
-  # end
+  def update_violation(conn, %{"id" => id} = params) do
+    try do
+      case Analysis.get_violation!(id) do
+        violation ->
+          action = params["action"]
+          user_id = conn.assigns.current_user.id
 
-  # def update_violation(conn, %{"id" => id} = params) do
-  #   case Analysis.get_violation!(id) do
-  #     violation ->
-  #       action = params["action"]
-  #       user_id = conn.assigns.current_user.id
+          result =
+            case action do
+              "resolve" ->
+                Analysis.resolve_violation(violation, user_id, params["note"])
 
-  #       result =
-  #         case action do
-  #           "resolve" ->
-  #             Analysis.resolve_violation(violation, user_id, params["note"])
+              "acknowledge" ->
+                Analysis.acknowledge_violation(violation, user_id, params["note"])
 
-  #           "acknowledge" ->
-  #             Analysis.acknowledge_violation(violation, user_id, params["note"])
+              "suppress" ->
+                case params["reason"] do
+                  nil ->
+                    {:error, "Reason is required for suppression"}
 
-  #           "suppress" ->
-  #             case params["reason"] do
-  #               nil ->
-  #                 {:error, "Reason is required for suppression"}
+                  reason ->
+                    Analysis.suppress_violation(violation, user_id, reason)
+                end
 
-  #               reason ->
-  #                 Analysis.suppress_violation(violation, user_id, reason)
-  #             end
+              "false_positive" ->
+                case params["reason"] do
+                  nil ->
+                    {:error, "Reason is required for false positive marking"}
 
-  #           "false_positive" ->
-  #             case params["reason"] do
-  #               nil ->
-  #                 {:error, "Reason is required for false positive marking"}
+                  reason ->
+                    Analysis.mark_false_positive(violation, user_id, reason)
+                end
 
-  #               reason ->
-  #                 Analysis.mark_false_positive(violation, user_id, reason)
-  #             end
+              _ ->
+                {:error,
+                 "Invalid action. Must be one of: resolve, acknowledge, suppress, false_positive"}
+            end
 
-  #           _ ->
-  #             {:error,
-  #              "Invalid action. Must be one of: resolve, acknowledge, suppress, false_positive"}
-  #         end
+          case result do
+            {:ok, updated_violation} ->
+              render(conn, "violation.json", violation: updated_violation)
 
-  #       case result do
-  #         {:ok, updated_violation} ->
-  #           render(conn, "violation.json", violation: updated_violation)
+            {:error, %Ecto.Changeset{} = changeset} ->
+              conn
+              |> put_status(:unprocessable_entity)
+              |> render("errors.json", changeset: changeset)
 
-  #         {:error, %Ecto.Changeset{} = changeset} ->
-  #           conn
-  #           |> put_status(:unprocessable_entity)
-  #           |> render("errors.json", changeset: changeset)
+            {:error, message} ->
+              conn
+              |> put_status(:bad_request)
+              |> json(%{error: message})
+          end
+      end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Violation not found"})
+    end
+  end
 
-  #         {:error, message} ->
-  #           conn
-  #           |> put_status(:bad_request)
-  #           |> json(%{error: message})
-  #       end
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Violation not found"})
-  #   end
-  # end
+  # Statistics
 
-  # # Statistics
+  def user_stats(conn, _params) do
+    user_id = conn.assigns.current_user.id
+    stats = Analysis.get_user_analysis_stats(user_id)
+    render(conn, "user_stats.json", stats: stats)
+  end
 
-  # def user_stats(conn, _params) do
-  #   user_id = conn.assigns.current_user.id
-  #   stats = Analysis.get_user_analysis_stats(user_id)
-  #   render(conn, "user_stats.json", stats: stats)
-  # end
-
-  # def session_stats(conn, %{"session_id" => session_id}) do
-  #   case Analysis.get_analysis_session!(session_id) do
-  #     session ->
-  #       stats = Analysis.get_violation_stats(session_id)
-  #       render(conn, "session_stats.json", session: session, stats: stats)
-  #   rescue
-  #     Ecto.NoResultsError ->
-  #       conn
-  #       |> put_status(:not_found)
-  #       |> json(%{error: "Analysis session not found"})
-  #   end
-  # end
+  def session_stats(conn, %{"session_id" => session_id}) do
+    try do
+      case Analysis.get_analysis_session!(session_id) do
+        session ->
+          stats = Analysis.get_violation_stats(session_id)
+          render(conn, "session_stats.json", session: session, stats: stats)
+      end
+    rescue
+      Ecto.NoResultsError ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "Analysis session not found"})
+    end
+  end
 
   # Private functions
 

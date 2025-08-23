@@ -38,8 +38,8 @@ defmodule Lang.Application do
       # Orchestration system
       {Lang.Orchestration.Master, []},
 
-      # LSP Server
-      {Lang.LSP.Server, []},
+      # LSP Server Supervisor
+      {Lang.LSP.Supervisor, []},
 
       # Web endpoint
       LangWeb.Endpoint

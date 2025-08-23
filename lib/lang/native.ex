@@ -521,15 +521,40 @@ defmodule Lang.Native do
     byte_size(content) > 100_000
   end
 
-  defp check_analysis_cache(_content, _format, _opts) do
-    # Cache implementation would go here
-    # For now, always return :miss
-    :miss
+  defp check_analysis_cache(content, format, opts) do
+    # Generate cache key based on content hash, format, and relevant options
+    cache_key = generate_cache_key(content, format, opts)
+
+    case :ets.whereis(:lang_analysis_cache) do
+      :undefined ->
+        create_cache_table()
+        :miss
+
+      table ->
+        case :ets.lookup(table, cache_key) do
+          [{^cache_key, result, timestamp}] ->
+            # Check if cache entry is still valid (1 hour TTL)
+            if :erlang.system_time(:second) - timestamp < 3600 do
+              {:hit, result}
+            else
+              :ets.delete(table, cache_key)
+              :miss
+            end
+
+          [] ->
+            :miss
+        end
+    end
   end
 
   defp add_cache_timing(result, start_time) do
     cache_time = (System.monotonic_time(:microsecond) - start_time) / 1000
-    put_in(result.performance_stats.cache_hit_time_ms, cache_time)
+
+    # Ensure performance_stats exists
+    performance_stats = Map.get(result, :performance_stats, %{})
+    updated_stats = Map.put(performance_stats, :cache_hit_time_ms, cache_time)
+
+    Map.put(result, :performance_stats, updated_stats)
   end
 
   defp categorize_documents(documents) do
@@ -580,14 +605,62 @@ defmodule Lang.Native do
   end
 
   defp merge_batch_results(original_docs, small_results, medium_results, large_results) do
-    # This would implement proper result merging to maintain original order
-    # For now, just concatenate (simplified)
-    small_results ++ medium_results ++ large_results
+    # Create a mapping from document content hash to result
+    all_results = small_results ++ medium_results ++ large_results
+
+    # Create hash lookup for results
+    result_map =
+      all_results
+      |> Enum.with_index()
+      |> Map.new(fn {result, index} ->
+        content_hash = :erlang.phash2(result.content || "")
+        {content_hash, {result, index}}
+      end)
+
+    # Merge results in original document order
+    original_docs
+    |> Enum.map(fn {content, _format} ->
+      content_hash = :erlang.phash2(content)
+
+      case Map.get(result_map, content_hash) do
+        {result, _index} -> result
+        nil -> create_error_result("merge_failed")
+      end
+    end)
+  end
+
+  defp generate_cache_key(content, format, opts) do
+    # Create a stable cache key from content hash and options
+    content_hash = :erlang.phash2(content)
+    opts_hash = :erlang.phash2(Keyword.take(opts, [:format, :parallel, :compression]))
+
+    {content_hash, format, opts_hash}
+  end
+
+  defp create_cache_table do
+    # Create ETS table for analysis cache with TTL support
+    :ets.new(:lang_analysis_cache, [:named_table, :public, :set, {:read_concurrency, true}])
+  end
+
+  defp store_in_cache(cache_key, result) do
+    case :ets.whereis(:lang_analysis_cache) do
+      :undefined ->
+        create_cache_table()
+        store_in_cache(cache_key, result)
+
+      table ->
+        timestamp = :erlang.system_time(:second)
+        :ets.insert(table, {cache_key, result, timestamp})
+    end
   end
 
   defp create_error_result(error_type) do
     %{
       content_type: :error,
+      tokens: [],
+      complexity_score: 0.0,
+      readability_score: 0.0,
+      processing_successful: false,
       parsing: %Parser.ParseResult{
         format: "error",
         tokens: [],

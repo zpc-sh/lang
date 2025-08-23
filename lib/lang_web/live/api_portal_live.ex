@@ -192,37 +192,24 @@ defmodule LangWeb.ApiPortalLive do
     |> assign(:api_endpoints, get_api_endpoints())
   end
 
-  defp get_user_api_keys(_user_id) do
-    # TODO: Replace with actual API key queries
-    [
-      %{
-        id: "key_1",
-        name: "Production API",
-        key: "lang_abc123...def456",
-        created_at: DateTime.add(DateTime.utc_now(), -86400 * 30),
-        last_used_at: DateTime.add(DateTime.utc_now(), -3600),
-        usage_count: 15420,
-        status: :active
-      },
-      %{
-        id: "key_2",
-        name: "Development Testing",
-        key: "lang_xyz789...uvw321",
-        created_at: DateTime.add(DateTime.utc_now(), -86400 * 7),
-        last_used_at: DateTime.add(DateTime.utc_now(), -1800),
-        usage_count: 2847,
-        status: :active
-      },
-      %{
-        id: "key_3",
-        name: "Legacy Integration",
-        key: "lang_old456...def789",
-        created_at: DateTime.add(DateTime.utc_now(), -86400 * 90),
-        last_used_at: DateTime.add(DateTime.utc_now(), -86400 * 15),
-        usage_count: 8903,
-        status: :revoked
-      }
-    ]
+  defp get_user_api_keys(user_id) do
+    case Lang.Accounts.ApiKey.list_by_user(user_id: user_id) do
+      {:ok, api_keys} ->
+        Enum.map(api_keys, fn key ->
+          %{
+            id: key.id,
+            name: key.name,
+            key: Lang.Accounts.ApiKey.display_key(key),
+            created_at: key.inserted_at,
+            last_used_at: key.last_used_at,
+            usage_count: key.usage_count,
+            status: key.status
+          }
+        end)
+
+      {:error, _} ->
+        []
+    end
   end
 
   defp get_api_usage_stats(user_id) do
@@ -467,24 +454,48 @@ defmodule LangWeb.ApiPortalLive do
   end
 
   defp generate_api_key(user_id, name) do
-    # TODO: Implement actual API key generation with database storage
-    key = "lang_" <> (:crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false))
+    # Get user's organization
+    case Lang.Accounts.User.by_id(user_id) do
+      {:ok, user} ->
+        attrs = %{
+          name: name,
+          user_id: user_id,
+          organization_id: user.organization_id
+        }
 
-    {:ok,
-     %{
-       id: "key_new",
-       name: name,
-       key: key,
-       created_at: DateTime.utc_now(),
-       last_used_at: nil,
-       usage_count: 0,
-       status: :active
-     }}
+        case Lang.Accounts.ApiKey.create(attrs) do
+          {:ok, api_key} ->
+            {:ok,
+             %{
+               id: api_key.id,
+               name: api_key.name,
+               key: api_key.key,
+               created_at: api_key.inserted_at,
+               last_used_at: api_key.last_used_at,
+               usage_count: api_key.usage_count,
+               status: api_key.status
+             }}
+
+          {:error, _changeset} ->
+            {:error, "Failed to create API key"}
+        end
+
+      {:error, _} ->
+        {:error, "User not found"}
+    end
   end
 
   defp revoke_api_key(key_id) do
-    # TODO: Implement actual API key revocation
-    {:ok, :revoked}
+    case Lang.Accounts.ApiKey.by_id(key_id) do
+      {:ok, api_key} ->
+        case Lang.Accounts.ApiKey.revoke(api_key) do
+          {:ok, _updated_key} -> {:ok, :revoked}
+          {:error, _changeset} -> {:error, "Failed to revoke API key"}
+        end
+
+      {:error, _} ->
+        {:error, "API key not found"}
+    end
   end
 
   defp test_api_endpoint(endpoint_id, _params, _user) do

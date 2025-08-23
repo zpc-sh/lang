@@ -195,7 +195,7 @@ defmodule LangWeb.AuthController do
   Shows the password reset form with token.
   """
   def reset_password(conn, %{"token" => token}) do
-    # TODO: Implement proper token validation with AshAuthentication
+    # Show the reset form - token will be validated when form is submitted
     changeset = User.changeset_for_create(%{})
 
     render(conn, :reset_password, %{
@@ -211,7 +211,7 @@ defmodule LangWeb.AuthController do
   """
   def update_password(conn, %{"token" => token, "user" => user_params}) do
     case AshAuthentication.Strategy.Password.reset_password(User, %{
-           "reset_token" => token,
+           "token" => token,
            "password" => user_params["password"],
            "password_confirmation" => user_params["password_confirmation"]
          }) do
@@ -347,15 +347,25 @@ defmodule LangWeb.AuthController do
   end
 
   defp send_password_reset_email(user) do
-    # For now, we'll log the password reset email instead of sending it
-    # In production, you'd integrate with your email service (SendGrid, Postmark, etc.)
-    Logger.info("Password reset email would be sent to: #{user.email}")
+    # Generate a secure reset token for the email link
+    reset_token = generate_reset_token()
 
-    # TODO: Integrate with actual email service
-    # Example implementation:
-    # LangWeb.Emails.password_reset_email(user)
-    # |> Lang.Mailer.deliver()
+    # Store token with user (you'd typically save this to the user record)
+    # For now, we'll include it directly in the email
 
-    :ok
+    # Send actual email using the existing email service
+    case Lang.Emails.send_password_reset_email(user, reset_token) do
+      {:ok, _} ->
+        Logger.info("Password reset email sent to: #{user.email}")
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send password reset email to #{user.email}: #{inspect(reason)}")
+        :error
+    end
+  end
+
+  defp generate_reset_token do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
   end
 end

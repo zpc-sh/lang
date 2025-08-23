@@ -532,10 +532,36 @@ defmodule Lang.Native.PerfEngine do
   """
   @spec pack_triples([{String.t(), String.t(), String.t()}]) :: binary()
   def pack_triples(triples) when is_list(triples) do
-    # This would be implemented to create the packed binary format
-    # that matches the PackedTriple struct in Rust
-    # For now, return empty binary as placeholder
-    <<>>
+    # Pack RDF triples into binary format for efficient storage and comparison
+    packed_data =
+      Enum.reduce(triples, <<>>, fn {subject, predicate, object}, acc ->
+        # Convert each triple to binary with length prefixes
+        subject_bin = :erlang.term_to_binary(subject)
+        predicate_bin = :erlang.term_to_binary(predicate)
+        object_bin = :erlang.term_to_binary(object)
+
+        subject_len = byte_size(subject_bin)
+        predicate_len = byte_size(predicate_bin)
+        object_len = byte_size(object_bin)
+
+        # Pack with 4-byte length prefixes for each component
+        triple_packed = <<
+          subject_len::32,
+          subject_bin::binary,
+          predicate_len::32,
+          predicate_bin::binary,
+          object_len::32,
+          object_bin::binary
+        >>
+
+        acc <> triple_packed
+      end)
+
+    # Add header with triple count and total size
+    triple_count = length(triples)
+    total_size = byte_size(packed_data)
+
+    <<triple_count::32, total_size::32, packed_data::binary>>
   end
 
   @doc """
@@ -557,7 +583,42 @@ defmodule Lang.Native.PerfEngine do
   """
   @spec clear_caches() :: :ok
   def clear_caches() do
-    # This would call the native cache clearing if implemented
+    # Clear all internal caches and reset performance counters
+    :persistent_term.erase({__MODULE__, :cache})
+    :persistent_term.erase({__MODULE__, :performance_stats})
+
+    # Clear ETS cache tables if they exist
+    case :ets.whereis(:lang_perf_cache) do
+      :undefined -> :ok
+      table -> :ets.delete_all_objects(table)
+    end
+
+    case :ets.whereis(:lang_semantic_cache) do
+      :undefined -> :ok
+      table -> :ets.delete_all_objects(table)
+    end
+
+    # Force garbage collection to free memory
+    :erlang.garbage_collect()
+
+    # Reset performance monitoring
+    reset_performance_counters()
+
+    :ok
+  end
+
+  defp reset_performance_counters do
+    # Reset performance monitoring counters
+    initial_stats = %{
+      cache_hits: 0,
+      cache_misses: 0,
+      total_operations: 0,
+      avg_processing_time_ms: 0.0,
+      memory_usage_mb: 0.0,
+      last_reset: :erlang.system_time(:second)
+    }
+
+    :persistent_term.put({__MODULE__, :performance_stats}, initial_stats)
     :ok
   end
 
