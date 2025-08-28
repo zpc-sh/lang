@@ -21,7 +21,8 @@ This is a sophisticated web application built with Phoenix, Ash Framework, and n
 - **Always** use native Rust NIFs for filesystem operations via `Lang.Native.FSScanner` instead of pure Elixir file operations
 - **Always** use Ash resources for data operations instead of raw Ecto queries
 - **Always** use Oban workers for long-running background tasks
-- **NEVER** start long-running processes like servers (`mix phx.server`, `npm run dev`, `python -m http.server`, etc.) or file watchers that don't terminate on their own
+- **CRITICAL: NEVER** start long-running processes like servers (`mix phx.server`, `npm run dev`, `python -m http.server`, etc.) or file watchers that don't terminate on their own
+- **ABSOLUTELY FORBIDDEN: `mix phx.server`** - This command runs indefinitely and will block the terminal. Use `mix run` for one-time operations instead
 - **NEVER** run commands that block indefinitely - always use timeouts or background jobs for long operations
 ### Phoenix v1.8 guidelines
 
@@ -586,21 +587,27 @@ end)
 **CRITICAL**: Never start processes that run indefinitely or require manual termination:
 
 ```bash
-# ❌ NEVER do these - they block indefinitely:
-mix phx.server          # Web server - runs forever
-npm run dev             # Development server - runs forever
-npm run start           # Production server - runs forever
-python -m http.server   # HTTP server - runs forever
-iex -S mix              # Interactive shell - requires manual exit
-mix test --stale        # File watcher - runs forever
+# ❌ ABSOLUTELY FORBIDDEN - NEVER RUN THESE:
+mix phx.server          # ⛔ FORBIDDEN: Web server - runs forever and blocks terminal
+npm run dev             # ⛔ FORBIDDEN: Development server - runs forever
+npm run start           # ⛔ FORBIDDEN: Production server - runs forever
+python -m http.server   # ⛔ FORBIDDEN: HTTP server - runs forever
+iex -S mix              # ⛔ FORBIDDEN: Interactive shell - requires manual exit
+mix test --stale        # ⛔ FORBIDDEN: File watcher - runs forever
 
 # ✅ ALWAYS do these instead - they terminate:
 mix compile             # Compiles and exits
 mix test               # Runs tests and exits
 mix ecto.migrate       # Runs migrations and exits
 mix run script.exs     # Runs script and exits
-timeout 30 mix phx.server  # Use timeout for testing startup
+timeout 15 mix phx.server 2>&1 | head -10  # Only for testing startup with timeout
 ```
+
+**⚠️ WARNING: `mix phx.server` IS ABSOLUTELY PROHIBITED**
+- This command will run indefinitely and block the terminal session
+- It does not terminate on its own and requires manual interruption
+- Use `mix run` for one-time operations or scripts instead
+- If you need to test server startup, use `timeout` with a short duration
 
 ### Background Job Processing
 - **Always** use Oban workers for operations that take more than a few seconds
@@ -609,14 +616,17 @@ timeout 30 mix phx.server  # Use timeout for testing startup
 
 ### Development Testing
 ```bash
-# Test application startup (with timeout)
+# Test application startup (ONLY with timeout for brief testing)
 timeout 15 mix phx.server 2>&1 | head -10
 
-# Test compilation only
+# Test compilation only (PREFERRED)
 mix compile --force
 
-# Run specific tests
+# Run specific tests (PREFERRED)
 mix test test/my_test.exs --max-failures 1
+
+# Check if application can start without running server
+mix run -e "Application.ensure_all_started(:lang)"
 ```
 
 ## Troubleshooting Guide
@@ -721,7 +731,7 @@ end
 mix setup                 # Initial setup
 mix precommit            # Run all checks before commit
 mix compile.native       # Compile Rust NIFs
-mix phx.server          # Start development server
+# mix phx.server          # ⛔ FORBIDDEN - DO NOT USE
 
 # Testing
 mix test                # Run test suite

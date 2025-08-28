@@ -27,15 +27,15 @@ defmodule LangWeb.Api.V2.SpatialController do
   - counts_only: when true, returns only counts/metadata (no items)
   """
   def map_summary(conn, %{"project_id" => project_id} = params) do
-    with {:ok, summary} <- Lang.Spatial.latest_map_summary(project_id) do
+    with {:ok, summary} <- Lang.Spatial.latest_map_summary(project_id),
+         {:ok, page} <- parse_positive_int_param(params, "page", @default_page),
+         {:ok, page_size0} <- parse_positive_int_param(params, "page_size", @default_page_size) do
       section = Map.get(params, "section", "all")
-
-      with {:ok, page} <- parse_positive_int_param(params, "page", @default_page),
-           {:ok, page_size} <- parse_positive_int_param(params, "page_size", @default_page_size) do
-        {page, page_size} = {page, min(page_size, @max_page_size)}
+      {page, page_size} = {page, min(page_size0, @max_page_size)}
       counts_only? = truthy?(Map.get(params, "counts_only"))
 
       languages = params |> Map.get("languages") |> parse_csv_list()
+
       types =
         params
         |> Map.get("types")
@@ -50,18 +50,29 @@ defmodule LangWeb.Api.V2.SpatialController do
         |> Enum.map(&normalize_kind/1)
         |> Enum.reject(&is_nil/1)
 
-      symbol_filters = Map.take(params, ["kind", "language", "file"]) |> atoms_if_present() |> Map.put(:kinds, kinds)
+      symbol_filters =
+        Map.take(params, ["kind", "language", "file"])
+        |> atoms_if_present()
+        |> Map.put(:kinds, kinds)
+
       relation_filters =
-        Map.take(params, ["type", "language", "target_kind", "from", "to", "file", "target_file"]) |> atoms_if_present()
+        Map.take(params, ["type", "language", "target_kind", "from", "to", "file", "target_file"])
+        |> atoms_if_present()
         |> Map.put(:types, types)
 
       # Symbols filtering, pagination, and counts
       {symbols_page, symbols_meta} =
         if section in ["all", "symbols"] do
           all_symbols = summary.symbols || []
-          all_symbols = if languages == [], do: all_symbols, else: Enum.filter(all_symbols, &(&1.language in languages))
+
+          all_symbols =
+            if languages == [],
+              do: all_symbols,
+              else: Enum.filter(all_symbols, &(&1.language in languages))
+
           filtered_symbols = Enum.filter(all_symbols, &filter_symbol(&1, symbol_filters))
           {page_items, meta} = paginate(filtered_symbols, page, page_size)
+
           %{
             total: length(filtered_symbols),
             total_all: length(all_symbols),
@@ -74,16 +85,32 @@ defmodule LangWeb.Api.V2.SpatialController do
           }
           |> then(fn m -> {page_items, m} end)
         else
-          {[], %{total: 0, total_all: 0, page: page, page_size: page_size, counts_all_by_language: %{}, counts_by_language: %{}, counts_all_by_kind: %{}, counts_by_kind: %{}}}
+          {[],
+           %{
+             total: 0,
+             total_all: 0,
+             page: page,
+             page_size: page_size,
+             counts_all_by_language: %{},
+             counts_by_language: %{},
+             counts_all_by_kind: %{},
+             counts_by_kind: %{}
+           }}
         end
 
       # Relations filtering, pagination, and counts
       {relations_page, relations_meta} =
         if section in ["all", "relations"] do
           all_relations = summary.relations || []
-          all_relations = if languages == [], do: all_relations, else: Enum.filter(all_relations, &(&1.language in languages))
+
+          all_relations =
+            if languages == [],
+              do: all_relations,
+              else: Enum.filter(all_relations, &(&1.language in languages))
+
           filtered_relations = Enum.filter(all_relations, &filter_relation(&1, relation_filters))
           {page_items, meta} = paginate(filtered_relations, page, page_size)
+
           %{
             total: length(filtered_relations),
             total_all: length(all_relations),
@@ -96,7 +123,17 @@ defmodule LangWeb.Api.V2.SpatialController do
           }
           |> then(fn m -> {page_items, m} end)
         else
-          {[], %{total: 0, total_all: 0, page: page, page_size: page_size, counts_all_by_language: %{}, counts_by_language: %{}, counts_all_by_type: %{}, counts_by_type: %{}}}
+          {[],
+           %{
+             total: 0,
+             total_all: 0,
+             page: page,
+             page_size: page_size,
+             counts_all_by_language: %{},
+             counts_by_language: %{},
+             counts_all_by_type: %{},
+             counts_by_type: %{}
+           }}
         end
 
       body = %{
@@ -117,10 +154,11 @@ defmodule LangWeb.Api.V2.SpatialController do
         }
       }
 
-        json(conn, body)
+      json(conn, body)
     else
       {:error, :invalid_pagination} ->
         conn |> put_status(:bad_request) |> json(%{error: "invalid page or page_size"})
+
       {:ok, nil} ->
         conn |> put_status(:not_found) |> json(%{error: "no map available"})
 
@@ -148,9 +186,14 @@ defmodule LangWeb.Api.V2.SpatialController do
     opts = if types, do: Keyword.put(opts, :types, types), else: opts
 
     case Lang.Spatial.Mapper.trace_path(project_id, spec, opts) do
-      {:ok, result} -> json(conn, result)
-      {:error, :invalid_spec} -> conn |> put_status(:bad_request) |> json(%{error: "from and to are required"})
-      {:error, reason} -> conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
+      {:ok, result} ->
+        json(conn, result)
+
+      {:error, :invalid_spec} ->
+        conn |> put_status(:bad_request) |> json(%{error: "from and to are required"})
+
+      {:error, reason} ->
+        conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
     end
   end
 
@@ -170,6 +213,7 @@ defmodule LangWeb.Api.V2.SpatialController do
     opts = []
     opts = if language, do: Keyword.put(opts, :language, language), else: opts
     opts = if types, do: Keyword.put(opts, :types, types), else: opts
+
     opts =
       case top_n do
         nil -> opts
@@ -178,9 +222,14 @@ defmodule LangWeb.Api.V2.SpatialController do
       end
 
     case Lang.Spatial.Mapper.find_related(project_id, criteria, opts) do
-      {:ok, result} -> json(conn, result)
-      {:error, :invalid_criteria} -> conn |> put_status(:bad_request) |> json(%{error: "file is required"})
-      {:error, reason} -> conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
+      {:ok, result} ->
+        json(conn, result)
+
+      {:error, :invalid_criteria} ->
+        conn |> put_status(:bad_request) |> json(%{error: "file is required"})
+
+      {:error, reason} ->
+        conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
     end
   end
 
@@ -192,7 +241,22 @@ defmodule LangWeb.Api.V2.SpatialController do
   """
   def traverse(conn, %{"project_id" => project_id} = params) do
     file = Map.get(params, "file")
-    depth = params |> Map.get("depth", "3") |> to_int(3)
+
+    depth =
+      case Map.get(params, "depth", "3") do
+        val when is_integer(val) ->
+          val
+
+        val when is_binary(val) ->
+          case Integer.parse(val) do
+            {i, ""} -> i
+            _ -> 3
+          end
+
+        _ ->
+          3
+      end
+
     language = Map.get(params, "language")
     types = Map.get(params, "types")
     kinds = Map.get(params, "kinds")
@@ -204,24 +268,34 @@ defmodule LangWeb.Api.V2.SpatialController do
     opts = if kinds, do: Keyword.put(opts, :kinds, kinds), else: opts
 
     case Lang.Spatial.Mapper.traverse(project_id, opts) do
-      {:ok, result} -> json(conn, result)
-      {:error, :missing_start_file} -> conn |> put_status(:bad_request) |> json(%{error: "file is required"})
-      {:error, reason} -> conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
+      {:ok, result} ->
+        json(conn, result)
+
+      {:error, :missing_start_file} ->
+        conn |> put_status(:bad_request) |> json(%{error: "file is required"})
+
+      {:error, reason} ->
+        conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
     end
   end
 
   # Pagination helpers
   defp parse_positive_int_param(params, key, default) do
     case Map.get(params, key) do
-      nil -> {:ok, default}
-      val when is_integer(val) and val > 0 -> {:ok, val}
+      nil ->
+        {:ok, default}
+
+      val when is_integer(val) and val > 0 ->
+        {:ok, val}
+
       val when is_binary(val) ->
         case Integer.parse(val) do
           {i, ""} when i > 0 -> {:ok, i}
           _ -> {:error, :invalid_pagination}
         end
 
-      _ -> {:error, :invalid_pagination}
+      _ ->
+        {:error, :invalid_pagination}
     end
   end
 
@@ -278,9 +352,11 @@ defmodule LangWeb.Api.V2.SpatialController do
 
   # Only match target_file when the relation points to a path-like target
   defp match_target_file(_item, nil), do: true
+
   defp match_target_file(%{target_kind: tk, to: to}, target_file)
        when tk in [:path, :module_path],
        do: to == target_file
+
   defp match_target_file(_item, _target_file), do: false
 
   defp counts_by_language(list) do
@@ -309,15 +385,37 @@ defmodule LangWeb.Api.V2.SpatialController do
 
   defp normalize_filter_value(v) when is_binary(v) do
     case v do
-      <<":"::utf8, rest::binary>> -> String.to_atom(rest)
+      <<":"::utf8, rest::binary>> ->
+        String.to_atom(rest)
+
       _ ->
         # try atom for the common enums; otherwise keep string
         down = String.downcase(v)
+
         case down do
-          s when s in ["function", "class", "struct", "enum", "interface", "module", "symbol", "type", "impl", "macro"] -> String.to_atom(down)
-          s when s in ["import", "export", "use", "aliases"] -> String.to_atom(down)
-          s when s in ["module", "path", "module_path", "unknown"] -> String.to_atom(down)
-          _ -> v
+          s
+          when s in [
+                 "function",
+                 "class",
+                 "struct",
+                 "enum",
+                 "interface",
+                 "module",
+                 "symbol",
+                 "type",
+                 "impl",
+                 "macro"
+               ] ->
+            String.to_atom(down)
+
+          s when s in ["import", "export", "use", "aliases"] ->
+            String.to_atom(down)
+
+          s when s in ["module", "path", "module_path", "unknown"] ->
+            String.to_atom(down)
+
+          _ ->
+            v
         end
     end
   end
@@ -325,11 +423,13 @@ defmodule LangWeb.Api.V2.SpatialController do
   defp normalize_filter_value(v), do: v
 
   defp parse_csv_list(nil), do: []
+
   defp parse_csv_list(val) when is_binary(val) do
     val
     |> String.split([",", " "], trim: true)
     |> Enum.reject(&(&1 == ""))
   end
+
   defp parse_csv_list(_), do: []
 
   defp normalize_type(v) when is_atom(v) do

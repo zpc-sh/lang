@@ -1,6 +1,4 @@
-// LANG LSP Editor Hooks - Enhanced with @nocsi/recurse editor integration
-
-import { RecurseEditor } from '@nocsi/recurse'
+// LANG LSP Editor Hooks - Optional Recurse editor integration (if provided globally)
 
 const LspEditorHooks = {
   // Main LSP Editor Hook using @nocsi/recurse
@@ -9,8 +7,13 @@ const LspEditorHooks = {
       const content = this.el.dataset.content || ''
       const language = this.el.dataset.language || 'elixir'
 
-      // Initialize @nocsi/recurse editor
-      this.editor = new RecurseEditor({
+      // Initialize Recurse editor if available; otherwise, skip gracefully
+      if (!window.RecurseEditor) {
+        console.warn("RecurseEditor not available; skipping rich editor init")
+        return
+      }
+
+      this.editor = new window.RecurseEditor({
         element: this.el,
         content: content,
         language: language,
@@ -191,9 +194,9 @@ const LspEditorHooks = {
       }
     },
 
-    insertText(text, position = null) {
+    insertText(text, _position = null) {
       if (this.editor) {
-        const pos = position || this.editor.getPosition()
+        const pos = _position || this.editor.getPosition()
         this.editor.executeEdits('insert-text', [{
           range: {
             startLineNumber: pos.lineNumber,

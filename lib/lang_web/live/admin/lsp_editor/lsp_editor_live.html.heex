@@ -401,11 +401,11 @@
                           Line {method.line_number}
                         </div>
 
-                        {if method.last_modified do}
+                        <%= if method.last_modified do %>
                           <div class="text-xs text-gray-500" title="Last modified">
-                            📅 {String.slice(method.last_modified, 0, 10)}
+                            📅 <%= String.slice(method.last_modified, 0, 10) %>
                           </div>
-                        {/if}
+                        <% end %>
                       </div>
                     </td>
                   </tr>

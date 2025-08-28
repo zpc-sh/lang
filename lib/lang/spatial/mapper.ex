@@ -140,11 +140,11 @@ defmodule Lang.Spatial.Mapper do
   end
 
   defp bfs(edges, start, depth) do
-    do_bfs(edges, MapSet.new([start]), :queue.in({start, 0}, :queue.new()), MapSet.new(), [])
+    do_bfs(edges, depth, MapSet.new([start]), :queue.in({start, 0}, :queue.new()), MapSet.new(), [])
     |> then(fn {visited, _q, _seen_edges, collected} -> {MapSet.to_list(visited), Enum.reverse(collected)} end)
   end
 
-  defp do_bfs(_edges, visited, q, seen_edges, collected) do
+  defp do_bfs(_edges, depth, visited, q, seen_edges, collected) do
     case :queue.out(q) do
       {{:value, {_node, d}}, q} when d < 0 -> {visited, q, seen_edges, collected}
       {{:value, {node, d}}, q} ->
@@ -162,7 +162,7 @@ defmodule Lang.Spatial.Mapper do
           end)
 
         if d + 1 <= depth do
-          do_bfs(_edges, visited, q, seen_edges, collected)
+          do_bfs(_edges, depth, visited, q, seen_edges, collected)
         else
           {visited, q, seen_edges, collected}
         end

@@ -53,7 +53,7 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
         :ok
     end
   end
-  end
+  
 
   # Build a compact symbol table and trivial relations using native FSScanner searches
   defp build_symbols_and_relations(root_path) do

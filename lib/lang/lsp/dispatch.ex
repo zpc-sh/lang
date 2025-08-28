@@ -75,13 +75,31 @@ defmodule Lang.LSP.Dispatch do
   def process(%{"method" => method} = msg) do
     case method do
       "lang.think.explain_intent" -> think(:explain_intent, msg)
+      "lang.think.explain_why" -> think(:explain_why, msg)
+      "lang.think.explain_how" -> think(:explain_how, msg)
+      "lang.think.diagnose" -> think(:diagnose, msg)
+      "lang.think.predict_bugs" -> think(:predict_bugs, msg)
+      "lang.think.predict_performance" -> think(:predict_performance, msg)
+      "lang.think.security_scan" -> think(:security_scan, msg)
       "lang.think.find_semantic" -> think(:find_semantic, msg)
+      "lang.think.find_similar" -> think(:find_similar, msg)
+      "lang.think.trace_flow" -> think(:trace_flow, msg)
+      "lang.think.generate_tests" -> think(:generate_tests, msg)
+      "lang.think.review_code" -> think(:review_code, msg)
+      "lang.think.estimate_complexity" -> think(:estimate_complexity, msg)
       "lang.spatial.map" -> spatial_map(msg)
       "lang.spatial.traverse" -> spatial_traverse(msg)
       "lang.spatial.trace_path" -> spatial_trace_path(msg)
       "lang.spatial.find_related" -> spatial_find_related(msg)
       "lang.capabilities" -> capabilities(msg)
       "lang.generate.complete_partial" -> generate(:complete_partial, msg)
+      "lang.generate.from_spec" -> generate(:from_spec, msg)
+      "lang.generate.from_tests" -> generate(:from_tests, msg)
+      "lang.generate.variations" -> generate(:variations, msg)
+      "lang.generate.optimize" -> generate(:optimize, msg)
+      "lang.generate.parallelize" -> generate(:parallelize, msg)
+      "lang.generate.migrate" -> generate(:migrate, msg)
+      "lang.generate.dockerfile" -> generate(:dockerfile, msg)
       m when m in @not_impl_methods -> not_implemented(msg)
       _ -> nil
     end
@@ -89,21 +107,33 @@ defmodule Lang.LSP.Dispatch do
 
   def process(_), do: nil
 
-  defp think(kind, %{"id" => id, "params" => params}) do
-    req_attrs = %{
-      kind: kind,
-      input: Map.get(params, "input", %{}),
-      user_id: Map.get(params, "user_id"),
-      project_id: Map.get(params, "project_id"),
-      run_id: Map.get(params, "run_id")
-    }
+  defp think(kind, %{"id" => id, "params" => params, "method" => method}) do
+    # If client requests realtime/provider handling, route to providers; else enqueue
+    if realtime_request?(params) do
+      router_opts = provider_opt(params)
+      case Lang.Providers.Router.route_request(method, params, router_opts) do
+        {:ok, result} ->
+          %{"jsonrpc" => "2.0", "id" => id, "result" => result}
 
-    case Lang.Think.Request.create_enqueued(req_attrs) do
-      {:ok, req} ->
-        %{"jsonrpc" => "2.0", "id" => id, "result" => %{request_id: req.id, status: "queued"}}
+        {:error, reason} ->
+          %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
+      end
+    else
+      req_attrs = %{
+        kind: kind,
+        input: Map.get(params, "input", %{}),
+        user_id: Map.get(params, "user_id"),
+        project_id: Map.get(params, "project_id"),
+        run_id: Map.get(params, "run_id")
+      }
 
-      {:error, reason} ->
-        %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
+      case Lang.Think.Request.create_enqueued(req_attrs) do
+        {:ok, req} ->
+          %{"jsonrpc" => "2.0", "id" => id, "result" => %{request_id: req.id, status: "queued"}}
+
+        {:error, reason} ->
+          %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
+      end
     end
   end
 
@@ -229,8 +259,26 @@ defmodule Lang.LSP.Dispatch do
       "result" => %{
         "implemented" => [
           "lang.think.explain_intent",
+          "lang.think.explain_why",
+          "lang.think.explain_how",
+          "lang.think.diagnose",
+          "lang.think.predict_bugs",
+          "lang.think.predict_performance",
+          "lang.think.security_scan",
           "lang.think.find_semantic",
+          "lang.think.find_similar",
+          "lang.think.trace_flow",
+          "lang.think.generate_tests",
+          "lang.think.review_code",
+          "lang.think.estimate_complexity",
           "lang.generate.complete_partial",
+          "lang.generate.from_spec",
+          "lang.generate.from_tests",
+          "lang.generate.variations",
+          "lang.generate.optimize",
+          "lang.generate.parallelize",
+          "lang.generate.migrate",
+          "lang.generate.dockerfile",
           "lang.spatial.map",
           "lang.spatial.traverse",
           "lang.spatial.trace_path",
@@ -249,6 +297,25 @@ defmodule Lang.LSP.Dispatch do
     end
   end
   defp parse_nonneg_int(_), do: {:error, :invalid_int}
+
+  defp realtime_request?(params) do
+    case {Map.get(params, "mode"), Map.get(params, "provider")} do
+      {mode, _} when mode in ["realtime", "sync", true] -> true
+      {_, prov} when prov in ["xai", "openai", "anthropic"] -> true
+      _ -> false
+    end
+  end
+
+  defp provider_opt(%{"provider" => p}) do
+    case p do
+      "xai" -> [provider: :xai]
+      "openai" -> [provider: :openai]
+      "anthropic" -> [provider: :anthropic]
+      _ -> []
+    end
+  end
+
+  defp provider_opt(_), do: []
 
   defp not_implemented(%{"id" => id, "method" => method}) do
     %{

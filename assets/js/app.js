@@ -25,8 +25,6 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/lang"
 import topbar from "../vendor/topbar"
 
-// Import @nocsi/recurse editor for advanced text editing
-import { RecurseEditor } from "@nocsi/recurse"
 
 // Import Stripe integration
 import "./stripe"
@@ -37,8 +35,9 @@ import LspEditorHooks from "./lsp_editor_hooks"
 // Get Stripe publishable key from environment
 window.stripePublishableKey = document.querySelector("meta[name='stripe-publishable-key']")?.getAttribute("content");
 
-// Make RecurseEditor available globally for LSP hooks
-window.RecurseEditor = RecurseEditor;
+// Optional: RecurseEditor integration (loaded externally when available)
+// If you integrate @nocsi/recurse via a separate build step, you can set
+// window.RecurseEditor there. We avoid bundling it here to keep esbuild simple.
 
 // Custom hooks for LANG landing page
 const langHooks = {

@@ -4,6 +4,7 @@ defmodule Lang.Spatial do
   """
 
   use Ash.Domain
+  require Ash.Query
 
   resources do
     resource(Lang.Spatial.Map)
