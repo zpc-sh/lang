@@ -624,7 +624,7 @@ defmodule Lang.LSP.Server do
 
         # Get hover info from AI
         hover_info =
-          case Lang.Providers.Router.route_request(:hover, %{
+        case Lang.Providers.Router.route_lsp(:hover, %{
                  word: word,
                  context: get_line_at_position(document.text, position),
                  language: document.language_id
@@ -1122,7 +1122,7 @@ defmodule Lang.LSP.Server do
       document ->
         context = get_completion_context(document.text, position)
 
-        case Lang.Providers.Router.route_request(:completion, %{
+        case Lang.Providers.Router.route_lsp(:completion, %{
                context: context,
                language: document.language_id,
                max_tokens: 100
@@ -1144,7 +1144,7 @@ defmodule Lang.LSP.Server do
       document ->
         code_snippet = extract_text_in_range(document.text, range)
 
-        case Lang.Providers.Router.route_request(:explain, %{
+        case Lang.Providers.Router.route_lsp(:explain, %{
                code: code_snippet,
                language: document.language_id
              }) do
@@ -1165,7 +1165,7 @@ defmodule Lang.LSP.Server do
       document ->
         code_snippet = extract_text_in_range(document.text, range)
 
-        case Lang.Providers.Router.route_request(:refactor, %{
+        case Lang.Providers.Router.route_lsp(:refactor, %{
                code: code_snippet,
                type: refactor_type,
                language: document.language_id
@@ -1187,7 +1187,7 @@ defmodule Lang.LSP.Server do
       document ->
         code_snippet = extract_text_in_range(document.text, range)
 
-        case Lang.Providers.Router.route_request(:generate_tests, %{
+        case Lang.Providers.Router.route_lsp(:generate_tests, %{
                code: code_snippet,
                language: document.language_id
              }) do

@@ -19,6 +19,9 @@ defmodule Lang.Workspace.Workspace do
 
   actions do
     defaults [:read]
+
+    create :create do
+      accept [:name, :project_id, :metadata]
+    end
   end
 end
-

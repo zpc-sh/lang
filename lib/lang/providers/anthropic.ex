@@ -97,6 +97,16 @@ defmodule Lang.Providers.Anthropic do
   end
 
   @impl Lang.Providers.Provider
+  def available? do
+    case get_api_key() do
+      nil -> false
+      _key -> true
+    end
+  rescue
+    _ -> false
+  end
+
+  @impl Lang.Providers.Provider
   def health_check do
     case simple_message("Respond with 'CLAUDE_HEALTHY' if you can process this request.") do
       {:ok, response} ->
@@ -302,7 +312,7 @@ defmodule Lang.Providers.Anthropic do
   # Anthropic API Integration
   # =============================================================================
 
-  defp message_request(content, opts \\ []) do
+  defp message_request(content, opts) do
     model = Keyword.get(opts, :model, @default_model)
     max_tokens = Keyword.get(opts, :max_tokens, 4000)
 
@@ -420,6 +430,155 @@ defmodule Lang.Providers.Anthropic do
 
     # Claude tokens: roughly 3.5 chars per token
     div(content_length, 4) + base_overhead
+  end
+
+  # =============================================================================
+  # LSP Methods (for router compatibility)
+  # =============================================================================
+
+  @doc """
+  Handle code completion requests
+  """
+  def complete(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      max_tokens: Keyword.get(opts, :max_tokens, 150),
+      messages: [
+        %{
+          role: "user",
+          content: """
+          You are a code completion assistant. Provide only the code to complete, without explanations.
+
+          #{prompt}
+          """
+        }
+      ]
+    }
+
+    case make_request("/messages", payload) do
+      {:ok, response} ->
+        case response["content"] do
+          [%{"text" => text} | _] ->
+            # Parse multiple completion options from response
+            completions = [
+              %{
+                text: String.trim(text),
+                label: String.slice(String.trim(text), 0..50),
+                kind: 1
+              }
+            ]
+
+            {:ok, completions}
+
+          _ ->
+            {:error, "Invalid completion response format"}
+        end
+
+      {:error, error} ->
+        {:error, "Completion failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle quick info/hover requests
+  """
+  def query(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      max_tokens: Keyword.get(opts, :max_tokens, 200),
+      messages: [
+        %{
+          role: "user",
+          content: """
+          You are a helpful code documentation assistant. Be concise and informative.
+
+          #{prompt}
+          """
+        }
+      ]
+    }
+
+    case make_request("/messages", payload) do
+      {:ok, response} ->
+        case response["content"] do
+          [%{"text" => text} | _] ->
+            {:ok, String.trim(text)}
+
+          _ ->
+            {:error, "Invalid query response format"}
+        end
+
+      {:error, error} ->
+        {:error, "Query failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle code analysis requests
+  """
+  def analyze(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @analysis_model),
+      max_tokens: Keyword.get(opts, :max_tokens, 1000),
+      messages: [
+        %{
+          role: "user",
+          content: """
+          You are an expert code analyst. Provide detailed, educational explanations.
+
+          #{prompt}
+          """
+        }
+      ]
+    }
+
+    case make_request("/messages", payload) do
+      {:ok, response} ->
+        case response["content"] do
+          [%{"text" => text} | _] ->
+            {:ok, String.trim(text)}
+
+          _ ->
+            {:error, "Invalid analysis response format"}
+        end
+
+      {:error, error} ->
+        {:error, "Analysis failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle code generation requests
+  """
+  def generate(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      max_tokens: Keyword.get(opts, :max_tokens, 2000),
+      messages: [
+        %{
+          role: "user",
+          content: """
+          You are an expert code generator. Generate clean, idiomatic code that follows best practices.
+
+          #{prompt}
+          """
+        }
+      ]
+    }
+
+    case make_request("/messages", payload) do
+      {:ok, response} ->
+        case response["content"] do
+          [%{"text" => text} | _] ->
+            {:ok, String.trim(text)}
+
+          _ ->
+            {:error, "Invalid generation response format"}
+        end
+
+      {:error, error} ->
+        {:error, "Generation failed: #{inspect(error)}"}
+    end
   end
 
   defp sanitize_payload(payload) do

@@ -161,4 +161,212 @@ defmodule Lang.TextIntelligence.ParserRegistry do
   end
 
   defp validate_parser_config(_), do: {:error, :invalid_config}
+
+  # =============================================================================
+  # Public API Methods
+  # =============================================================================
+
+  @doc """
+  Parse content using the appropriate parser for the format.
+  """
+  def parse(content, format) when is_binary(content) and is_binary(format) do
+    case get_parser(format) do
+      {:ok, parser_config} ->
+        parse_with_config(content, format, parser_config)
+
+      {:error, :unsupported_format} ->
+        # Fallback to basic text parsing
+        {:ok, parse_as_text(content)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp parse_with_config(content, format, %{parser: :composite, components: components}) do
+    # For composite parsers, run all components and merge results
+    results =
+      components
+      |> Enum.map(fn component ->
+        parse_with_parser(content, format, component)
+      end)
+      |> Enum.reduce(%{}, fn result, acc ->
+        Map.merge(acc, result, fn _key, v1, v2 ->
+          case {v1, v2} do
+            {list1, list2} when is_list(list1) and is_list(list2) -> list1 ++ list2
+            {map1, map2} when is_map(map1) and is_map(map2) -> Map.merge(map1, map2)
+            {_, v2} -> v2
+          end
+        end)
+      end)
+
+    {:ok, results}
+  end
+
+  defp parse_with_config(content, format, %{parser: parser}) do
+    result = parse_with_parser(content, format, parser)
+    {:ok, result}
+  end
+
+  defp parse_with_parser(content, format, parser) do
+    case parser do
+      :builtin_javascript -> parse_javascript(content)
+      :builtin_python -> parse_python(content)
+      :builtin_elixir -> parse_elixir(content)
+      :builtin_markdown -> parse_markdown(content)
+      :builtin_json -> parse_json(content)
+      :builtin_yaml -> parse_yaml(content)
+      :builtin_xml -> parse_xml(content)
+      :builtin_text -> parse_as_text(content)
+      _ -> parse_as_text(content)
+    end
+  end
+
+  # =============================================================================
+  # Format-specific parsers
+  # =============================================================================
+
+  defp parse_javascript(content) do
+    %{
+      type: "javascript",
+      functions: extract_js_functions(content),
+      variables: extract_js_variables(content),
+      imports: extract_js_imports(content),
+      exports: extract_js_exports(content)
+    }
+  end
+
+  defp parse_python(content) do
+    %{
+      type: "python",
+      classes: extract_python_classes(content),
+      functions: extract_python_functions(content),
+      imports: extract_python_imports(content)
+    }
+  end
+
+  defp parse_elixir(content) do
+    %{
+      type: "elixir",
+      modules: extract_elixir_modules(content),
+      functions: extract_elixir_functions(content),
+      macros: extract_elixir_macros(content),
+      attributes: extract_elixir_attributes(content)
+    }
+  end
+
+  defp parse_markdown(content) do
+    %{
+      type: "markdown",
+      headers: extract_markdown_headers(content),
+      links: extract_markdown_links(content),
+      code_blocks: extract_markdown_code_blocks(content)
+    }
+  end
+
+  defp parse_json(content) do
+    case Jason.decode(content) do
+      {:ok, parsed} -> %{type: "json", data: parsed}
+      {:error, _} -> %{type: "json", error: "Invalid JSON", raw: content}
+    end
+  end
+
+  defp parse_yaml(content) do
+    case YamlElixir.read_from_string(content) do
+      {:ok, parsed} -> %{type: "yaml", data: parsed}
+      {:error, _} -> %{type: "yaml", error: "Invalid YAML", raw: content}
+    end
+  rescue
+    _ -> %{type: "yaml", error: "YAML parser not available", raw: content}
+  end
+
+  defp parse_xml(content) do
+    %{type: "xml", raw: content}
+  end
+
+  defp parse_as_text(content) do
+    %{
+      type: "text",
+      lines: String.split(content, "\n"),
+      word_count: content |> String.split(~r/\s+/) |> length(),
+      char_count: String.length(content)
+    }
+  end
+
+  # =============================================================================
+  # Extraction helpers
+  # =============================================================================
+
+  defp extract_js_functions(content) do
+    Regex.scan(~r/function\s+(\w+)\s*\(([^)]*)\)/, content, capture: :all_but_first)
+    |> Enum.map(fn [name, params] -> %{name: name, params: params} end)
+  end
+
+  defp extract_js_variables(content) do
+    Regex.scan(~r/(?:let|const|var)\s+(\w+)/, content, capture: :all_but_first)
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_js_imports(content) do
+    Regex.scan(~r/import\s+.*\s+from\s+['"]([^'"]+)['"]/, content, capture: :all_but_first)
+    |> Enum.map(fn [module] -> module end)
+  end
+
+  defp extract_js_exports(content) do
+    Regex.scan(~r/export\s+(?:default\s+)?(?:function\s+)?(\w+)/, content,
+      capture: :all_but_first
+    )
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_python_classes(content) do
+    Regex.scan(~r/class\s+(\w+)(?:\([^)]*\))?:/, content, capture: :all_but_first)
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_python_functions(content) do
+    Regex.scan(~r/def\s+(\w+)\s*\(([^)]*)\):/, content, capture: :all_but_first)
+    |> Enum.map(fn [name, params] -> %{name: name, params: params} end)
+  end
+
+  defp extract_python_imports(content) do
+    imports = Regex.scan(~r/import\s+([\w\.]+)/, content, capture: :all_but_first)
+    from_imports = Regex.scan(~r/from\s+([\w\.]+)\s+import/, content, capture: :all_but_first)
+    (imports ++ from_imports) |> Enum.map(fn [module] -> module end)
+  end
+
+  defp extract_elixir_modules(content) do
+    Regex.scan(~r/defmodule\s+([\w\.]+)/, content, capture: :all_but_first)
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_elixir_functions(content) do
+    Regex.scan(~r/def\s+(\w+)(?:\([^)]*\))?/, content, capture: :all_but_first)
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_elixir_macros(content) do
+    Regex.scan(~r/defmacro\s+(\w+)(?:\([^)]*\))?/, content, capture: :all_but_first)
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_elixir_attributes(content) do
+    Regex.scan(~r/@(\w+)/, content, capture: :all_but_first)
+    |> Enum.map(fn [name] -> name end)
+  end
+
+  defp extract_markdown_headers(content) do
+    Regex.scan(~r/^(#+)\s+(.+)$/m, content, capture: :all_but_first)
+    |> Enum.map(fn [hashes, title] -> %{level: String.length(hashes), title: title} end)
+  end
+
+  defp extract_markdown_links(content) do
+    Regex.scan(~r/\[([^\]]+)\]\(([^)]+)\)/, content, capture: :all_but_first)
+    |> Enum.map(fn [text, url] -> %{text: text, url: url} end)
+  end
+
+  defp extract_markdown_code_blocks(content) do
+    Regex.scan(~r/```(\w*)\n(.*?)```/s, content, capture: :all_but_first)
+    |> Enum.map(fn [lang, code] -> %{language: lang, code: String.trim(code)} end)
+  end
 end

@@ -33,26 +33,26 @@ defmodule Lang.Spatial.Path do
     attribute(:project_id, :string, allow_nil?: false)
     attribute(:from_label, :string)
     attribute(:to_label, :string)
+    attribute(:from_ref, :string)
+    attribute(:to_ref, :string)
+    attribute(:hops, :integer, default: 1)
+    attribute(:rationale, :string)
     attribute(:metadata, :map, default: %{})
     create_timestamp(:inserted_at)
     update_timestamp(:updated_at)
   end
 
-  relationships do
-    belongs_to :project, Project do
-      attribute_writable?(true)
-    end
-  end
+  # Relationships can be added once Lang.Analyses.Project exists
 
   actions do
     defaults([:read, :destroy])
 
     create :create do
-      accept([:project_id, :from_ref, :to_ref, :hops, :rationale])
+      accept([:project_id, :from_label, :to_label, :metadata])
     end
 
     update :update do
-      accept([:from_ref, :to_ref, :hops, :rationale])
+      accept([:from_label, :to_label, :metadata])
     end
   end
 

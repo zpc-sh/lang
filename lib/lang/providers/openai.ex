@@ -94,6 +94,16 @@ defmodule Lang.Providers.OpenAI do
   end
 
   @impl Lang.Providers.Provider
+  def available? do
+    case get_api_key() do
+      nil -> false
+      _key -> true
+    end
+  rescue
+    _ -> false
+  end
+
+  @impl Lang.Providers.Provider
   def health_check do
     case simple_completion("Respond with 'OPENAI_HEALTHY' if you can process this request.") do
       {:ok, response} ->
@@ -385,6 +395,139 @@ defmodule Lang.Providers.OpenAI do
 
     # GPT tokens: roughly 4 chars per token
     div(content_length, 4) + base_overhead
+  end
+
+  # =============================================================================
+  # LSP Methods (for router compatibility)
+  # =============================================================================
+
+  @doc """
+  Handle code completion requests
+  """
+  def complete(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      temperature: 0.3,
+      messages: [
+        %{
+          role: "system",
+          content:
+            "You are a code completion assistant. Provide only the code to complete, without explanations."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 150),
+      n: Keyword.get(opts, :n, 3),
+      stop: Keyword.get(opts, :stop_sequences, ["\n\n", "```"])
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => choices}} ->
+        completions =
+          Enum.map(choices, fn choice ->
+            %{
+              text: get_in(choice, ["message", "content"]) || "",
+              label: String.slice(get_in(choice, ["message", "content"]) || "", 0..50),
+              kind: 1
+            }
+          end)
+
+        {:ok, completions}
+
+      {:error, error} ->
+        {:error, "Completion failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle quick info/hover requests
+  """
+  def query(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      temperature: 0.2,
+      messages: [
+        %{
+          role: "system",
+          content: "You are a helpful code documentation assistant. Be concise and informative."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 200)
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
+        {:ok, content}
+
+      {:error, error} ->
+        {:error, "Query failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle code analysis requests
+  """
+  def analyze(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @generation_model),
+      temperature: 0.4,
+      messages: [
+        %{
+          role: "system",
+          content: "You are an expert code analyst. Provide detailed, educational explanations."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 1000)
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
+        {:ok, content}
+
+      {:error, error} ->
+        {:error, "Analysis failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle code generation requests
+  """
+  def generate(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @generation_model),
+      temperature: 0.5,
+      messages: [
+        %{
+          role: "system",
+          content:
+            "You are an expert code generator. Generate clean, idiomatic code that follows best practices."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 2000)
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
+        {:ok, content}
+
+      {:error, error} ->
+        {:error, "Generation failed: #{inspect(error)}"}
+    end
   end
 
   defp sanitize_payload(payload) do

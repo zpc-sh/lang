@@ -59,6 +59,15 @@
               %>
               <div class={klass} title="Editor engine status">{label}</div>
             </div>
+            <!-- Model mode badge -->
+            <div class="ml-1">
+              <div class={[
+                "bx--tag bx--tag--sm",
+                if(@model_mode == :db, do: "bx--tag--green", else: "bx--tag--cool-gray")
+              ]} title="Model source">
+                {if @model_mode == :db, do: "Mode: DB", else: "Mode: Specs"}
+              </div>
+            </div>
             <button class="bx--btn bx--btn--sm bx--btn--secondary" phx-click="export_csv">Export CSV</button>
             <button
               class={[
@@ -422,9 +431,7 @@
                             </button>
                             <button
                               class="bx--btn bx--btn--sm bx--btn--danger bx--btn--ghost"
-                              phx-click="delete_method"
-                              phx-value-method={method.name}
-                              data-confirm="Delete this LSP method?"
+                              phx-click={JS.push("delete_method", value: %{method: method.name}) |> JS.confirm("Delete this LSP method?")}
                               title="Delete method"
                             >
                               Delete

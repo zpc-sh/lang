@@ -68,6 +68,40 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
     end
   end
 
+  @impl true
+  def delete_method(name) when is_binary(name) do
+    cond do
+      ensure_repo_started() and function_exported?(LspMethod, :delete_by_name, 1) ->
+        LspMethod.delete_by_name(name)
+      true ->
+        delete_method_from_specs(name)
+    end
+  end
+
+  defp delete_method_from_specs(name, dir \\ "priv/lsp/specs") do
+    files =
+      ["**/*.jsonld", "**/*.yaml", "**/*.yml"]
+      |> Enum.flat_map(fn pat -> Path.wildcard(Path.join(dir, pat)) end)
+
+    case Enum.find(files, fn path -> file_contains_method?(path, name) end) do
+      nil -> {:error, :not_found}
+      path ->
+        case File.rm(path) do
+          :ok -> {:ok, :deleted}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  defp file_contains_method?(path, name) do
+    case File.read(path) do
+      {:ok, content} ->
+        specs = Nullity.CDFM.Spec.parse_spec!(content)
+        Enum.any?(specs, fn s -> s.name == name end)
+      _ -> false
+    end
+  end
+
   defp ensure_repo_started do
     try do
       case Process.whereis(Lang.Repo) do

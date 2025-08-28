@@ -9,11 +9,13 @@ defmodule Lang.Providers.XAI do
   - Result synthesis
   """
 
-  @behaviour Lang.Providers.Provider
   require Logger
+
+  @behaviour Lang.Providers.Provider
 
   @base_url "https://api.x.ai/v1"
   @default_model "grok-beta"
+  @analysis_model "grok-beta"
   @command_temperature 0.3
   @analysis_temperature 0.7
 
@@ -28,57 +30,50 @@ defmodule Lang.Providers.XAI do
         "mission_command",
         "tactical_analysis",
         "lang.query.simple",
+        "lang.fs.explain_structure",
         "lang.think.explain_intent",
         "lang.think.find_semantic",
-        "lang.generate.simple_task"
+        "completion",
+        "hover",
+        "explain",
+        "refactor",
+        "generate_tests"
       ],
-      strengths: [:command, :coordination, :cost_optimization, :speed],
-      weaknesses: [:complex_analysis, :detailed_generation],
-      cost_tier: :cheap,
-      speed_tier: :fast,
-      quality_tier: :good,
-      specializations: [:command, :coordination, :tactical_decisions, :simple_tasks]
+      models: [@default_model],
+      max_context_length: 100_000,
+      supports_functions: true,
+      supports_vision: true,
+      cost_per_1k_tokens: %{
+        input: 0.001,
+        output: 0.002
+      }
     }
   end
 
   @impl Lang.Providers.Provider
-  def pricing do
-    %{
-      input_tokens_per_dollar: 5_000,
-      output_tokens_per_dollar: 2_000,
-      base_cost_per_request: 0.001,
-      bulk_discount_threshold: 100_000
-    }
+  def available? do
+    case Application.get_env(:lang, :ai_providers)[:xai_api_key] do
+      nil -> false
+      "" -> false
+      _ -> true
+    end
   end
 
   @impl Lang.Providers.Provider
   def handle_request(method, params, opts \\ []) do
     case method do
-      "mission_command" ->
-        command_mission(params, opts)
-
-      "tactical_analysis" ->
-        analyze_situation(params.context, params.question, opts)
-
-      "lang.query.simple" ->
-        simple_task(params, opts)
-
-      "lang.generate.simple_task" ->
-        simple_task(params, opts)
-
-      <<"lang.think", _::binary>> ->
-        handle_think_method(method, params, opts)
-
-      _ ->
-        {:error, "Method #{method} not supported by xAI provider"}
+      "lang.think." <> _ -> handle_think_method(method, params, opts)
+      "lang.query.simple" -> simple_task(params.query, opts)
+      "lang.fs.explain_structure" -> explain_file_structure(params, opts)
+      _ -> {:error, "Unknown method: #{method}"}
     end
   end
 
   @impl Lang.Providers.Provider
   def estimate_cost(method, params) do
     estimated_tokens = estimate_tokens(method, params)
-    # Rough estimate
-    estimated_cost = estimated_tokens * 0.0002
+    # $0.001 per 1K tokens (example)
+    estimated_cost = estimated_tokens * 0.001 / 1000
 
     {:ok,
      %{
@@ -159,7 +154,6 @@ defmodule Lang.Providers.XAI do
   def simple_task(task_description, opts \\ []) do
     payload = %{
       model: Keyword.get(opts, :model, @default_model),
-      # Very focused for simple tasks
       temperature: 0.1,
       messages: [
         %{role: "user", content: task_description}
@@ -173,6 +167,139 @@ defmodule Lang.Providers.XAI do
 
       {:error, error} ->
         {:error, "Simple task failed: #{inspect(error)}"}
+    end
+  end
+
+  # =============================================================================
+  # LSP-Specific Methods
+  # =============================================================================
+
+  @doc """
+  Handle code completion requests
+  """
+  def complete(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      temperature: 0.3,
+      messages: [
+        %{
+          role: "system",
+          content:
+            "You are a code completion assistant. Provide only the code to complete, without explanations."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 150),
+      n: Keyword.get(opts, :n, 3),
+      stop: Keyword.get(opts, :stop_sequences, ["\n\n", "```"])
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => choices}} ->
+        completions =
+          Enum.map(choices, fn choice ->
+            %{
+              text: get_in(choice, ["message", "content"]) || "",
+              label: String.slice(get_in(choice, ["message", "content"]) || "", 0..50),
+              kind: 1
+            }
+          end)
+
+        {:ok, completions}
+
+      {:error, error} ->
+        {:error, "Completion failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle quick info/hover requests
+  """
+  def query(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      temperature: 0.2,
+      messages: [
+        %{
+          role: "system",
+          content: "You are a helpful code documentation assistant. Be concise and informative."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 200)
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
+        {:ok, content}
+
+      {:error, error} ->
+        {:error, "Query failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle code analysis requests
+  """
+  def analyze(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @analysis_model),
+      temperature: 0.4,
+      messages: [
+        %{
+          role: "system",
+          content: "You are an expert code analyst. Provide detailed, educational explanations."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 1000)
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
+        {:ok, content}
+
+      {:error, error} ->
+        {:error, "Analysis failed: #{inspect(error)}"}
+    end
+  end
+
+  @doc """
+  Handle code generation requests
+  """
+  def generate(prompt, opts \\ []) do
+    payload = %{
+      model: Keyword.get(opts, :model, @default_model),
+      temperature: 0.5,
+      messages: [
+        %{
+          role: "system",
+          content:
+            "You are an expert code generator. Generate clean, idiomatic code that follows best practices."
+        },
+        %{
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: Keyword.get(opts, :max_tokens, 2000)
+    }
+
+    case make_request("/chat/completions", payload) do
+      {:ok, %{"choices" => [%{"message" => %{"content" => content}} | _]}} ->
+        {:ok, content}
+
+      {:error, error} ->
+        {:error, "Generation failed: #{inspect(error)}"}
     end
   end
 
@@ -442,6 +569,18 @@ defmodule Lang.Providers.XAI do
     simple_task(prompt, opts)
   end
 
+  defp explain_file_structure(params, opts) do
+    prompt = """
+    Explain the structure and purpose of this file/directory:
+
+    #{params.path}
+
+    Consider the file types, organization, and apparent purpose.
+    """
+
+    simple_task(prompt, opts)
+  end
+
   defp estimate_tokens(_method, params) do
     content_length =
       case params do
@@ -451,7 +590,6 @@ defmodule Lang.Providers.XAI do
       end
 
     # Rough token estimation: ~4 chars per token
-    # Base overhead
     div(content_length, 4) + 200
   end
 end

@@ -1,14 +1,26 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Spatial.WaypointSet do
-  @moduledoc "Ash resource implemented"
-  @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.spatial.waypoint_set"
+defmodule Lang.Spatial.Waypoint do
+  use Ash.Resource,
+    domain: Lang.Spatial,
+    data_layer: AshPostgres.DataLayer
 
-  @impl true
-  def method, do: @lsp_method
+  postgres do
+    table "spatial_waypoints"
+    repo Lang.Repo
+  end
 
-  @impl true
-  def handle(params, ctx) when is_map(params) and is_map(ctx) do
-    # TODO: implement
-    {:error, :not_implemented}
+  attributes do
+    uuid_primary_key :id
+    attribute :project_id, :string, allow_nil?: false
+    attribute :file, :string
+    attribute :line, :integer
+    attribute :label, :string
+    attribute :metadata, :map, default: %{}
+    create_timestamp :inserted_at
+    update_timestamp :updated_at
+  end
+
+  actions do
+    defaults [:read]
   end
 end
+

@@ -2,9 +2,9 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   use LangWeb, :live_view
 
   alias Lang.Native.FSScanner
-  alias Lang.TextIntelligence.MarkdownLDParser
-  alias Lang.Analysis.AnalyzedFile
   alias Kyozo.Lang.UniversalParser.LinkedDataExtractor
+  alias Nullity.CDFM.Adapters.Store.Ash, as: SpecStore
+  alias Phoenix.LiveView.JS
 
   @lsp_doc_path "docs/lsp.md"
 
@@ -452,27 +452,53 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   # Private functions
 
   defp load_lsp_data(socket) do
-    case parse_lsp_markdown() do
-      {:ok, {methods, raw_content}} ->
-        categories = extract_categories(methods)
-        stats = calculate_stats(methods)
-
-        # Extract markdown_ld data if available
-        markdown_ld_data = extract_markdown_ld(raw_content)
+    case SpecStore.read_all_methods() do
+      {:ok, methods} ->
+        model_methods = Enum.map(methods, &model_to_lv/1)
+        categories = extract_categories(model_methods)
+        stats = calculate_stats(model_methods)
 
         socket
-        |> assign(:lsp_methods, methods)
+        |> assign(:lsp_methods, model_methods)
         |> assign(:categories, categories)
-        |> assign(:raw_markdown, raw_content)
-        |> assign(:markdown_ld_data, markdown_ld_data)
+        |> assign(:raw_markdown, "")
+        |> assign(:markdown_ld_data, %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}})
         |> assign(:stats, stats)
+        |> assign(:model_mode, model_mode())
         |> assign(:loading, false)
 
       {:error, reason} ->
         socket
         |> assign(:loading, false)
-        |> put_flash(:error, "Failed to load LSP data: #{reason}")
+        |> put_flash(:error, "Failed to load LSP methods: #{inspect(reason)}")
     end
+  end
+
+  defp model_mode do
+    repo_started? = match?(pid when is_pid(pid), Process.whereis(Lang.Repo))
+    if repo_started?, do: :db, else: :specs
+  end
+
+  defp model_to_lv(%{name: name} = m) do
+    %{
+      name: name,
+      category: m[:category] || "other",
+      description: m[:description] || "",
+      priority: m[:priority] || "Medium",
+      status:
+        case m[:derived_status] || m[:spec_status] do
+          s when is_atom(s) -> s
+          "implemented" -> :implemented
+          "in_progress" -> :in_progress
+          "not_implemented" -> :not_started
+          "not_started" -> :not_started
+          _ -> :not_started
+        end,
+      file_path: m[:impl_file] || "",
+      impl_module: m[:impl_module],
+      impl_function: m[:impl_function],
+      impl_arity: m[:impl_arity]
+    }
   end
 
   defp parse_lsp_markdown do
@@ -762,36 +788,18 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   end
 
   defp update_method_status(method_name, new_status) do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
-        updated_content = update_status_in_content(content, method_name, new_status)
-        write_file(@lsp_doc_path, updated_content)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    attrs = %{name: method_name, spec_status: to_spec_status(new_status)}
+    SpecStore.upsert_method(attrs)
   end
 
   defp update_method_description(method_name, new_description) do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
-        updated_content = update_description_in_content(content, method_name, new_description)
-        write_file(@lsp_doc_path, updated_content)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    attrs = %{name: method_name, description: new_description}
+    SpecStore.upsert_method(attrs)
   end
 
   defp update_method_priority(method_name, new_priority) do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
-        updated_content = update_priority_in_content(content, method_name, new_priority)
-        write_file(@lsp_doc_path, updated_content)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    attrs = %{name: method_name, priority: new_priority}
+    SpecStore.upsert_method(attrs)
   end
 
   defp update_status_in_content(content, method_name, new_status) do
@@ -831,86 +839,49 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   end
 
   defp bulk_update_method_status(from_status, to_status) do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
-        from_emoji =
-          case from_status do
-            "not_started" -> "❌"
-            "in_progress" -> "🚧"
-            "implemented" -> "✅"
-          end
-
-        to_emoji =
-          case to_status do
-            "not_started" -> "❌"
-            "in_progress" -> "🚧"
-            "implemented" -> "✅"
-          end
-
-        updated_content = String.replace(content, from_emoji, to_emoji)
-
-        case write_file(@lsp_doc_path, updated_content) do
-          :ok ->
-            # Count how many were changed
-            original_count = String.split(content, from_emoji) |> length() |> Kernel.-(1)
-            new_count = String.split(updated_content, from_emoji) |> length() |> Kernel.-(1)
-            original_count - new_count
-
-          {:error, _} ->
-            0
+    with {:ok, methods} <- SpecStore.read_all_methods() do
+      target = Enum.filter(methods, fn m -> (m[:spec_status] || m[:derived_status]) in [from_status, to_string(from_status)] end)
+      Enum.reduce(target, 0, fn m, acc ->
+        case SpecStore.upsert_method(%{name: m[:name], spec_status: to_spec_status(to_status)}) do
+          {:ok, _} -> acc + 1
+          _ -> acc
         end
-
-      {:error, _} ->
-        0
+      end)
+    else
+      _ -> 0
     end
   end
 
   defp add_new_method(method_data) do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
-        method_line = build_method_table_row(method_data)
-        # Find appropriate section to add the method
-        updated_content = append_method_to_section(content, method_line, method_data["category"])
-        write_file(@lsp_doc_path, updated_content)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    # Expect keys: "method", "priority", "description", "category", "file_path"
+    attrs = %{
+      name: method_data["method"],
+      category: method_data["category"],
+      priority: method_data["priority"],
+      description: method_data["description"],
+      spec_status: "not_implemented",
+      impl_file: method_data["file_path"]
+    }
+    SpecStore.upsert_method(attrs)
   end
 
   defp delete_method(method_name) do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
-        pattern = ~r/^\|\s*`#{Regex.escape(method_name)}`\s*\|.*?\|\s*$/m
-        updated_content = Regex.replace(pattern, content, "")
-        write_file(@lsp_doc_path, updated_content)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    SpecStore.delete_method(method_name)
   end
 
-  defp build_method_table_row(method_data) do
-    status_emoji =
-      case method_data["status"] do
-        "not_started" -> "❌"
-        "in_progress" -> "🔄"
-        "implemented" -> "✅"
-        _ -> "❌"
-      end
+  defp to_spec_status(status) when is_binary(status), do: status
+  defp to_spec_status(:implemented), do: "implemented"
+  defp to_spec_status(:in_progress), do: "in_progress"
+  defp to_spec_status(:not_started), do: "not_implemented"
 
-    "| `#{method_data["method"]}` | #{status_emoji} | #{method_data["priority"]} | #{method_data["description"]} | `#{method_data["file_path"]}` |"
-  end
+defp build_method_table_row(_method_data), do: ""
 
-  defp append_method_to_section(content, method_line, _category) do
-    # Simple approach: append to end of appropriate category section
-    # In a more sophisticated version, we'd parse the markdown structure
-    content <> "\n" <> method_line
-  end
+defp append_method_to_section(content, _method_line, _category), do: content
 
   defp read_implementation_file(file_path) do
     case FSScanner.preview(file_path, max_lines: 1000) do
-      {:ok, content} -> {:ok, content}
+      {:ok, content} when is_list(content) -> {:ok, Enum.join(content, "\n")}
+      {:ok, content} when is_binary(content) -> {:ok, content}
       {:error, :file_not_found} -> {:error, :file_not_found}
       {:error, reason} -> {:error, reason}
     end
@@ -919,7 +890,11 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   defp create_stub_file(file_path) do
     # Ensure directory exists
     dir_path = Path.dirname(file_path)
-    File.mkdir_p!(dir_path)
+    try do
+      File.mkdir_p!(dir_path)
+    rescue
+      _ -> :ok
+    end
 
     # Generate stub content based on file type
     stub_content = generate_stub_content(file_path)
@@ -1028,9 +1003,7 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   defp status_to_string(:in_progress), do: "In Progress"
   defp status_to_string(:implemented), do: "Implemented"
 
-  defp file_exists?(file_path) do
-    File.exists?(file_path)
-  end
+  defp file_exists?(file_path), do: File.exists?(file_path)
 
   defp get_file_last_modified(file_path) do
     case File.stat(file_path) do
@@ -1045,61 +1018,13 @@ defmodule LangWeb.LspEditor.LspEditorLive do
     end
   end
 
-  defp extract_markdown_ld(content) do
-    case LinkedDataExtractor.extract_from_content(content, :markdown_ld) do
-      {:ok, linked_data} ->
-        %{
-          entities: linked_data.entities || [],
-          relationships: linked_data.relationships || [],
-          context: linked_data.context || %{},
-          triples: linked_data.triples || [],
-          confidence_scores: linked_data.confidence_scores || %{}
-        }
+defp extract_markdown_ld(_content), do: %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}}
 
-      {:error, _reason} ->
-        %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}}
-    end
-  end
+defp enhance_methods_with_semantic_data(methods, _markdown_ld_data), do: methods
 
-  defp enhance_methods_with_semantic_data(methods, markdown_ld_data) do
-    Enum.map(methods, fn method ->
-      # Find related entities for this method
-      related_entities = find_related_entities(method, markdown_ld_data.entities)
+defp find_related_entities(_method, _entities), do: []
 
-      # Calculate semantic confidence
-      semantic_confidence = calculate_semantic_confidence(method, markdown_ld_data)
-
-      method
-      |> Map.put(:related_entities, related_entities)
-      |> Map.put(:semantic_confidence, semantic_confidence)
-      |> Map.put(:has_semantic_data, length(related_entities) > 0)
-    end)
-  end
-
-  defp find_related_entities(method, entities) do
-    method_text = "#{method.name} #{method.description}" |> String.downcase()
-
-    Enum.filter(entities, fn entity ->
-      entity_text = "#{entity.text || ""} #{entity.type || ""}" |> String.downcase()
-      String.contains?(method_text, entity_text) or String.contains?(entity_text, method_text)
-    end)
-  end
-
-  defp calculate_semantic_confidence(method, markdown_ld_data) do
-    base_confidence = if method.status == :implemented, do: 0.9, else: 0.5
-
-    # Boost confidence if method has related entities
-    entity_boost =
-      if length(find_related_entities(method, markdown_ld_data.entities)) > 0, do: 0.1, else: 0.0
-
-    # Boost confidence if method has relationships
-    relationship_boost =
-      markdown_ld_data.relationships
-      |> Enum.any?(fn rel -> String.contains?("#{rel}", method.name) end)
-      |> if(do: 0.1, else: 0.0)
-
-    min(1.0, base_confidence + entity_boost + relationship_boost)
-  end
+defp calculate_semantic_confidence(method, _markdown_ld_data), do: if(method.status == :implemented, do: 0.9, else: 0.5)
 
   defp build_path(socket, extra_params \\ %{}) do
     query_params = []

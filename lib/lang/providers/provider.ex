@@ -42,6 +42,11 @@ defmodule Lang.Providers.Provider do
   @callback health_check() :: {:ok, String.t()} | {:error, any()}
 
   @doc """
+  Check if provider is available (has required configuration)
+  """
+  @callback available?() :: boolean()
+
+  @doc """
   Estimate cost for a request before executing
   """
   @callback estimate_cost(method :: String.t(), params :: map()) ::
