@@ -67,7 +67,8 @@ defmodule Lang.MCP.Servers.GitServer do
       requests_handled: state.stats.requests_handled,
       implementation: :stub,
       capabilities: ["git/info", "git/health"],
-      configured_repo?: is_binary(state.config["repository_url"]) and state.config["repository_url"] != ""
+      configured_repo?:
+        is_binary(state.config["repository_url"]) and state.config["repository_url"] != ""
     }
 
     {:reply, {:ok, details}, state}
@@ -77,7 +78,11 @@ defmodule Lang.MCP.Servers.GitServer do
   def handle_call({:mcp_request, request}, _from, state) when is_map(request) do
     Logger.debug("Git server received request (stub)", request: request)
 
-    state = %{state | last_request_at: DateTime.utc_now(), stats: %{state.stats | requests_handled: state.stats.requests_handled + 1}}
+    state = %{
+      state
+      | last_request_at: DateTime.utc_now(),
+        stats: %{state.stats | requests_handled: state.stats.requests_handled + 1}
+    }
 
     case request do
       %{"method" => "git/health"} ->
@@ -89,11 +94,17 @@ defmodule Lang.MCP.Servers.GitServer do
           branch: state.config["branch"] || "main",
           implementation: "stub"
         }
+
         {:reply, {:ok, %{result: info}}, state}
 
       %{"method" => method} ->
         Logger.warning("Unsupported git method (stub)", method: method)
-        error_state = %{state | stats: %{state.stats | errors_encountered: state.stats.errors_encountered + 1}}
+
+        error_state = %{
+          state
+          | stats: %{state.stats | errors_encountered: state.stats.errors_encountered + 1}
+        }
+
         {:reply, {:error, "Unsupported method: #{method}"}, error_state}
     end
   end
@@ -110,4 +121,3 @@ defmodule Lang.MCP.Servers.GitServer do
     :ok
   end
 end
-

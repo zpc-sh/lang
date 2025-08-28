@@ -3,7 +3,7 @@ defmodule LangWeb.Api.AnalysisController do
   alias LangWeb.ApiError
 
   alias Lang.Analysis
-  alias Lang.Analysis.{Project, AnalysisSession, AnalyzedFile, Violation}
+  alias Lang.Analyses.{Project, Run}
 
   action_fallback LangWeb.Api.FallbackController
 
@@ -187,8 +187,12 @@ defmodule LangWeb.Api.AnalysisController do
     # TODO: Add user authorization check
     case Analysis.get_analysis_session!(id) do
       session ->
-        unless AnalysisSession.in_progress?(session) do
-          ApiError.json(conn, :unprocessable_entity, "Cannot cancel session that is not in progress")
+        unless Run.in_progress?(session) do
+          ApiError.json(
+            conn,
+            :unprocessable_entity,
+            "Cannot cancel session that is not in progress"
+          )
         else
           case Analysis.cancel_analysis_session(session) do
             {:ok, session} ->
@@ -213,7 +217,7 @@ defmodule LangWeb.Api.AnalysisController do
     try do
       case Analysis.get_analysis_session!(session_id) do
         session ->
-          unless session.status == "pending" do
+          unless session.status == :pending do
             ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
           else
             case extract_files_from_upload(params) do
@@ -266,7 +270,7 @@ defmodule LangWeb.Api.AnalysisController do
               case Analysis.create_analyzed_file(file_attrs) do
                 {:ok, file} ->
                   # Update file status to processing
-                  {:ok, updated_file} = Analysis.update_analyzed_file_status(file, "processing")
+                  {:ok, updated_file} = Analysis.update_analyzed_file_status(file, :processing)
                   render(conn, "file.json", file: updated_file)
 
                 {:error, changeset} ->

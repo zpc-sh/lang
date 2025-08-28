@@ -63,13 +63,89 @@ defmodule Lang.Workers.TextEnvironment do
           }
         },
         "responses" => %{
-          "BadRequestError" => %{"description" => "Bad request", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}, "details" => %{"type" => "object", "additionalProperties" => true}}}}}},
-          "UnauthorizedError" => %{"description" => "Unauthorized", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
-          "ForbiddenError" => %{"description" => "Forbidden", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
-          "NotFoundError" => %{"description" => "Not found", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
-          "UnprocessableEntityError" => %{"description" => "Unprocessable entity", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}, "details" => %{"type" => "object", "additionalProperties" => true}}}}}},
-          "TooManyRequestsError" => %{"description" => "Rate limited", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}},
-          "InternalError" => %{"description" => "Internal server error", "content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"error" => %{"type" => "string"}}}}}}
+          "BadRequestError" => %{
+            "description" => "Bad request",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{
+                    "error" => %{"type" => "string"},
+                    "details" => %{"type" => "object", "additionalProperties" => true}
+                  }
+                }
+              }
+            }
+          },
+          "UnauthorizedError" => %{
+            "description" => "Unauthorized",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{"error" => %{"type" => "string"}}
+                }
+              }
+            }
+          },
+          "ForbiddenError" => %{
+            "description" => "Forbidden",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{"error" => %{"type" => "string"}}
+                }
+              }
+            }
+          },
+          "NotFoundError" => %{
+            "description" => "Not found",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{"error" => %{"type" => "string"}}
+                }
+              }
+            }
+          },
+          "UnprocessableEntityError" => %{
+            "description" => "Unprocessable entity",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{
+                    "error" => %{"type" => "string"},
+                    "details" => %{"type" => "object", "additionalProperties" => true}
+                  }
+                }
+              }
+            }
+          },
+          "TooManyRequestsError" => %{
+            "description" => "Rate limited",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{"error" => %{"type" => "string"}}
+                }
+              }
+            }
+          },
+          "InternalError" => %{
+            "description" => "Internal server error",
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{
+                  "type" => "object",
+                  "properties" => %{"error" => %{"type" => "string"}}
+                }
+              }
+            }
+          }
         },
         "responses" => generate_common_responses(),
         "examples" => generate_text_examples()

@@ -73,7 +73,7 @@ defmodule Lang.Accounts do
   """
   def create_demo_user do
     attrs = %{
-      email: "demo@lang-platform.com",
+      email: "demo@nulity.com",
       name: "Demo User",
       organization_name: "Demo Organization",
       subscription_tier: :pro,

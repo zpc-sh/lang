@@ -14,10 +14,10 @@ defmodule Lang.Emails do
 
   @behaviour AshAuthentication.Sender
 
-  @from_email "no-reply@nocsi.com"
+  @from_email "no-reply@nulity.com"
   @from_name "LANG Platform"
-  @support_email "support@nocsi.com"
-  @base_url System.get_env("BASE_URL", "https://lang.ai")
+  @support_email "support@nulity.com"
+  @base_url System.get_env("BASE_URL", "https://nulity.com")
 
   @doc """
   AshAuthentication.Sender callback for sending confirmation emails.

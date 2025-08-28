@@ -126,32 +126,39 @@ defmodule Lang.LSP.Server do
   end
 
   defp process_lsp_message(message) do
-    case message do
-      %{"method" => "initialize", "id" => id, "params" => params} ->
-        handle_initialize(id, params)
+    # First try domain-specific dispatch to avoid duplication
+    case Lang.LSP.Dispatch.process(message) do
+      nil ->
+        case message do
+          %{"method" => "initialize", "id" => id, "params" => params} ->
+            handle_initialize(id, params)
 
-      %{"method" => "textDocument/didOpen", "params" => params} ->
-        handle_did_open(params)
+          %{"method" => "textDocument/didOpen", "params" => params} ->
+            handle_did_open(params)
 
-      %{"method" => "textDocument/completion", "id" => id, "params" => params} ->
-        handle_completion(id, params)
+          %{"method" => "textDocument/completion", "id" => id, "params" => params} ->
+            handle_completion(id, params)
 
-      %{"method" => "textDocument/hover", "id" => id, "params" => params} ->
-        handle_hover(id, params)
+          %{"method" => "textDocument/hover", "id" => id, "params" => params} ->
+            handle_hover(id, params)
 
-      %{"method" => "textDocument/didChange", "params" => params} ->
-        handle_did_change(params)
+          %{"method" => "textDocument/didChange", "params" => params} ->
+            handle_did_change(params)
 
-      %{"method" => "shutdown", "id" => id} ->
-        handle_shutdown(id)
+          %{"method" => "shutdown", "id" => id} ->
+            handle_shutdown(id)
 
-      %{"method" => method} ->
-        Logger.info("Unhandled LSP method: #{method}")
-        nil
+          %{"method" => method} ->
+            Logger.info("Unhandled LSP method: #{method}")
+            nil
 
-      _ ->
-        Logger.warning("Invalid LSP message format")
-        nil
+          _ ->
+            Logger.warning("Invalid LSP message format")
+            nil
+        end
+
+      response ->
+        response
     end
   end
 

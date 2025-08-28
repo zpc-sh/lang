@@ -70,7 +70,7 @@ defmodule Lang.LSP.StreamingProtocol do
   Stream workspace symbols with pagination support.
   """
   @spec stream_workspace_symbols(String.t(), Keyword.t()) :: {:ok, stream_id}
-  def stream_workspace_symbols(query, opts \\ []) do
+  def stream_workspace_symbols(query, _opts \\ []) do
     stream_id = generate_stream_id()
 
     Task.start_link(fn ->
@@ -152,7 +152,7 @@ defmodule Lang.LSP.StreamingProtocol do
 
   defp stream_large_response(stream_id, response, json, opts) do
     chunk_size = Keyword.get(opts, :chunk_size, @chunk_size)
-    total_size = byte_size(json)
+    _total_size = byte_size(json)
 
     # For structured responses, try to split intelligently
     case response do

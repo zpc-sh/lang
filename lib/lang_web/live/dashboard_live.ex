@@ -2,7 +2,7 @@ defmodule LangWeb.DashboardLive do
   use LangWeb, :live_view
 
   alias Lang.Analysis
-  alias Lang.Analysis.{Project, AnalysisSession}
+  alias Lang.Analyses.Run
 
   @impl true
   def mount(_params, _session, socket) do
@@ -43,7 +43,7 @@ defmodule LangWeb.DashboardLive do
     try do
       session = Analysis.get_analysis_session!(session_id)
 
-      if AnalysisSession.in_progress?(session) do
+      if Run.in_progress?(session) do
         case Analysis.cancel_analysis_session(session) do
           {:ok, _session} ->
             # Refresh active sessions
@@ -113,6 +113,11 @@ defmodule LangWeb.DashboardLive do
                 </p>
               </div>
               <div class="flex gap-3">
+                <%= if Application.get_env(:lang, :env) == :dev do %>
+                  <.link href="/oban" class="btn btn-outline btn-sm">
+                    <.icon name="hero-chart-bar" class="w-4 h-4 mr-2" /> Oban
+                  </.link>
+                <% end %>
                 <button
                   class="btn btn-outline btn-sm"
                   phx-click="refresh_stats"
@@ -332,7 +337,7 @@ defmodule LangWeb.DashboardLive do
                                 <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
                               <% end %>
                               <span class="font-medium text-gray-900">
-                                {AnalysisSession.status_description(session)}
+                                {Run.status_description(session)}
                               </span>
                             </div>
                           </div>
@@ -341,7 +346,7 @@ defmodule LangWeb.DashboardLive do
                           </div>
                           <%= if session.status == "processing" and session.processing_time_ms do %>
                             <div class="text-xs text-gray-500 mt-1">
-                              Processing for {duration_in_words(AnalysisSession.duration(session))}
+                              Processing for {duration_in_words(Run.duration(session))}
                             </div>
                           <% end %>
                         </div>
@@ -349,7 +354,7 @@ defmodule LangWeb.DashboardLive do
                           <.link href={~p"/sessions/#{session.id}"} class="btn btn-ghost btn-xs">
                             View
                           </.link>
-                          <%= if AnalysisSession.in_progress?(session) do %>
+                          <%= if Run.in_progress?(session) do %>
                             <button
                               class="btn btn-outline btn-error btn-xs"
                               phx-click="cancel_session"
@@ -432,8 +437,8 @@ defmodule LangWeb.DashboardLive do
                             <%= if session.processing_time_ms do %>
                               {duration_in_words(session.processing_time_ms)}
                             <% else %>
-                              <%= if AnalysisSession.in_progress?(session) do %>
-                                {duration_in_words(AnalysisSession.duration(session))}
+                              <%= if Run.in_progress?(session) do %>
+                                {duration_in_words(Run.duration(session))}
                               <% else %>
                                 -
                               <% end %>

@@ -19,7 +19,10 @@ defmodule Lang.Security.RedisLimiter do
     {limit, window} = limits_for(method)
     now = System.system_time(:second)
     window_slot = div(now, window)
-    key = "ratelimit:" <> to_string(api_key_id) <> ":" <> method <> ":" <> Integer.to_string(window_slot)
+
+    key =
+      "ratelimit:" <>
+        to_string(api_key_id) <> ":" <> method <> ":" <> Integer.to_string(window_slot)
 
     case Redis.incr(key) do
       {:ok, count} when is_integer(count) ->
@@ -38,7 +41,9 @@ defmodule Lang.Security.RedisLimiter do
     method_cfg = Map.get(config, method)
 
     case method_cfg do
-      %{limit: l, window: w} when is_integer(l) and is_integer(w) and l > 0 and w > 0 -> {l, w}
+      %{limit: l, window: w} when is_integer(l) and is_integer(w) and l > 0 and w > 0 ->
+        {l, w}
+
       _ ->
         # sensible defaults per namespace
         cond do
@@ -51,4 +56,3 @@ defmodule Lang.Security.RedisLimiter do
     end
   end
 end
-

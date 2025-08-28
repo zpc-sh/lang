@@ -4,7 +4,12 @@ defmodule Lang.RPC.FsScanTest do
   alias Lang.RPC.Router
 
   setup do
-    root = Path.join(System.tmp_dir!(), "fs_scan_" <> Integer.to_string(:erlang.unique_integer([:positive])))
+    root =
+      Path.join(
+        System.tmp_dir!(),
+        "fs_scan_" <> Integer.to_string(:erlang.unique_integer([:positive]))
+      )
+
     File.mkdir_p!(Path.join(root, "sub"))
     File.write!(Path.join(root, "a.txt"), "hello\n")
     File.write!(Path.join(root, "sub/b.txt"), "world\n")
@@ -22,10 +27,13 @@ defmodule Lang.RPC.FsScanTest do
   end
 
   defp collect_paths(%{"path" => path, "children" => nil}), do: [path]
+
   defp collect_paths(%{"path" => path, "children" => children}) when is_list(children) do
     [path | Enum.flat_map(children, &collect_paths/1)]
   end
+
   defp collect_paths(%{path: path, children: nil}), do: [path]
+
   defp collect_paths(%{path: path, children: children}) when is_list(children) do
     [path | Enum.flat_map(children, &collect_paths/1)]
   end

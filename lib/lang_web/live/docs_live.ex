@@ -251,6 +251,20 @@ defmodule LangWeb.DocsLive do
                   </a>
                 </div>
               </div>
+
+              <div class="mt-6">
+                <h3 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Guides
+                </h3>
+                <div class="mt-2 space-y-1">
+                  <a
+                    href="/docs/guides/authentication"
+                    class="block px-3 py-2 rounded-md text-sm text-gray-300 hover:text-white hover:bg-gray-800"
+                  >
+                    Authentication & Org Context
+                  </a>
+                </div>
+              </div>
             </div>
           </nav>
         </aside>

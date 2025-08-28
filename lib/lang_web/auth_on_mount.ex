@@ -11,6 +11,7 @@ defmodule LangWeb.AuthOnMount do
 
   alias Lang.Accounts.User
   alias Lang.Events
+  alias LangWeb.AuthHelpers
   require Logger
 
   @doc """
@@ -20,9 +21,15 @@ defmodule LangWeb.AuthOnMount do
     socket =
       case get_current_user_from_session(session) do
         {:ok, user} ->
+          org =
+            case AuthHelpers.ensure_user_organization(user) do
+              {:ok, org} -> org
+              _ -> nil
+            end
+
           socket
           |> assign(:current_user, user)
-          |> assign(:current_org, load_user_org(user))
+          |> assign(:current_org, org)
           |> assign(:current_scope, %{type: :user, id: user.id})
           |> assign(:authenticated?, true)
 
@@ -108,7 +115,7 @@ defmodule LangWeb.AuthOnMount do
     socket =
       case socket.assigns do
         %{current_user: %{} = user, current_org: nil} ->
-          case load_user_organization(user) do
+          case AuthHelpers.ensure_user_organization(user) do
             {:ok, org} ->
               assign(socket, :current_org, org)
 
@@ -121,11 +128,9 @@ defmodule LangWeb.AuthOnMount do
           end
 
         %{current_org: %{}} ->
-          # Organization already assigned
           socket
 
         _ ->
-          # No user or organization context
           socket
       end
 
@@ -134,91 +139,7 @@ defmodule LangWeb.AuthOnMount do
 
   # Private helper functions
 
-  defp load_user_org(user) do
-    case user.organization do
-      %{} = org -> org
-      nil -> create_default_organization(user)
-      _ -> nil
-    end
-  end
-
-  defp load_user_with_org(user_id) do
-    import Ash.Query
-
-    case User
-         |> Ash.Query.filter(id == ^user_id)
-         |> Ash.Query.load([:organization])
-         |> Ash.read_one() do
-      {:ok, %{organization: org} = user} when not is_nil(org) ->
-        {:ok, user, org}
-
-      {:ok, user} ->
-        # User exists but no organization
-        case create_default_organization(user) do
-          {:ok, org} -> {:ok, user, org}
-          error -> error
-        end
-
-      {:error, _} = error ->
-        error
-
-      nil ->
-        {:error, :not_found}
-    end
-  end
-
-  defp load_user_organization(%{organization_id: org_id}) when is_binary(org_id) do
-    require Ash.Query
-
-    case Lang.Accounts.Organization
-         |> Ash.Query.filter(id == ^org_id)
-         |> Ash.read_one() do
-      {:ok, org} -> {:ok, org}
-      {:error, error} -> {:error, error}
-      nil -> {:error, :not_found}
-    end
-  end
-
-  defp load_user_organization(%{id: user_id}) do
-    # Load organization through user relationship
-    require Ash.Query
-
-    case User
-         |> Ash.Query.filter(id == ^user_id)
-         |> Ash.Query.load([:organization])
-         |> Ash.read_one() do
-      {:ok, %{organization: org}} when not is_nil(org) ->
-        {:ok, org}
-
-      {:ok, user} ->
-        create_default_organization(user)
-
-      {:error, error} ->
-        {:error, error}
-
-      nil ->
-        {:error, :user_not_found}
-    end
-  end
-
-  defp create_default_organization(user) do
-    case Lang.Accounts.Organization.create(%{
-           name: "#{user.name}'s Organization",
-           owner_id: user.id,
-           plan: :free,
-           subscription_status: :trial
-         }) do
-      {:ok, org} ->
-        {:ok, org}
-
-      {:error, error} ->
-        Logger.warning(
-          "Failed to create default organization for user #{user.id}: #{inspect(error)}"
-        )
-
-        {:error, error}
-    end
-  end
+  # Organization helpers are delegated to LangWeb.AuthHelpers
 
   defp assign_development_user(socket) do
     if Mix.env() in [:dev, :test] do

@@ -5,7 +5,7 @@ defmodule Lang.Specs.JsonLD do
 
   @context %{
     "@context" => %{
-      "lang" => "https://lang.nocsi.com/schema/v1#",
+      "lang" => "https://lang.nulity.com/schema/v1#",
       "rdf" => "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
       "rdfs" => "http://www.w3.org/2000/01/rdf-schema#",
       "schema" => "https://schema.org/",
@@ -23,11 +23,11 @@ defmodule Lang.Specs.JsonLD do
       },
       "servers" => [
         %{
-          "url" => "https://lang.nocsi.com/api",
+          "url" => "https://lang.nulity.com/api",
           "description" => "Production"
         },
         %{
-          "url" => "https://lang.nocsi.com/api",
+          "url" => "https://lang.nulity.com/api",
           "description" => "Development"
         }
       ],

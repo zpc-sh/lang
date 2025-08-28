@@ -125,13 +125,21 @@ defmodule LangWeb.Plugs.AuthPlug do
   # Private helper functions
 
   defp assign_user_context(conn, user) do
-    org = load_user_organization(user)
+    case LangWeb.AuthHelpers.ensure_user_organization(user) do
+      {:ok, org} ->
+        conn
+        |> assign(:current_user, user)
+        |> assign(:current_org, org)
+        |> assign(:current_scope, %{type: :user, id: user.id})
+        |> assign(:authenticated?, true)
 
-    conn
-    |> assign(:current_user, user)
-    |> assign(:current_org, org)
-    |> assign(:current_scope, %{type: :user, id: user.id})
-    |> assign(:authenticated?, true)
+      {:error, _} ->
+        conn
+        |> assign(:current_user, user)
+        |> assign(:current_org, nil)
+        |> assign(:current_scope, %{type: :user, id: user.id})
+        |> assign(:authenticated?, true)
+    end
   end
 
   defp authenticate_session_token(token) do
@@ -164,23 +172,17 @@ defmodule LangWeb.Plugs.AuthPlug do
     # Remove "Bearer " prefix if present
     cleaned_key = String.replace_prefix(api_key, "Bearer ", "")
 
-    require Ash.Query
-
-    case Lang.Accounts.ApiKey
-         |> Ash.Query.filter(key == ^cleaned_key and status == :active)
-         |> Ash.Query.load([:user])
-         |> Ash.read_one() do
-      {:ok, %{user: user}} when not is_nil(user) ->
-        # Update last used timestamp
-        Lang.Accounts.ApiKey.update(%{id: api_key.id}, %{last_used_at: DateTime.utc_now()})
+    case Lang.Accounts.ApiKey.authenticate(cleaned_key) do
+      {:ok, %{user: user} = key} ->
+        # Record usage metadata on the key
+        _ = Lang.Accounts.ApiKey.record_usage(key)
         {:ok, load_user_with_associations(user)}
 
-      _ ->
+      {:error, _} ->
         {:error, :invalid_api_key}
     end
   rescue
-    _ ->
-      {:error, :api_key_lookup_failed}
+    _ -> {:error, :api_key_lookup_failed}
   end
 
   defp authenticate_and_assign_api_key(conn, api_key) do
@@ -223,34 +225,7 @@ defmodule LangWeb.Plugs.AuthPlug do
     end
   end
 
-  defp load_user_organization(%{organization: org}) when not is_nil(org), do: org
-
-  defp load_user_organization(%{organization_id: org_id}) when is_binary(org_id) do
-    require Ash.Query
-
-    case Organization
-         |> Ash.Query.filter(id == ^org_id)
-         |> Ash.read_one() do
-      {:ok, org} -> org
-      _ -> create_default_organization_for_user(%{id: org_id})
-    end
-  end
-
-  defp load_user_organization(user) do
-    create_default_organization_for_user(user)
-  end
-
-  defp create_default_organization_for_user(user) do
-    case Organization.create(%{
-           name: "#{Map.get(user, :name, "User")}'s Organization",
-           owner_id: user.id,
-           plan: :free,
-           subscription_status: :trial
-         }) do
-      {:ok, org} -> org
-      _ -> nil
-    end
-  end
+  # User/org load/creation consolidated in LangWeb.AuthHelpers
 
   defp get_client_ip(conn) do
     case get_req_header(conn, "x-forwarded-for") do

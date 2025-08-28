@@ -12,6 +12,8 @@ https://your-lang-instance.com/api/v1
 
 All API endpoints require authentication using Bearer tokens or API keys.
 
+See also: Guides → Authentication & Org Context (/docs/guides/authentication) for header formats, session behavior, and organization scoping.
+
 ### Using API Keys (Recommended)
 
 ```bash

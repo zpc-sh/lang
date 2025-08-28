@@ -7,4 +7,3 @@ defmodule Lang.RPC.Errors do
     if is_nil(data), do: base, else: put_in(base, ["error", "data"], data)
   end
 end
-

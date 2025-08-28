@@ -35,9 +35,14 @@ defmodule Lang.Storage.S3 do
 
   def presign_put(key, headers \\ [], expires_in \\ 900) do
     case bucket() do
-      "" -> {:error, :missing_bucket}
-      b -> S3.presigned_url(ExAws.Config.new(:s3), :put, b, key, expires_in: expires_in, headers: headers)
+      "" ->
+        {:error, :missing_bucket}
+
+      b ->
+        S3.presigned_url(ExAws.Config.new(:s3), :put, b, key,
+          expires_in: expires_in,
+          headers: headers
+        )
     end
   end
 end
-

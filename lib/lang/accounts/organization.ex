@@ -115,6 +115,28 @@ defmodule Lang.Accounts.Organization do
       accept([:name, :slug, :contact_email, :billing_email, :website, :description, :max_users])
     end
 
+    update :update_billing do
+      # Transitional action to update billing fields via Ash, not raw Ecto
+      argument(:stripe_customer_id, :string)
+      argument(:stripe_subscription_id, :string)
+
+      argument(:subscription_tier, :atom,
+        constraints: [one_of: [:free, :professional, :enterprise]]
+      )
+
+      argument(:subscription_status, :atom,
+        constraints: [one_of: [:active, :canceled, :past_due, :unpaid, :trialing]]
+      )
+
+      change(fn changeset, _ctx ->
+        changeset
+        |> maybe_change(:stripe_customer_id)
+        |> maybe_change(:stripe_subscription_id)
+        |> maybe_change(:subscription_tier)
+        |> maybe_change(:subscription_status)
+      end)
+    end
+
     update :upgrade_subscription do
       argument :tier, :atom do
         constraints(one_of: [:free, :professional, :enterprise])
@@ -146,6 +168,7 @@ defmodule Lang.Accounts.Organization do
     define(:by_slug, get_by: [:slug], action: :read)
     define(:list_all, action: :read)
     define(:update)
+    define(:update_billing)
     define(:upgrade_subscription)
     define(:destroy)
   end
@@ -186,5 +209,12 @@ defmodule Lang.Accounts.Organization do
 
   def at_user_limit?(organization) do
     user_count(organization) >= organization.max_users
+  end
+
+  defp maybe_change(changeset, field) do
+    case Ash.Changeset.get_argument(changeset, field) do
+      nil -> changeset
+      value -> Ash.Changeset.change_attribute(changeset, field, value)
+    end
   end
 end

@@ -3,8 +3,7 @@ defmodule Lang.Accounts.APIUsage do
     otp_app: :lang,
     domain: Lang.Accounts,
     data_layer: AshPostgres.DataLayer,
-    notifiers: [Ash.Notifier.PubSub],
-    extensions: [AshOban]
+    notifiers: [Ash.Notifier.PubSub]
 
   postgres do
     table("api_usage")
@@ -20,31 +19,7 @@ defmodule Lang.Accounts.APIUsage do
     end
   end
 
-  # AshOban configuration for background processing
-  oban do
-    triggers do
-      # trigger :process_usage_metrics do
-      #   debug?(true)
-      #   queue(:metrics)
-      #   action(:process_metrics)
-      #   trigger_once?(true)
-
-      #   # Process usage metrics in batches to avoid large resource issues
-      #   worker_read_action(:unprocessed_metrics)
-      #   worker_module_name(Lang.Accounts.APIUsage.AshOban.Worker.ProcessUsageMetrics)
-      #   scheduler_module_name(Lang.Accounts.APIUsage.AshOban.Scheduler.ProcessUsageMetrics)
-      # end
-
-      # trigger :cleanup_old_usage do
-      #   debug?(false)
-      #   queue(:cleanup)
-      #   action(:cleanup_old_records)
-
-      #   # Note: Schedule configuration will be handled in application config
-      #   worker_module_name(Lang.Accounts.APIUsage.AshOban.Worker.CleanupOldUsage)
-      # end
-    end
-  end
+  # Background processing moved to Lang.Billing workers (aggregation/retention/reporting)
 
   # PubSub configuration for real-time updates
   pub_sub do

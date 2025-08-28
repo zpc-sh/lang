@@ -29,6 +29,8 @@ Your account will be created with:
 - **Organization** - Automatically created for you
 - **API key** - Generated for immediate use
 
+Note: See Guides → Authentication & Org Context (/docs/guides/authentication) for how authentication works and how your organization context is applied to API requests.
+
 ### 2. Get Your API Key
 
 After registration, get your API key:

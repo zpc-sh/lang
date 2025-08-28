@@ -24,8 +24,16 @@ defmodule Lang.Native.FSScanner do
 
   # These will be replaced by the NIF functions
   def scan_directory(_path, _max_depth, _include_hidden), do: :erlang.nif_error(:nif_not_loaded)
-  def scan_directory_filtered(_path, _max_depth, _include_hidden, _include_globs, _exclude_globs, _max_file_size_bytes),
-    do: :erlang.nif_error(:nif_not_loaded)
+
+  def scan_directory_filtered(
+        _path,
+        _max_depth,
+        _include_hidden,
+        _include_globs,
+        _exclude_globs,
+        _max_file_size_bytes
+      ),
+      do: :erlang.nif_error(:nif_not_loaded)
 
   def search_content(_root_path, _pattern, _max_results, _context_lines, _case_sensitive),
     do: :erlang.nif_error(:nif_not_loaded)
@@ -67,7 +75,7 @@ defmodule Lang.Native.FSScanner do
 
     task =
       Task.async(fn ->
-        if (include_globs != [] or exclude_globs != [] or max_file_size_bytes != 0) do
+        if include_globs != [] or exclude_globs != [] or max_file_size_bytes != 0 do
           scan_directory_filtered(
             to_string(path),
             max_depth,

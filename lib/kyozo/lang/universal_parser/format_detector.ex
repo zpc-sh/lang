@@ -88,14 +88,7 @@ defmodule Kyozo.Lang.UniversalParser.FormatDetector do
   ]
 
   # Format detection patterns as functions
-  defp json_patterns do
-    [
-      # JSON object
-      ~r/^\s*\{.*\}\s*$/s,
-      # JSON array
-      ~r/^\s*\[.*\]\s*$/s
-    ]
-  end
+  # NOTE: json_patterns removed (unused); rely on structural heuristics below.
 
   defp yaml_patterns do
     [

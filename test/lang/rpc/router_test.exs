@@ -5,8 +5,11 @@ defmodule Lang.RPC.RouterTest do
 
   test "rpc.initialize returns capabilities with auth" do
     ctx = %{api_key_id: "test-key"}
+
     {:ok, %{capabilities: caps, client: client}} =
-      Router.dispatch(ctx, "rpc.initialize", %{"client" => %{"name" => "test", "version" => "0.1"}})
+      Router.dispatch(ctx, "rpc.initialize", %{
+        "client" => %{"name" => "test", "version" => "0.1"}
+      })
 
     assert caps.service == "lang"
     assert is_binary(caps.version)
@@ -39,4 +42,3 @@ defmodule Lang.RPC.RouterTest do
     assert Enum.at(lines, 1) == "line2"
   end
 end
-

@@ -7,7 +7,7 @@ defmodule Lang.Benchmarks.FilesystemBenchmark do
   """
 
   alias Lang.Native.FSScanner
-  alias Lang.Parsers.Filesystem
+  # alias Lang.Parsers.Filesystem
   require Logger
 
   @doc """
@@ -23,7 +23,7 @@ defmodule Lang.Benchmarks.FilesystemBenchmark do
     if Enum.empty?(test_paths) do
       IO.puts("❌ No test directories found. Creating sample directory...")
       create_sample_directory()
-      test_paths = ["/tmp/lang_benchmark_sample"]
+      _test_paths = ["/tmp/lang_benchmark_sample"]
     end
 
     Enum.each(test_paths, fn path ->
@@ -326,7 +326,7 @@ defmodule Lang.Benchmarks.FilesystemBenchmark do
   defp simulate_elixir_search(path, _pattern) do
     # Simulate grep-like search in pure Elixir (much slower)
     case FSScanner.search(path, "test", max_results: 10) do
-      {:ok, results} when length(results) > 0 ->
+      {:ok, results} when results != [] ->
         # Estimate based on file count and complexity
         # Assume more files than matches
         file_count = length(results) * 50

@@ -16,7 +16,8 @@ defmodule Lang.Workspace.Store do
   alias Lang.Redis
 
   @prefix "ws:"
-  @default_ttl 7_200 # 2 hours
+  # 2 hours
+  @default_ttl 7_200
 
   # Public API
 
@@ -53,12 +54,14 @@ defmodule Lang.Workspace.Store do
 
   # Large sub-documents stored separately to keep context small
   def get_symbols_index(session_id), do: get_json(symbols_key(session_id))
+
   def put_symbols_index(session_id, map, opts \\ []) when is_map(map) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
     set_json(symbols_key(session_id), map, ttl)
   end
 
   def get_import_graph(session_id), do: get_json(import_graph_key(session_id))
+
   def put_import_graph(session_id, map, opts \\ []) when is_map(map) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
     set_json(import_graph_key(session_id), map, ttl)
@@ -116,6 +119,7 @@ defmodule Lang.Workspace.Store do
       symbols_key(session_id),
       import_graph_key(session_id)
     ])
+
     :ok
   end
 
@@ -124,7 +128,9 @@ defmodule Lang.Workspace.Store do
   defp analysis_key(session_id), do: @prefix <> to_string(session_id) <> ":analysis_cache"
   defp mcp_key(session_id), do: @prefix <> to_string(session_id) <> ":mcp_connections"
   defp symbols_key(session_id), do: @prefix <> to_string(session_id) <> ":context:symbols_index"
-  defp import_graph_key(session_id), do: @prefix <> to_string(session_id) <> ":context:import_graph"
+
+  defp import_graph_key(session_id),
+    do: @prefix <> to_string(session_id) <> ":context:import_graph"
 
   defp get_json(key) do
     case Redis.get(key) do

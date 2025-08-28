@@ -60,10 +60,12 @@ defmodule LangWeb.Api.V2.McpController do
   }
   """
   def connect(conn, params) do
+    {conn, auth_session_id} = AuthHelpers.get_or_put_auth_session_id(conn)
+
     with {:ok, request} <- validate_connect_request(params),
          {:ok, user_id} <- get_authenticated_user_id(conn),
          :ok <- check_rate_limit(user_id, "mcp_connect"),
-         {:ok, connection_id} <- create_mcp_connection(request, user_id),
+         {:ok, connection_id} <- create_mcp_connection(request, user_id, auth_session_id),
          {:ok, stream_id} <- create_streaming_bridge(connection_id, user_id, request) do
       # Log successful connection
       Events.track_event(%{
@@ -73,7 +75,8 @@ defmodule LangWeb.Api.V2.McpController do
           server_type: request["server_type"],
           connection_id: connection_id,
           stream_id: stream_id,
-          session_id: request["session_id"]
+          session_id: request["session_id"],
+          auth_session_id: auth_session_id
         }
       })
 
@@ -88,7 +91,8 @@ defmodule LangWeb.Api.V2.McpController do
             status: ~p"/api/v2/mcp/status/#{stream_id}",
             disconnect_by_stream: ~p"/api/v2/mcp/disconnect/#{stream_id}",
             disconnect: ~p"/api/v2/mcp/disconnect/#{connection_id}",
-            websocket: ~p"/socket/websocket?vsn=2.0.0" # clients join topic "mcp:#{stream_id}"
+            # clients join topic "mcp:#{stream_id}"
+            websocket: ~p"/socket/websocket?vsn=2.0.0"
           }
         },
         topics: %{
@@ -105,10 +109,14 @@ defmodule LangWeb.Api.V2.McpController do
         ApiError.json(conn, :too_many_requests, "Rate limit exceeded for MCP connections")
 
       {:error, :server_type_not_allowed} ->
-        ApiError.json(conn, :bad_request, "MCP server type not allowed", %{allowed: Lang.MCP.Security.allowed_server_types()})
+        ApiError.json(conn, :bad_request, "MCP server type not allowed", %{
+          allowed: Lang.MCP.Security.allowed_server_types()
+        })
 
       {:error, :user_connection_limit_exceeded} ->
-        ApiError.json(conn, :forbidden, "Maximum MCP connections exceeded for user", %{max_connections: Broker.max_connections_per_user()})
+        ApiError.json(conn, :forbidden, "Maximum MCP connections exceeded for user", %{
+          max_connections: Broker.max_connections_per_user()
+        })
 
       {:error, reason} ->
         Logger.warning("MCP connection failed", reason: reason, params: params)
@@ -144,10 +152,11 @@ defmodule LangWeb.Api.V2.McpController do
         connection_id: stream_status.connection_id,
         connection_status: conn_status,
         stream_status: stream_status.status,
-        server_type: case Broker.get_connection_status(stream_status.connection_id) do
-          {:ok, %{server_type: st}} -> st
-          _ -> nil
-        end,
+        server_type:
+          case Broker.get_connection_status(stream_status.connection_id) do
+            {:ok, %{server_type: st}} -> st
+            _ -> nil
+          end,
         progress: %{
           total_chunks: stream_status.total_chunks,
           sent_chunks: stream_status.sent_chunks,
@@ -198,6 +207,8 @@ defmodule LangWeb.Api.V2.McpController do
   }
   """
   def disconnect(conn, %{"stream_id" => stream_id}) do
+    {conn, auth_session_id} = AuthHelpers.get_or_put_auth_session_id(conn)
+
     with {:ok, user_id} <- get_authenticated_user_id(conn),
          {:ok, stream_status} <- StreamBridge.get_stream_status(stream_id),
          :ok <- verify_stream_access(stream_status, user_id),
@@ -210,7 +221,8 @@ defmodule LangWeb.Api.V2.McpController do
         metadata: %{
           stream_id: stream_id,
           connection_id: stream_status.connection_id,
-          duration_seconds: DateTime.diff(DateTime.utc_now(), stream_status.created_at)
+          duration_seconds: DateTime.diff(DateTime.utc_now(), stream_status.created_at),
+          auth_session_id: auth_session_id
         }
       })
 
@@ -490,12 +502,13 @@ defmodule LangWeb.Api.V2.McpController do
     end
   end
 
-  defp create_mcp_connection(request, user_id) do
+  defp create_mcp_connection(request, user_id, auth_session_id) do
     Broker.request_connection(
       request["server_type"],
       user_id,
       request["session_id"],
-      request["config"]
+      request["config"],
+      auth_session_id
     )
   end
 
@@ -551,7 +564,8 @@ defmodule LangWeb.Api.V2.McpController do
           Map.merge(c, %{
             endpoints: %{
               status: if(c.stream_id, do: ~p"/api/v2/mcp/status/#{c.stream_id}", else: nil),
-              disconnect_by_stream: if(c.stream_id, do: ~p"/api/v2/mcp/disconnect/#{c.stream_id}", else: nil),
+              disconnect_by_stream:
+                if(c.stream_id, do: ~p"/api/v2/mcp/disconnect/#{c.stream_id}", else: nil),
               disconnect: ~p"/api/v2/mcp/disconnect/#{c.connection_id}"
             },
             topics: %{

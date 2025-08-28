@@ -22,7 +22,7 @@ defmodule Lang.MCP.Broker do
   use GenServer
   require Logger
 
-  alias Lang.MCP.{Security, Pool, StreamBridge}
+  alias Lang.MCP.{Security, Pool}
   alias Lang.Security.RateLimiter
   alias Lang.Events
 
@@ -98,15 +98,16 @@ defmodule Lang.MCP.Broker do
 
   Returns `{:ok, connection_id}` or `{:error, reason}`
   """
-  @spec request_connection(server_type(), user_id(), String.t(), map()) ::
+  @spec request_connection(server_type(), user_id(), String.t(), map(), String.t() | nil) ::
           {:ok, connection_id()} | {:error, term()}
-  def request_connection(server_type, user_id, session_id, config \\ %{}) do
+  def request_connection(server_type, user_id, session_id, config \\ %{}, auth_session_id \\ nil) do
     GenServer.call(__MODULE__, {
       :request_connection,
       server_type,
       user_id,
       session_id,
-      config
+      config,
+      auth_session_id
     })
   end
 
@@ -182,10 +183,21 @@ defmodule Lang.MCP.Broker do
   end
 
   @impl true
-  def handle_call({:request_connection, server_type, user_id, session_id, config}, _from, state) do
+  def handle_call(
+        {:request_connection, server_type, user_id, session_id, config, auth_session_id},
+        _from,
+        state
+      ) do
     case validate_connection_request(server_type, user_id, state) do
       :ok ->
-        case create_secure_connection(server_type, user_id, session_id, config, state) do
+        case create_secure_connection(
+               server_type,
+               user_id,
+               session_id,
+               config,
+               auth_session_id,
+               state
+             ) do
           {:ok, connection_id, updated_state} ->
             Events.track_event(%{
               event_type: "mcp_connection_created",
@@ -193,7 +205,8 @@ defmodule Lang.MCP.Broker do
               metadata: %{
                 server_type: server_type,
                 connection_id: connection_id,
-                session_id: session_id
+                session_id: session_id,
+                auth_session_id: auth_session_id
               }
             })
 
@@ -274,15 +287,20 @@ defmodule Lang.MCP.Broker do
       |> Enum.filter(fn {_id, conn} -> conn.user_id == user_id end)
       |> Enum.map(fn {connection_id, conn} ->
         status = if(Process.alive?(conn.pid), do: :alive, else: :dead)
-        health = case Pool.health_check(conn.pid) do
-          :ok -> :healthy
-          _ -> :unhealthy
-        end
+
+        health =
+          case Pool.health_check(conn.pid) do
+            :ok -> :healthy
+            _ -> :unhealthy
+          end
+
         server_pid_masked = "pid-" <> Integer.to_string(:erlang.phash2(conn.pid))
-        health_details = case Pool.health_details(conn.pid) do
-          {:ok, details} -> details
-          _ -> nil
-        end
+
+        health_details =
+          case Pool.health_details(conn.pid) do
+            {:ok, details} -> details
+            _ -> nil
+          end
 
         %{
           connection_id: connection_id,
@@ -390,7 +408,7 @@ defmodule Lang.MCP.Broker do
     end
   end
 
-  defp create_secure_connection(server_type, user_id, session_id, config, state) do
+  defp create_secure_connection(server_type, user_id, session_id, config, auth_session_id, state) do
     connection_id = generate_connection_id()
 
     # Validate and sanitize MCP server config
@@ -412,6 +430,22 @@ defmodule Lang.MCP.Broker do
               stream_id: nil,
               request_count: 0
             }
+
+            # Persist an Ash Connection record (best-effort; ETS remains source of truth)
+            _ =
+              try do
+                attrs = [
+                  connection_id: connection_id,
+                  user_id: user_id,
+                  auth_session_id: auth_session_id,
+                  status: :connected,
+                  health_status: :unknown
+                ]
+
+                Ash.create(Lang.MCP.Connection, attrs, action: :create)
+              rescue
+                _ -> :ok
+              end
 
             # Update state
             updated_connections = Map.put(state.connections, connection_id, connection)
@@ -460,9 +494,14 @@ defmodule Lang.MCP.Broker do
             case Pool.send_request(connection.pid, safe_request, timeout: 30_000) do
               {:ok, response} ->
                 # Update last activity
-                updated_connection = %{connection | last_activity: DateTime.utc_now(), request_count: connection.request_count + 1}
+                updated_connection = %{
+                  connection
+                  | last_activity: DateTime.utc_now(),
+                    request_count: connection.request_count + 1
+                }
 
-                updated_connections = Map.put(state.connections, connection_id, updated_connection)
+                updated_connections =
+                  Map.put(state.connections, connection_id, updated_connection)
 
                 updated_state = %{state | connections: updated_connections}
 
@@ -646,15 +685,19 @@ defmodule Lang.MCP.Broker do
   end
 
   defp build_connection_status(connection) do
-    health = case Pool.health_check(connection.pid) do
-      :ok -> :healthy
-      _ -> :unhealthy
-    end
+    health =
+      case Pool.health_check(connection.pid) do
+        :ok -> :healthy
+        _ -> :unhealthy
+      end
+
     server_pid_masked = "pid-" <> Integer.to_string(:erlang.phash2(connection.pid))
-    health_details = case Pool.health_details(connection.pid) do
-      {:ok, details} -> details
-      _ -> nil
-    end
+
+    health_details =
+      case Pool.health_details(connection.pid) do
+        {:ok, details} -> details
+        _ -> nil
+      end
 
     %{
       server_type: connection.server_type,

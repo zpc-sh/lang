@@ -126,10 +126,10 @@ defmodule Lang.Native do
 
     # Extract options with defaults
     format = Keyword.get(opts, :format, detect_format(content))
-    include_style = Keyword.get(opts, :include_style, false)
+    _include_style = Keyword.get(opts, :include_style, false)
     use_cache = Keyword.get(opts, :use_cache, true)
-    parallel = Keyword.get(opts, :parallel, should_use_parallel?(content))
-    compression = Keyword.get(opts, :compression, should_compress_result?(content))
+    _parallel = Keyword.get(opts, :parallel, should_use_parallel?(content))
+    _compression = Keyword.get(opts, :compression, should_compress_result?(content))
 
     # Check cache first if enabled
     if use_cache do
@@ -181,7 +181,7 @@ defmodule Lang.Native do
     compress_result = Keyword.get(opts, :compress, false)
 
     case PerfEngine.semantic_diff_complete(old_doc, new_doc) do
-      {:ok, {:identical, hash}} ->
+      {:ok, {:identical, _hash}} ->
         result = %{
           diff_type: :identical,
           optimization_used: "quick_hash_comparison",
@@ -266,7 +266,7 @@ defmodule Lang.Native do
   @spec batch_analyze([{String.t(), format()}], analysis_opts()) ::
           {:ok, [analysis_result()]} | {:error, term()}
   def batch_analyze(documents, opts \\ []) when is_list(documents) do
-    start_time = System.monotonic_time(:microsecond)
+    _start_time = System.monotonic_time(:microsecond)
 
     # Categorize documents by size for optimal processing
     {small_docs, medium_docs, large_docs} = categorize_documents(documents)
@@ -558,7 +558,7 @@ defmodule Lang.Native do
   end
 
   defp categorize_documents(documents) do
-    Enum.reduce(documents, {[], [], []}, fn {content, format} = doc, {small, medium, large} ->
+    Enum.reduce(documents, {[], [], []}, fn {content, _format} = doc, {small, medium, large} ->
       size = byte_size(content)
 
       cond do
@@ -673,7 +673,7 @@ defmodule Lang.Native do
     }
   end
 
-  defp classify_content_type(format, %Parser.ParseResult{functions: functions, classes: classes}) do
+  defp classify_content_type(format, %Parser.ParseResult{functions: functions, classes: _classes}) do
     cond do
       format in ["javascript", "python", "elixir"] and length(functions) > 0 -> :code
       format == "markdown" -> :documentation

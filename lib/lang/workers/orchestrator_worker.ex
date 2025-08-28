@@ -612,8 +612,10 @@ defmodule Lang.Workers.OrchestratorWorker do
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, Jason.encode!(spec, pretty: true))
 
-    # Also save to database if needed
-    Lang.Artifacts.save_spec(env, spec)
+    # Also save to database if needed (placeholder)
+    if Code.ensure_loaded?(Lang.Artifacts) and function_exported?(Lang.Artifacts, :save_spec, 2) do
+      Lang.Artifacts.save_spec(env, spec)
+    end
   end
 
   defp spec_path(env), do: "priv/static/specs/#{env}_api_v2.json"
@@ -947,9 +949,13 @@ defmodule Lang.Workers.OrchestratorWorker do
         timestamp: DateTime.utc_now()
       }
 
-      HTTPoison.post(webhook_url, Jason.encode!(payload), [
-        {"Content-Type", "application/json"}
-      ])
+      _ =
+        Req.post!(
+          url: webhook_url,
+          json: payload,
+          headers: [{"content-type", "application/json"}],
+          receive_timeout: 5_000
+        )
     end)
   end
 

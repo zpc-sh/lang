@@ -1,7 +1,7 @@
 defmodule LangWeb.Api.AnalysisView do
   use LangWeb, :view
 
-  alias Lang.Analysis.{Project, AnalysisSession, AnalyzedFile, Violation}
+  alias Lang.Analyses.{Run, File, Violation}
 
   # Phoenix View helpers for render_many and render_one
   def render_many(collection, view, template, assigns \\ %{}) do
@@ -104,8 +104,8 @@ defmodule LangWeb.Api.AnalysisView do
       critical_issues_count: session.critical_issues_count,
       warnings_count: session.warnings_count,
       processing_time_ms: session.processing_time_ms,
-      duration_ms: AnalysisSession.duration(session),
-      status_description: AnalysisSession.status_description(session)
+      duration_ms: Run.duration(session),
+      status_description: Run.status_description(session)
     }
   end
 
@@ -123,9 +123,9 @@ defmodule LangWeb.Api.AnalysisView do
       processing_time_ms: session.processing_time_ms,
       metadata: session.metadata,
       error_message: session.error_message,
-      duration_ms: AnalysisSession.duration(session),
-      status_description: AnalysisSession.status_description(session),
-      summary: AnalysisSession.summary(session),
+      duration_ms: Run.duration(session),
+      status_description: Run.status_description(session),
+      summary: Run.summary(session),
       analyzed_files:
         render_many(session.analyzed_files, __MODULE__, "file_summary.json", as: :file),
       insights:
@@ -158,13 +158,13 @@ defmodule LangWeb.Api.AnalysisView do
       file_path: file.file_path,
       file_extension: file.file_extension,
       file_size_bytes: file.file_size_bytes,
-      file_size_human: AnalyzedFile.human_file_size(file),
+      file_size_human: File.human_file_size(file),
       language_detected: file.language_detected,
       status: file.status,
       processed_at: file.processed_at,
       processing_time_ms: file.processing_time_ms,
       violation_count: length(file.violations || []),
-      analysis_summary: AnalyzedFile.analysis_summary(file)
+      analysis_summary: File.analysis_summary(file)
     }
   end
 
@@ -175,7 +175,7 @@ defmodule LangWeb.Api.AnalysisView do
       file_path: file.file_path,
       file_extension: file.file_extension,
       file_size_bytes: file.file_size_bytes,
-      file_size_human: AnalyzedFile.human_file_size(file),
+      file_size_human: File.human_file_size(file),
       content_type: file.content_type,
       language_detected: file.language_detected,
       content_hash: file.content_hash,
@@ -183,7 +183,7 @@ defmodule LangWeb.Api.AnalysisView do
       processed_at: file.processed_at,
       processing_time_ms: file.processing_time_ms,
       analysis_result: file.analysis_result,
-      analysis_summary: AnalyzedFile.analysis_summary(file),
+      analysis_summary: File.analysis_summary(file),
       violations:
         render_many(file.violations || [], __MODULE__, "violation_summary.json", as: :violation)
     }

@@ -260,7 +260,7 @@ defmodule Lang.Accounts.User do
               changeset
               |> Ash.Changeset.change_attribute(:email, email)
               |> Ash.Changeset.change_attribute(:name, name)
-              |> Ash.Changeset.change_attribute(:organization_id, organization.id)
+              |> Lang.AshHelpers.set_org(organization.id)
               |> Ash.Changeset.change_attribute(:subscription_tier, :free)
               |> Ash.Changeset.change_attribute(:monthly_request_limit, 1000)
 
@@ -309,7 +309,7 @@ defmodule Lang.Accounts.User do
              }) do
           {:ok, organization} ->
             changeset
-            |> Ash.Changeset.change_attribute(:organization_id, organization.id)
+            |> Lang.AshHelpers.set_org(organization.id)
 
           {:error, error} ->
             Ash.Changeset.add_error(changeset,

@@ -286,7 +286,7 @@ defmodule Lang.MCP.StreamBridge do
     end
   end
 
-  defp create_new_stream(connection_id, user_id, session_id, opts, state) do
+  defp create_new_stream(connection_id, user_id, session_id, _opts, state) do
     stream_id = generate_stream_id()
 
     # Validate connection exists and user has access
@@ -649,8 +649,8 @@ defmodule Lang.MCP.StreamBridge do
   end
 
   defp store_session_state(stream_id, stream_state) do
-    key = @redis_prefix <> stream_id
-    data = :erlang.term_to_binary(stream_state)
+    _key = @redis_prefix <> stream_id
+    _data = :erlang.term_to_binary(stream_state)
 
     # Store in Redis with TTL (would use Redis client here)
     # Redix.command(Lang.Redis, ["SETEX", key, @redis_ttl, data])
@@ -658,7 +658,7 @@ defmodule Lang.MCP.StreamBridge do
   end
 
   defp delete_session_state(stream_id) do
-    key = @redis_prefix <> stream_id
+    _key = @redis_prefix <> stream_id
     # Redix.command(Lang.Redis, ["DEL", key])
     :ok
   end

@@ -69,6 +69,8 @@ custom classes must fully style the input
 - Use API key authentication for API routes: `AuthPlug` with `:api_key` strategy
 - **Always** load user organization: `AuthHelpers.current_org(conn)`
 
+Note: Auth is centralized in `LangWeb.AuthHelpers`. `LangWeb.Plugs.AuthPlug` and `LangWeb.AuthOnMount` delegate user/org loading to it. The legacy `LangWeb.AuthSessionPlug` and any `AuthAndRateLimit` plug are removed. Because the app is not multitenant yet, default organization auto-creation is enabled by default and handled centrally whenever a user lacks an organization.
+
 ### Billing & Subscriptions (Stripe)
 - **Always** use the billing configuration in `config/billing.exs` for plan definitions
 - Handle Stripe webhooks via `LangWeb.WebhooksController`

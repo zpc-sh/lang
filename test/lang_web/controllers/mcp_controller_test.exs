@@ -9,7 +9,10 @@ defmodule LangWeb.Api.V2.McpControllerTest do
       # Connect to filesystem MCP
       params = %{"server_type" => "filesystem", "config" => %{}, "session_id" => "test-session"}
       conn1 = post(conn, "/api/v2/mcp/connect", params)
-      assert %{"connection_id" => connection_id, "stream_id" => stream_id} = json_response(conn1, 201)
+
+      assert %{"connection_id" => connection_id, "stream_id" => stream_id} =
+               json_response(conn1, 201)
+
       assert is_binary(connection_id)
       assert is_binary(stream_id)
 
@@ -24,7 +27,7 @@ defmodule LangWeb.Api.V2.McpControllerTest do
       assert is_integer(item["uptime_seconds"]) and item["uptime_seconds"] >= 0
       assert item["server_pid_masked"] =~ ~r/^pid-/
       assert item["health"] in ["healthy", "unhealthy", :healthy, :unhealthy]
-      assert is_map(item["endpoints"]) and is_map(item["topics"]) 
+      assert is_map(item["endpoints"]) and is_map(item["topics"])
       assert is_map(pool)
 
       # Disconnect by connection_id
@@ -43,12 +46,12 @@ defmodule LangWeb.Api.V2.McpControllerTest do
       conn2 = get(conn, "/api/v2/mcp/status/#{stream_id}")
       res = json_response(conn2, 200)
       assert res["connection_id"] == connection_id
-      assert is_map(res["connection_status"]) 
+      assert is_map(res["connection_status"])
       cs = res["connection_status"]
       assert cs["server_pid_masked"] =~ ~r/^pid-/
       assert cs["health"] in ["healthy", "unhealthy", :healthy, :unhealthy]
-      assert is_map(res["pool"]) 
-      assert is_map(res["endpoints"]) and is_map(res["topics"]) 
+      assert is_map(res["pool"])
+      assert is_map(res["endpoints"]) and is_map(res["topics"])
     end
 
     test "disconnect by stream_id returns connection_id and cleanup", %{conn: conn} do

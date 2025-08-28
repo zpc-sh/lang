@@ -161,7 +161,9 @@ defmodule Lang.Workers.McpLifecycleWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"task" => "connection_recovery", "connection_id" => connection_id}}) do
+  def perform(%Oban.Job{
+        args: %{"task" => "connection_recovery", "connection_id" => connection_id}
+      }) do
     Logger.info("Attempting MCP connection recovery", connection_id: connection_id)
 
     case recover_failed_connection(connection_id) do
@@ -277,7 +279,8 @@ defmodule Lang.Workers.McpLifecycleWorker do
     }
     |> new(
       queue: :mcp,
-      scheduled_at: DateTime.add(DateTime.utc_now(), Keyword.get(opts, :delay_seconds, 10), :second),
+      scheduled_at:
+        DateTime.add(DateTime.utc_now(), Keyword.get(opts, :delay_seconds, 10), :second),
       max_attempts: Keyword.get(opts, :retry_attempts, 3)
     )
     |> Oban.insert()
@@ -299,6 +302,7 @@ defmodule Lang.Workers.McpLifecycleWorker do
     results =
       if check_pools do
         pool_results = check_pool_health(recovery_enabled)
+
         %{
           results
           | healthy_count: results.healthy_count + pool_results.healthy_count,
@@ -312,6 +316,7 @@ defmodule Lang.Workers.McpLifecycleWorker do
     results =
       if check_streams do
         stream_results = check_stream_health(recovery_enabled)
+
         %{
           results
           | healthy_count: results.healthy_count + stream_results.healthy_count,
@@ -384,10 +389,11 @@ defmodule Lang.Workers.McpLifecycleWorker do
     cleaned_count = before_stats.total_connections - after_stats.total_connections
     resources_freed = calculate_resources_freed(cleaned_count)
 
-    {:ok, %{
-      cleaned_count: cleaned_count,
-      resources_freed: resources_freed
-    }}
+    {:ok,
+     %{
+       cleaned_count: cleaned_count,
+       resources_freed: resources_freed
+     }}
   end
 
   defp optimize_connection_pools(args) do
@@ -402,10 +408,11 @@ defmodule Lang.Workers.McpLifecycleWorker do
     # Apply optimizations
     optimization_results = apply_pool_optimizations(optimization_plan)
 
-    {:ok, %{
-      optimized_count: optimization_results.pools_modified,
-      adjusted_count: optimization_results.connections_adjusted
-    }}
+    {:ok,
+     %{
+       optimized_count: optimization_results.pools_modified,
+       adjusted_count: optimization_results.connections_adjusted
+     }}
   end
 
   defp recover_circuit_breakers(args) do
@@ -415,26 +422,32 @@ defmodule Lang.Workers.McpLifecycleWorker do
     broker_stats = Broker.get_stats()
 
     # Find circuit breakers that are ready for recovery attempt
-    recovery_candidates = find_recovery_candidates(broker_stats.circuit_breaker_states, cooldown_minutes)
+    recovery_candidates =
+      find_recovery_candidates(broker_stats.circuit_breaker_states, cooldown_minutes)
 
     recovered_count = 0
     restored_types = []
 
-    results = Enum.reduce(recovery_candidates, {recovered_count, restored_types}, fn {server_type, _breaker_state}, {count, types} ->
-      case attempt_circuit_breaker_recovery(server_type, test_connections) do
-        :ok ->
-          {count + 1, [server_type | types]}
-        {:error, _reason} ->
-          {count, types}
-      end
-    end)
+    results =
+      Enum.reduce(recovery_candidates, {recovered_count, restored_types}, fn {server_type,
+                                                                              _breaker_state},
+                                                                             {count, types} ->
+        case attempt_circuit_breaker_recovery(server_type, test_connections) do
+          :ok ->
+            {count + 1, [server_type | types]}
+
+          {:error, _reason} ->
+            {count, types}
+        end
+      end)
 
     {final_recovered_count, final_restored_types} = results
 
-    {:ok, %{
-      recovered_count: final_recovered_count,
-      restored_types: final_restored_types
-    }}
+    {:ok,
+     %{
+       recovered_count: final_recovered_count,
+       restored_types: final_restored_types
+     }}
   end
 
   defp collect_performance_metrics(_args) do
@@ -574,11 +587,12 @@ defmodule Lang.Workers.McpLifecycleWorker do
 
   defp analyze_pool_utilization(stats, target_utilization, max_pool_size) do
     # Analyze current utilization and create optimization plan
-    current_utilization = if stats.total_connections > 0 do
-      stats.active_connections / stats.total_connections
-    else
-      0.0
-    end
+    current_utilization =
+      if stats.total_connections > 0 do
+        stats.active_connections / stats.total_connections
+      else
+        0.0
+      end
 
     %{
       current_utilization: current_utilization,
@@ -619,7 +633,8 @@ defmodule Lang.Workers.McpLifecycleWorker do
   defp calculate_throughput_mbps(bridge_stats) do
     # Calculate throughput in megabytes per second
     # This is a simplified calculation
-    bridge_stats.bytes_streamed / (1024 * 1024) / 60  # Assuming 60 second window
+    # Assuming 60 second window
+    bridge_stats.bytes_streamed / (1024 * 1024) / 60
   end
 
   defp calculate_pool_utilization(pool_stats) do

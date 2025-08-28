@@ -22,7 +22,7 @@ defmodule Lang.MCP.Pool do
   use GenServer
   require Logger
 
-  alias Lang.MCP.Security
+  # alias Lang.MCP.Security
   alias Lang.Events
 
   # Pool configuration

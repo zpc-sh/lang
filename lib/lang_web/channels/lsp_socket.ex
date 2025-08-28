@@ -17,15 +17,16 @@ defmodule LangWeb.LspSocket do
         scopes: ["read"],
         client_ip: peer_ip(connect_info[:peer_data])
       }
+
       {:ok, Phoenix.Socket.assign(socket, :rpc_ctx, ctx)}
     else
-    api_key = header_api_key(connect_info[:x_headers]) || uri_api_key(connect_info[:uri])
+      api_key = header_api_key(connect_info[:x_headers]) || uri_api_key(connect_info[:uri])
 
-    if is_binary(api_key) do
-      do_connect(api_key, socket, connect_info)
-    else
-      :error
-    end
+      if is_binary(api_key) do
+        do_connect(api_key, socket, connect_info)
+      else
+        :error
+      end
     end
   end
 
@@ -55,6 +56,7 @@ defmodule LangWeb.LspSocket do
   end
 
   defp header_api_key(nil), do: nil
+
   defp header_api_key(headers) when is_list(headers) do
     headers
     |> Enum.find_value(fn {k, v} ->
@@ -71,6 +73,7 @@ defmodule LangWeb.LspSocket do
 
   defp uri_api_key(nil), do: nil
   defp uri_api_key(%URI{query: nil}), do: nil
+
   defp uri_api_key(%URI{query: q}) do
     q
     |> URI.decode_query()
@@ -83,12 +86,15 @@ defmodule LangWeb.LspSocket do
 
   defp rpc_test_bypass?(connect_info) do
     bypass_cfg = Application.get_env(:lang, :rpc_test_bypass, Mix.env() == :test)
+
     case connect_info[:uri] do
       %URI{query: q} when is_binary(q) ->
         params = URI.decode_query(q)
         bypass_param = params["test_bypass"] in ["true", "1", true]
         bypass_cfg and bypass_param
-      _ -> false
+
+      _ ->
+        false
     end
   end
 end

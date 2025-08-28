@@ -57,6 +57,24 @@ defmodule LangWeb.AuthHelpers do
   end
 
   @doc """
+  Returns {conn, auth_session_id}. Generates and stores a stable auth_session_id if missing.
+  """
+  def get_or_put_auth_session_id(conn) do
+    case get_session(conn, :auth_session_id) do
+      nil ->
+        id = generate_auth_session_id()
+        {put_session(conn, :auth_session_id, id) |> assign(:auth_session_id, id), id}
+
+      id ->
+        {assign(conn, :auth_session_id, id), id}
+    end
+  end
+
+  defp generate_auth_session_id do
+    "auth_sess_" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+  end
+
+  @doc """
   Gets the current user from the connection assigns.
   """
   def current_user(conn) do
@@ -174,7 +192,7 @@ defmodule LangWeb.AuthHelpers do
           }
         })
 
-        # Create default organization
+        # Ensure default organization via centralized helper
         case ensure_user_organization(user) do
           {:ok, _org} ->
             {:ok, user}
@@ -188,6 +206,31 @@ defmodule LangWeb.AuthHelpers do
         {:error, changeset}
     end
   end
+
+  @doc """
+  Ensure user has an organization.
+  Since we are not multitenant yet, we auto-create a default
+  organization whenever it is missing. Centralized here so
+  behavior remains consistent across plugs and LiveViews.
+  Returns {:ok, org} | {:error, reason}.
+  """
+  def ensure_user_organization(%{organization: %{} = org}), do: {:ok, org}
+
+  def ensure_user_organization(%{id: user_id} = user) do
+    import Ash.Query
+
+    case User
+         |> Ash.Query.filter(id == ^user_id)
+         |> Ash.Query.load([:organization])
+         |> Ash.read_one() do
+      {:ok, %{organization: %{} = org}} -> {:ok, org}
+      {:ok, _loaded_user} -> create_default_organization(user)
+      {:error, reason} -> {:error, reason}
+      nil -> {:error, :user_not_found}
+    end
+  end
+
+  defp default_org_name(user), do: (user.name || "User") <> "'s Organization"
 
   @doc """
   Updates user's last login timestamp and login count.
@@ -219,32 +262,30 @@ defmodule LangWeb.AuthHelpers do
   Generates a secure API key for the user.
   """
   def generate_api_key(user, name \\ "Default API Key") do
-    key = generate_secure_key()
+    with {:ok, org} <- ensure_user_organization(user),
+         {:ok, api_key} <-
+           Lang.Accounts.ApiKey.create(%{
+             user_id: user.id,
+             organization_id: org.id,
+             name: name
+           }) do
+      Events.track_event(%{
+        event_type: "api_key_created",
+        user_id: user.id,
+        metadata: %{
+          api_key_name: name,
+          api_key_id: api_key.id
+        }
+      })
 
-    case Lang.Accounts.APIKey.create(%{
-           user_id: user.id,
-           name: name,
-           key: key,
-           status: :active,
-           created_at: DateTime.utc_now(),
-           last_used_at: nil,
-           usage_count: 0
-         }) do
-      {:ok, api_key} ->
-        Events.track_event(%{
-          event_type: "api_key_created",
-          user_id: user.id,
-          metadata: %{
-            api_key_name: name,
-            api_key_id: api_key.id
-          }
-        })
-
-        {:ok, api_key}
-
+      {:ok, api_key}
+    else
       {:error, reason} ->
         Logger.error("Failed to create API key: #{inspect(reason)}")
         {:error, reason}
+
+      other ->
+        other
     end
   end
 
@@ -254,14 +295,11 @@ defmodule LangWeb.AuthHelpers do
   def revoke_api_key(api_key_id, user_id) do
     import Ash.Query
 
-    case Lang.Accounts.APIKey
+    case Lang.Accounts.ApiKey
          |> Ash.Query.filter(id == ^api_key_id and user_id == ^user_id)
          |> Ash.read_one() do
       {:ok, api_key} ->
-        case Lang.Accounts.APIKey.update(api_key, %{
-               status: :revoked,
-               revoked_at: DateTime.utc_now()
-             }) do
+        case Lang.Accounts.ApiKey.revoke(api_key) do
           {:ok, revoked_key} ->
             Events.track_event(%{
               event_type: "api_key_revoked",
@@ -369,24 +407,6 @@ defmodule LangWeb.AuthHelpers do
     Bcrypt.verify_pass(password, hash)
   end
 
-  defp ensure_user_organization(user) do
-    case user.organization_id do
-      nil ->
-        create_default_organization(user)
-
-      org_id ->
-        # Load existing organization
-        import Ash.Query
-
-        case Organization
-             |> Ash.Query.filter(id == ^org_id)
-             |> Ash.read_one() do
-          {:ok, org} -> {:ok, org}
-          _ -> create_default_organization(user)
-        end
-    end
-  end
-
   defp create_default_organization(user) do
     org_name =
       if user.name && String.trim(user.name) != "" do
@@ -403,8 +423,7 @@ defmodule LangWeb.AuthHelpers do
            created_at: DateTime.utc_now()
          }) do
       {:ok, org} ->
-        # Update user with organization_id
-        User.update(user, %{organization_id: org.id})
+        _ = User.update(user, %{organization_id: org.id})
         {:ok, org}
 
       {:error, reason} ->
@@ -413,11 +432,7 @@ defmodule LangWeb.AuthHelpers do
     end
   end
 
-  defp generate_secure_key do
-    prefix = "lang_"
-    random_part = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
-    "#{prefix}#{random_part}"
-  end
+  # Deprecated: API keys are generated in Lang.Accounts.ApiKey.create/1
 
   defp generate_secure_token do
     :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)

@@ -18,11 +18,12 @@ defmodule Lang.Workers.MCPEnvironment do
       "info" => %{
         "title" => "LANG MCP Broker API",
         "version" => "2.0.0",
-        "description" => "Secure MCP Broker endpoints for MCP servers\n\n## Error Conventions\nAll error responses use a consistent JSON shape:\n\n- error: human‑readable message (string)\n- details: optional object with structured fields (e.g., allowed lists, limits)\n\nCommon HTTP status codes:\n- 400 Bad Request (validation issues; often includes details.allowed)\n- 401 Unauthorized (missing/invalid auth)\n- 403 Forbidden (exceeded limits; includes details.max_connections)\n- 404 Not Found\n- 409 Conflict (rare; resource conflicts)\n- 422 Unprocessable Entity (semantic validation)\n- 429 Too Many Requests (rate limiting)\n- 500 Internal Server Error",
+        "description" =>
+          "Secure MCP Broker endpoints for MCP servers\n\n## Error Conventions\nAll error responses use a consistent JSON shape:\n\n- error: human‑readable message (string)\n- details: optional object with structured fields (e.g., allowed lists, limits)\n\nCommon HTTP status codes:\n- 400 Bad Request (validation issues; often includes details.allowed)\n- 401 Unauthorized (missing/invalid auth)\n- 403 Forbidden (exceeded limits; includes details.max_connections)\n- 404 Not Found\n- 409 Conflict (rare; resource conflicts)\n- 422 Unprocessable Entity (semantic validation)\n- 429 Too Many Requests (rate limiting)\n- 500 Internal Server Error",
         "x-generated" => DateTime.utc_now()
       },
       "servers" => [
-        %{ "url" => "https://lang.nocsi.com", "description" => "Production"}
+        %{"url" => "https://lang.nocsi.com", "description" => "Production"}
       ],
       "paths" => paths(allowed_server_types, max_conn),
       "components" => %{
@@ -55,7 +56,14 @@ defmodule Lang.Workers.MCPEnvironment do
         "post" => %{
           "tags" => ["MCP"],
           "summary" => "Create MCP connection",
-          "requestBody" => %{"required" => true, "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPConnectRequest"}}}},
+          "requestBody" => %{
+            "required" => true,
+            "content" => %{
+              "application/json" => %{
+                "schema" => %{"$ref" => "#/components/schemas/MCPConnectRequest"}
+              }
+            }
+          },
           "responses" => %{
             "201" => %{
               "description" => "Created",
@@ -72,8 +80,15 @@ defmodule Lang.Workers.MCPEnvironment do
                 "application/json" => %{
                   "schema" => %{"$ref" => "#/components/schemas/MCPError"},
                   "examples" => %{
-                    "missing_server_type" => %{"value" => %{"error" => "Missing required parameter: server_type"}},
-                    "server_type_not_allowed" => %{"value" => %{"error" => "MCP server type not allowed", "details" => %{"allowed" => allowed_server_types}}}
+                    "missing_server_type" => %{
+                      "value" => %{"error" => "Missing required parameter: server_type"}
+                    },
+                    "server_type_not_allowed" => %{
+                      "value" => %{
+                        "error" => "MCP server type not allowed",
+                        "details" => %{"allowed" => allowed_server_types}
+                      }
+                    }
                   }
                 }
               }
@@ -94,8 +109,25 @@ defmodule Lang.Workers.MCPEnvironment do
                 }
               }
             },
-            "429" => %{"description" => "Rate limited", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "Rate limit exceeded for MCP connections"}}}}}},
-            "500" => %{"description" => "Internal error", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}}
+            "429" => %{
+              "description" => "Rate limited",
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{
+                    "default" => %{
+                      "value" => %{"error" => "Rate limit exceeded for MCP connections"}
+                    }
+                  }
+                }
+              }
+            },
+            "500" => %{
+              "description" => "Internal error",
+              "content" => %{
+                "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+              }
+            }
           }
         }
       },
@@ -114,9 +146,32 @@ defmodule Lang.Workers.MCPEnvironment do
                 }
               }
             },
-            "404" => %{"description" => "Not found", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "MCP stream not found"}}}}}},
-            "403" => %{"description" => "Forbidden", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "Access denied to MCP stream"}}}}}},
-            "500" => %{"description" => "Internal error", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}}
+            "404" => %{
+              "description" => "Not found",
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{"default" => %{"value" => %{"error" => "MCP stream not found"}}}
+                }
+              }
+            },
+            "403" => %{
+              "description" => "Forbidden",
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{
+                    "default" => %{"value" => %{"error" => "Access denied to MCP stream"}}
+                  }
+                }
+              }
+            },
+            "500" => %{
+              "description" => "Internal error",
+              "content" => %{
+                "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+              }
+            }
           }
         }
       },
@@ -128,15 +183,33 @@ defmodule Lang.Workers.MCPEnvironment do
           "responses" => %{
             "200" => %{
               "description" => "OK",
-              "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPDisconnectResponse"}}}
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPDisconnectResponse"}
+                }
+              }
             },
             "404" => %{
               "description" => "Not found",
-              "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "MCP connection not found"}}}}}
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{
+                    "default" => %{"value" => %{"error" => "MCP connection not found"}}
+                  }
+                }
+              }
             },
             "403" => %{
               "description" => "Access denied",
-              "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "Access denied to MCP connection"}}}}}
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{
+                    "default" => %{"value" => %{"error" => "Access denied to MCP connection"}}
+                  }
+                }
+              }
             }
           }
         }
@@ -157,7 +230,14 @@ defmodule Lang.Workers.MCPEnvironment do
             },
             "401" => %{
               "description" => "Unauthorized",
-              "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "Authentication required"}}}}}
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{
+                    "default" => %{"value" => %{"error" => "Authentication required"}}
+                  }
+                }
+              }
             }
           }
         }
@@ -167,25 +247,51 @@ defmodule Lang.Workers.MCPEnvironment do
           "tags" => ["MCP"],
           "summary" => "Usage billing summary",
           "parameters" => [
-            %{"name" => "period", "in" => "query", "required" => true, "schema" => %{"type" => "string", "enum" => ["current_month", "last_month"]}}
+            %{
+              "name" => "period",
+              "in" => "query",
+              "required" => true,
+              "schema" => %{"type" => "string", "enum" => ["current_month", "last_month"]}
+            }
           ],
           "responses" => %{
-            "200" => %{"description" => "OK", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPUsageResponse"}}}},
+            "200" => %{
+              "description" => "OK",
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPUsageResponse"}
+                }
+              }
+            },
             "400" => %{
               "description" => "Bad request",
               "content" => %{
                 "application/json" => %{
                   "schema" => %{"$ref" => "#/components/schemas/MCPError"},
                   "examples" => %{
-                    "missing_period" => %{"value" => %{"error" => "Missing required parameter: period"}},
-                    "invalid_period" => %{"value" => %{"error" => "Invalid period parameter", "details" => %{ "allowed" => ["current_month", "last_month"]}}}
+                    "missing_period" => %{
+                      "value" => %{"error" => "Missing required parameter: period"}
+                    },
+                    "invalid_period" => %{
+                      "value" => %{
+                        "error" => "Invalid period parameter",
+                        "details" => %{"allowed" => ["current_month", "last_month"]}
+                      }
+                    }
                   }
                 }
               }
             },
             "401" => %{
               "description" => "Unauthorized",
-              "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}, "examples" => %{"default" => %{"value" => %{"error" => "Authentication required"}}}}}
+              "content" => %{
+                "application/json" => %{
+                  "schema" => %{"$ref" => "#/components/schemas/MCPError"},
+                  "examples" => %{
+                    "default" => %{"value" => %{"error" => "Authentication required"}}
+                  }
+                }
+              }
             }
           }
         }
@@ -210,11 +316,14 @@ defmodule Lang.Workers.MCPEnvironment do
           "connection_id" => %{"type" => "string"},
           "stream_id" => %{"type" => "string"},
           "status" => %{"type" => "string"},
-          "server_info" => %{"type" => "object", "properties" => %{
-            "server_type" => %{"type" => "string"},
-            "created_at" => %{"type" => "string", "format" => "date-time"},
-            "endpoints" => %{"$ref" => "#/components/schemas/MCPEndpoints"}
-          }},
+          "server_info" => %{
+            "type" => "object",
+            "properties" => %{
+              "server_type" => %{"type" => "string"},
+              "created_at" => %{"type" => "string", "format" => "date-time"},
+              "endpoints" => %{"$ref" => "#/components/schemas/MCPEndpoints"}
+            }
+          },
           "topics" => %{"$ref" => "#/components/schemas/MCPTopics"}
         },
         "required" => ["connection_id", "stream_id", "status"]
@@ -243,23 +352,32 @@ defmodule Lang.Workers.MCPEnvironment do
           "connection_status" => %{"$ref" => "#/components/schemas/MCPConnectionStatus"},
           "stream_status" => %{"type" => "string"},
           "server_type" => %{"type" => "string"},
-          "progress" => %{"type" => "object", "properties" => %{
-            "total_chunks" => %{"type" => "integer"},
-            "sent_chunks" => %{"type" => "integer"},
-            "completion_percentage" => %{"type" => "number"}
-          }},
-          "stats" => %{"type" => "object", "properties" => %{
-            "created_at" => %{"type" => "string", "format" => "date-time"},
-            "last_activity" => %{"type" => "string", "format" => "date-time"},
-            "session_id" => %{"type" => "string"}
-          }},
-          "pool" => %{"type" => "object", "properties" => %{
-            "total_pools" => %{"type" => "integer"},
-            "total_connections" => %{"type" => "integer"},
-            "active_connections" => %{"type" => "integer"},
-            "idle_connections" => %{"type" => "integer"},
-            "failed_connections" => %{"type" => "integer"}
-          }},
+          "progress" => %{
+            "type" => "object",
+            "properties" => %{
+              "total_chunks" => %{"type" => "integer"},
+              "sent_chunks" => %{"type" => "integer"},
+              "completion_percentage" => %{"type" => "number"}
+            }
+          },
+          "stats" => %{
+            "type" => "object",
+            "properties" => %{
+              "created_at" => %{"type" => "string", "format" => "date-time"},
+              "last_activity" => %{"type" => "string", "format" => "date-time"},
+              "session_id" => %{"type" => "string"}
+            }
+          },
+          "pool" => %{
+            "type" => "object",
+            "properties" => %{
+              "total_pools" => %{"type" => "integer"},
+              "total_connections" => %{"type" => "integer"},
+              "active_connections" => %{"type" => "integer"},
+              "idle_connections" => %{"type" => "integer"},
+              "failed_connections" => %{"type" => "integer"}
+            }
+          },
           "endpoints" => %{"$ref" => "#/components/schemas/MCPEndpoints"},
           "topics" => %{"$ref" => "#/components/schemas/MCPTopics"}
         }
@@ -312,14 +430,20 @@ defmodule Lang.Workers.MCPEnvironment do
       "MCPConnectionsResponse" => %{
         "type" => "object",
         "properties" => %{
-          "connections" => %{"type" => "array", "items" => %{"$ref" => "#/components/schemas/MCPConnectionItem"}},
-          "pool" => %{"type" => "object", "properties" => %{
-            "total_pools" => %{"type" => "integer"},
-            "total_connections" => %{"type" => "integer"},
-            "active_connections" => %{"type" => "integer"},
-            "idle_connections" => %{"type" => "integer"},
-            "failed_connections" => %{"type" => "integer"}
-          }}
+          "connections" => %{
+            "type" => "array",
+            "items" => %{"$ref" => "#/components/schemas/MCPConnectionItem"}
+          },
+          "pool" => %{
+            "type" => "object",
+            "properties" => %{
+              "total_pools" => %{"type" => "integer"},
+              "total_connections" => %{"type" => "integer"},
+              "active_connections" => %{"type" => "integer"},
+              "idle_connections" => %{"type" => "integer"},
+              "failed_connections" => %{"type" => "integer"}
+            }
+          }
         }
       },
       "MCPConnectionItem" => %{
@@ -347,7 +471,10 @@ defmodule Lang.Workers.MCPEnvironment do
           "total_connections" => %{"type" => "integer"},
           "total_cost_cents" => %{"type" => "integer"},
           "period" => %{"type" => "string"},
-          "by_server_type" => %{"type" => "object", "additionalProperties" => %{"type" => "integer"}}
+          "by_server_type" => %{
+            "type" => "object",
+            "additionalProperties" => %{"type" => "integer"}
+          }
         }
       }
     }
@@ -361,17 +488,53 @@ defmodule Lang.Workers.MCPEnvironment do
 
   defp error_responses do
     %{
-      "BadRequestError" => %{"description" => "Bad request", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}},
-      "UnauthorizedError" => %{"description" => "Unauthorized", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}},
-      "ForbiddenError" => %{"description" => "Forbidden", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}},
-      "NotFoundError" => %{"description" => "Not found", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}},
-      "TooManyRequestsError" => %{"description" => "Rate limited", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}},
-      "UnprocessableEntityError" => %{"description" => "Unprocessable entity", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}},
-      "InternalError" => %{"description" => "Internal server error", "content" => %{"application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}}}
+      "BadRequestError" => %{
+        "description" => "Bad request",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      },
+      "UnauthorizedError" => %{
+        "description" => "Unauthorized",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      },
+      "ForbiddenError" => %{
+        "description" => "Forbidden",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      },
+      "NotFoundError" => %{
+        "description" => "Not found",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      },
+      "TooManyRequestsError" => %{
+        "description" => "Rate limited",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      },
+      "UnprocessableEntityError" => %{
+        "description" => "Unprocessable entity",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      },
+      "InternalError" => %{
+        "description" => "Internal server error",
+        "content" => %{
+          "application/json" => %{"schema" => %{"$ref" => "#/components/schemas/MCPError"}}
+        }
+      }
     }
   end
 
-  defp param(name), do: %{"name" => name, "in" => "path", "required" => true, "schema" => %{"type" => "string"}}
+  defp param(name),
+    do: %{"name" => name, "in" => "path", "required" => true, "schema" => %{"type" => "string"}}
 
   defp param_stream_id do
     %{
@@ -403,6 +566,7 @@ defmodule Lang.Workers.MCPEnvironment do
       }
     }
   end
+
   defp example_connect_response do
     %{
       connection_id: "mcp_conn_deadbeef",
@@ -418,7 +582,10 @@ defmodule Lang.Workers.MCPEnvironment do
           websocket: "/socket/websocket?vsn=2.0.0"
         }
       },
-      topics: %{websocket: "mcp:mcp_stream_cafebabe", session: "mcp_stream:session:mcp_session_1234"}
+      topics: %{
+        websocket: "mcp:mcp_stream_cafebabe",
+        session: "mcp_stream:session:mcp_session_1234"
+      }
     }
   end
 
@@ -442,14 +609,27 @@ defmodule Lang.Workers.MCPEnvironment do
       stream_status: :active,
       server_type: "filesystem",
       progress: %{total_chunks: 1, sent_chunks: 0, completion_percentage: 0.0},
-      stats: %{created_at: DateTime.utc_now(), last_activity: DateTime.utc_now(), session_id: "mcp_session_1234"},
-      pool: %{total_pools: 1, total_connections: 1, active_connections: 1, idle_connections: 0, failed_connections: 0},
+      stats: %{
+        created_at: DateTime.utc_now(),
+        last_activity: DateTime.utc_now(),
+        session_id: "mcp_session_1234"
+      },
+      pool: %{
+        total_pools: 1,
+        total_connections: 1,
+        active_connections: 1,
+        idle_connections: 0,
+        failed_connections: 0
+      },
       endpoints: %{
         status: "/api/v2/mcp/status/mcp_stream_cafebabe",
         disconnect_by_stream: "/api/v2/mcp/disconnect/mcp_stream_cafebabe",
         disconnect: "/api/v2/mcp/disconnect/mcp_conn_deadbeef"
       },
-      topics: %{websocket: "mcp:mcp_stream_cafebabe", session: "mcp_stream:session:mcp_session_1234"}
+      topics: %{
+        websocket: "mcp:mcp_stream_cafebabe",
+        session: "mcp_stream:session:mcp_session_1234"
+      }
     }
   end
 
@@ -473,10 +653,19 @@ defmodule Lang.Workers.MCPEnvironment do
             disconnect_by_stream: "/api/v2/mcp/disconnect/mcp_stream_cafebabe",
             disconnect: "/api/v2/mcp/disconnect/mcp_conn_deadbeef"
           },
-          topics: %{websocket: "mcp:mcp_stream_cafebabe", session: "mcp_stream:session:mcp_session_1234"}
+          topics: %{
+            websocket: "mcp:mcp_stream_cafebabe",
+            session: "mcp_stream:session:mcp_session_1234"
+          }
         }
       ],
-      pool: %{total_pools: 1, total_connections: 1, active_connections: 1, idle_connections: 0, failed_connections: 0}
+      pool: %{
+        total_pools: 1,
+        total_connections: 1,
+        active_connections: 1,
+        idle_connections: 0,
+        failed_connections: 0
+      }
     }
   end
 end

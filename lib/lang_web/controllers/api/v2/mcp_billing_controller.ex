@@ -2,7 +2,7 @@ defmodule LangWeb.Api.V2.MCPBillingController do
   use LangWeb, :controller
   require Ash.Query
 
-  alias Lang.MCP.Resources.Connection
+  alias Lang.MCP.Connection
   alias LangWeb.ApiError
 
   # GET /api/v2/mcp/billing/usage?period=current_month|last_month
@@ -28,7 +28,9 @@ defmodule LangWeb.Api.V2.MCPBillingController do
         json(conn, usage_summary)
 
       {:error, :invalid_period} ->
-        ApiError.json(conn, :bad_request, "Invalid period parameter", %{allowed: ["current_month", "last_month"]})
+        ApiError.json(conn, :bad_request, "Invalid period parameter", %{
+          allowed: ["current_month", "last_month"]
+        })
     end
   end
 
@@ -38,7 +40,7 @@ defmodule LangWeb.Api.V2.MCPBillingController do
 
   defp group_by_server_type(connections) do
     connections
-    |> Enum.group_by(fn c -> c.server_config && c.server_config.server_type || :unknown end)
+    |> Enum.group_by(fn c -> (c.server_config && c.server_config.server_type) || :unknown end)
     |> Enum.map(fn {type, conns} -> {type, length(conns)} end)
     |> Enum.into(%{})
   end
@@ -48,7 +50,7 @@ defmodule LangWeb.Api.V2.MCPBillingController do
     {:ok, date} = Date.new(now.year, now.month, 1)
     {:ok, naive} = NaiveDateTime.new(date, ~T[00:00:00])
     DateTime.from_naive!(naive, "Etc/UTC")
-    end
+  end
 
   defp period_start("last_month") do
     now = DateTime.utc_now()

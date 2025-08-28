@@ -87,7 +87,7 @@ config :lang, Oban,
 config :lang, LangWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -163,3 +163,21 @@ config :ash, :compile_time_index?, false
 config :logger, level: :info
 
 config :rustler_precompiled, :force_build, lang: true
+
+# Stripe configuration for development
+# Use test keys in development - these are safe to commit
+config :stripity_stripe,
+  api_key: System.get_env("STRIPE_SECRET_KEY", "sk_test_51234567890abcdefghijklmnopqrstuvwxyz"),
+  public_key:
+    System.get_env("STRIPE_PUBLISHABLE_KEY", "pk_test_51234567890abcdefghijklmnopqrstuvwxyz")
+
+config :lang, :stripe,
+  webhook_secret:
+    System.get_env("STRIPE_WEBHOOK_SECRET", "whsec_test_webhook_secret_for_development"),
+  success_url: "http://localhost:4000/billing?success=true",
+  cancel_url: "http://localhost:4000/billing?cancelled=true",
+  price_ids: %{
+    plus: System.get_env("STRIPE_PLUS_PRICE_ID", "price_test_plus_placeholder"),
+    pro: System.get_env("STRIPE_PRO_PRICE_ID", "price_test_pro_placeholder"),
+    business: System.get_env("STRIPE_BUSINESS_PRICE_ID", "price_test_business_placeholder")
+  }

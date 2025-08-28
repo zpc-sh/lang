@@ -179,7 +179,7 @@ defmodule Kyozo.Lang.UniversalParser.Formats.YAML do
 
   """
   @spec parse_multi_document(String.t(), parse_options()) :: {:ok, [term()]} | {:error, term()}
-  def parse_multi_document(content, options \\ []) when is_binary(content) do
+  def parse_multi_document(content, _options \\ []) when is_binary(content) do
     # Split content by document separators
     documents = String.split(content, ~r/^---\s*$/m, trim: true)
 

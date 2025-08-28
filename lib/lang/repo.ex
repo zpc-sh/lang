@@ -14,7 +14,7 @@ defmodule Lang.Repo do
   """
   @impl true
   def all_tenants do
-    for tenant <- Ash.read!(Kyozo.Accounts.Team) do
+    for tenant <- Ash.read!(Kyozo.Accounts.Organization) do
       tenant.domain
     end
   end

@@ -249,12 +249,18 @@ defmodule Lang.Workers.DailyOrchestrationWorker do
     }
 
     Enum.each(webhooks, fn webhook_url ->
-      Task.async(fn ->
+      Task.start(fn ->
         try do
-          HTTPoison.post(webhook_url, Jason.encode!(payload), [
-            {"Content-Type", "application/json"},
-            {"User-Agent", "LANG-Orchestration/2.0"}
-          ])
+          _ =
+            Req.post!(
+              url: webhook_url,
+              json: payload,
+              headers: [
+                {"content-type", "application/json"},
+                {"user-agent", "LANG-Orchestration/2.0"}
+              ],
+              receive_timeout: 5_000
+            )
         rescue
           error ->
             Logger.warning("Failed to send webhook to #{webhook_url}: #{inspect(error)}")

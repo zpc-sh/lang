@@ -10,10 +10,28 @@ import Config
 # Import billing configuration
 import_config "billing.exs"
 
+# AI Provider API Keys
+config :lang, :ai_providers,
+  xai_api_key: System.get_env("XAI_API_KEY"),
+  openai_api_key: System.get_env("OPENAI_API_KEY"),
+  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY")
+
 config :lang,
   ecto_repos: [Lang.Repo],
   generators: [timestamp_type: :utc_datetime],
-  env: Mix.env()
+  env: Mix.env(),
+  # Register Ash Domains used across the app
+  ash_domains: [
+    Lang.Accounts,
+    Lang.Events,
+    Lang.MCP,
+    Lang.Git,
+    Lang.Billing,
+    Lang.Analyses,
+    Lang.Think,
+    Lang.Generate,
+    Lang.Spatial
+  ]
 
 # Configures the endpoint
 config :lang, LangWeb.Endpoint,
@@ -89,7 +107,11 @@ config :lang, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        # Generate MCP spec monthly at 03:15 UTC on the 1st
-       {"15 3 1 * *", Lang.Workers.MCPEnvironment, args: %{"task" => "generate_spec"}}
+       {"15 3 1 * *", Lang.Workers.MCPEnvironment, args: %{"task" => "generate_spec"}},
+       # Billing/usage background pipeline
+       {"0 * * * *", Lang.Workers.BillingAggregateUsageWorker, args: %{}},
+       {"30 3 * * *", Lang.Workers.BillingCleanupUsageWorker, args: %{}},
+       {"15 * * * *", Lang.Workers.BillingStripeUsageReporter, args: %{}}
      ]}
   ],
   queues: [
@@ -108,6 +130,11 @@ config :lang, Oban,
     # New queue for marketing content
     marketing: 2
   ]
+
+# Analysis pipeline configuration
+config :lang, :analysis,
+  finalize_delay_seconds: 120,
+  run_finalize_reschedule_seconds: 60
 
 # Configure LANG-specific settings
 config :lang, :text_intelligence,
@@ -138,6 +165,22 @@ config :lang, :timemachine,
 config :lang, :security,
   rate_limit_cleanup_interval: 60_000,
   default_rate_limit: %{limit: 100, window: 3600, block_duration: 300}
+
+# Configure Stripe payment processing
+config :stripity_stripe,
+  api_key: {:system, "STRIPE_SECRET_KEY"},
+  public_key: {:system, "STRIPE_PUBLISHABLE_KEY"}
+
+config :lang, :stripe,
+  webhook_secret: {:system, "STRIPE_WEBHOOK_SECRET"},
+  success_url: {:system, "STRIPE_SUCCESS_URL", "http://localhost:4000/billing?success=true"},
+  cancel_url: {:system, "STRIPE_CANCEL_URL", "http://localhost:4000/billing?cancelled=true"},
+  # Price IDs for each plan (set in environment)
+  price_ids: %{
+    plus: {:system, "STRIPE_PLUS_PRICE_ID"},
+    pro: {:system, "STRIPE_PRO_PRICE_ID"},
+    business: {:system, "STRIPE_BUSINESS_PRICE_ID"}
+  }
 
 # Configure Redis for caching and metrics
 config :lang,

@@ -46,31 +46,33 @@ defmodule Lang.Workers.FileSystemScanWorker do
 
       case FSScanner.scan(path, scan_opts) do
         {:ok, %{tree: tree, stats: stats}} ->
-          # Process and store results
-          result = %{
-            session_id: session_id,
-            project_id: project_id,
-            path: path,
-            tree: tree,
-            stats: stats,
-            completed_at: DateTime.utc_now()
-          }
-
-          # Store in database
-          case Analysis.create_scan_result(result) do
-            {:ok, scan_result} ->
-              # Queue follow-up analysis jobs
-              queue_analysis_jobs(scan_result, opts)
+          # Convert tree -> analyzed files for session
+          case Analysis.create_scan_result(%{session_id: session_id, tree: tree}) do
+            {:ok, %{files: created_files}} ->
+              # Enqueue per-file analysis
+              Enum.each(created_files, fn file ->
+                %{"file_id" => file.id}
+                |> Lang.Workers.FileAnalyzeWorker.new(queue: :analysis)
+                |> Oban.insert()
+              end)
 
               # Broadcast completion
               broadcast_progress(session_id, :completed, %{
-                scan_result_id: scan_result.id,
                 stats: stats,
                 files_found: stats.total_files,
                 directories_found: stats.total_directories,
                 total_size: stats.total_size,
                 scan_duration: stats.scan_duration_ms
               })
+
+              # Schedule a run finalize check (will reschedule itself until files are done)
+              finalize_delay =
+                Application.get_env(:lang, :analysis, [])
+                |> Keyword.get(:finalize_delay_seconds, 120)
+
+              Lang.Workers.RunFinalizeWorker
+              |> apply(:new, [%{"run_id" => session_id}, [queue: :analysis, scheduled_at: DateTime.add(DateTime.utc_now(), finalize_delay)]])
+              |> Oban.insert()
 
               # Track event for analytics
               Events.track_event(%{
@@ -89,11 +91,11 @@ defmodule Lang.Workers.FileSystemScanWorker do
                 "Filesystem scan completed successfully for #{path}: #{stats.total_files} files, #{stats.total_directories} directories"
               )
 
-              {:ok, scan_result}
+              {:ok, %{files_count: length(created_files), stats: stats}}
 
             {:error, reason} ->
-              Logger.error("Failed to store scan result: #{inspect(reason)}")
-              broadcast_error(session_id, "Failed to store scan results", reason)
+              Logger.error("Failed to create analyzed files from scan: #{inspect(reason)}")
+              broadcast_error(session_id, "Failed to ingest scan results", reason)
               {:error, reason}
           end
 
@@ -157,28 +159,7 @@ defmodule Lang.Workers.FileSystemScanWorker do
 
   # Private functions
 
-  defp queue_analysis_jobs(scan_result, opts) do
-    analysis_types = get_opt(opts, "queue_analysis", [])
-
-    Enum.each(analysis_types, fn analysis_type ->
-      case analysis_type do
-        "content_search" ->
-          queue_content_search_job(scan_result, opts)
-
-        "semantic_analysis" ->
-          queue_semantic_analysis_job(scan_result, opts)
-
-        "security_scan" ->
-          queue_security_scan_job(scan_result, opts)
-
-        "dependency_analysis" ->
-          queue_dependency_analysis_job(scan_result, opts)
-
-        _ ->
-          Logger.warning("Unknown analysis type: #{analysis_type}")
-      end
-    end)
-  end
+  # Per-file analysis now enqueued directly after ingest; keep helpers below for future batch jobs if needed
 
   defp queue_content_search_job(scan_result, opts) do
     search_patterns = get_opt(opts, "search_patterns", default_search_patterns())

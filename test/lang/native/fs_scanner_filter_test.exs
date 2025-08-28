@@ -3,7 +3,7 @@ defmodule Lang.Native.FSScannerFilterTest do
 
   alias Lang.Native.FSScanner
 
-  @tmp_root Path.join([File.cwd!(), "tmp", "fs_scanner_test"]) 
+  @tmp_root Path.join([File.cwd!(), "tmp", "fs_scanner_test"])
 
   setup do
     dir = Path.join(@tmp_root, Integer.to_string(:erlang.unique_integer([:monotonic, :positive])))
@@ -68,4 +68,3 @@ defmodule Lang.Native.FSScannerFilterTest do
     assert stats.total_files >= 1
   end
 end
-

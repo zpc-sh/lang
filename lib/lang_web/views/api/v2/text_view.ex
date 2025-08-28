@@ -4,7 +4,7 @@ defmodule LangWeb.Api.V2.TextView do
 
   def render("parse_result.json", %{document: document, analysis: analysis, metadata: metadata}) do
     %{
-      "@context" => "https://lang.ai/context/text",
+      "@context" => "https://lang.nulity.com/context/text",
       "@type" => "ParseResult",
       "status" => "success",
       "data" => %{
@@ -59,7 +59,7 @@ defmodule LangWeb.Api.V2.TextView do
         metadata: metadata
       }) do
     %{
-      "@context" => "https://lang.ai/context/stylometry",
+      "@context" => "https://lang.nulity.com/context/stylometry",
       "@type" => "StylometricAnalysisResult",
       "status" => "success",
       "data" => %{
@@ -81,7 +81,7 @@ defmodule LangWeb.Api.V2.TextView do
         metadata: metadata
       }) do
     %{
-      "@context" => "https://lang.ai/context/markdown-ld",
+      "@context" => "https://lang.nulity.com/context/markdown-ld",
       "@type" => "MarkdownLDResult",
       "status" => "success",
       "data" => %{
@@ -100,7 +100,7 @@ defmodule LangWeb.Api.V2.TextView do
 
   def render("comprehensive.json", results) do
     %{
-      "@context" => "https://lang.ai/context/comprehensive",
+      "@context" => "https://lang.nulity.com/context/comprehensive",
       "@type" => "ComprehensiveAnalysisResult",
       "status" => "success",
       "data" => %{
@@ -119,7 +119,7 @@ defmodule LangWeb.Api.V2.TextView do
 
   def render("error.json", %{error: error, details: details}) do
     %{
-      "@context" => "https://lang.ai/context/error",
+      "@context" => "https://lang.nulity.com/context/error",
       "@type" => "Error",
       "status" => "error",
       "error" => %{

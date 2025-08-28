@@ -11,12 +11,14 @@ defmodule Mix.Tasks.Mcp.Spec.Dump do
   @impl true
   def run(_args) do
     spec_path = Path.expand("priv/static/docs/mcp/openapi.json")
+
     if File.exists?(spec_path) do
       {:ok, bin} = File.read(spec_path)
       spec = Jason.decode!(bin)
       paths = Map.get(spec, "paths", %{})
       IO.puts("Spec: #{spec_path}")
       IO.puts("Endpoints: #{map_size(paths)}")
+
       Enum.each(paths, fn {p, ops} ->
         methods = ops |> Map.keys() |> Enum.join(",")
         IO.puts(" - #{p} [#{methods}]")
@@ -26,4 +28,3 @@ defmodule Mix.Tasks.Mcp.Spec.Dump do
     end
   end
 end
-

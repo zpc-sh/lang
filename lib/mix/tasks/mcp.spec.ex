@@ -30,9 +30,9 @@ defmodule Mix.Tasks.Mcp.Spec do
     case Lang.Workers.MCPEnvironment.enqueue(opts) do
       {:ok, job} ->
         Mix.shell().info("Enqueued MCP spec generation job: #{job.id}")
+
       {:error, reason} ->
         Mix.shell().error("Failed to enqueue MCP spec generation: #{inspect(reason)}")
     end
   end
 end
-

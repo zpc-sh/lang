@@ -14,7 +14,7 @@ defmodule LangWeb.BillingLive do
   use LangWeb, :live_view
 
   alias Lang.{Billing, Accounts, Events}
-  alias Lang.Billing.ConfigManager
+  alias Lang.Billing.{ConfigManager, StripeService}
   require Logger
 
   @impl true
@@ -66,9 +66,9 @@ defmodule LangWeb.BillingLive do
 
     socket = assign(socket, :stripe_loading, true)
 
-    case create_checkout_session(organization, plan) do
-      {:ok, checkout_url} ->
-        {:noreply, redirect(socket, external: checkout_url)}
+    case Billing.Service.create_checkout_session(organization.id, plan) do
+      {:ok, session} ->
+        {:noreply, redirect(socket, external: session.url)}
 
       {:error, reason} ->
         {:noreply,
@@ -81,11 +81,11 @@ defmodule LangWeb.BillingLive do
   def handle_event("cancel_subscription", _params, socket) do
     organization = socket.assigns.current_scope
 
-    case Billing.cancel_subscription(organization.id) do
-      {:ok, _updated_org} ->
+    case Billing.Service.cancel_subscription(organization.id) do
+      {:ok, _subscription} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Subscription cancelled successfully")
+         |> put_flash(:info, "Subscription will be cancelled at the end of your billing period")
          |> load_billing_data()}
 
       {:error, reason} ->
@@ -767,64 +767,24 @@ defmodule LangWeb.BillingLive do
     ]
   end
 
-  defp create_checkout_session(organization, plan_type) do
-    # Get environment variables for Stripe price IDs
-    price_id =
-      case plan_type do
-        :pro -> System.get_env("STRIPE_PRO_PRICE_ID")
-        :enterprise -> System.get_env("STRIPE_ENTERPRISE_PRICE_ID")
-        _ -> nil
-      end
+  def handle_event("manage_billing", _params, socket) do
+    organization = socket.assigns.current_scope
 
-    if is_nil(price_id) do
-      Logger.error("Missing Stripe price ID for plan: #{plan_type}")
-      {:error, "Plan configuration error"}
-    else
-      # Create or retrieve Stripe customer
-      case ensure_stripe_customer(organization) do
-        {:ok, customer_id} ->
-          create_stripe_checkout_session(customer_id, price_id, organization)
+    case Billing.Service.create_portal_session(organization.id) do
+      {:ok, session} ->
+        {:noreply, redirect(socket, external: session.url)}
 
-        {:error, reason} ->
-          Logger.error("Failed to create Stripe customer: #{inspect(reason)}")
-          {:error, "Customer creation failed"}
-      end
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to open billing portal: #{inspect(reason)}")}
     end
   end
 
-  defp ensure_stripe_customer(organization) do
-    case organization.stripe_customer_id do
-      nil ->
-        # Create new Stripe customer
-        customer_params = %{
-          email: organization.primary_email || "noreply@#{organization.slug}.lang.co",
-          name: organization.name,
-          metadata: %{
-            organization_id: organization.id,
-            slug: organization.slug
-          }
-        }
-
-        case Stripe.Customer.create(customer_params) do
-          {:ok, customer} ->
-            # Update organization with customer ID
-            case Accounts.Organization.update(organization, %{stripe_customer_id: customer.id}) do
-              {:ok, _updated_org} ->
-                {:ok, customer.id}
-
-              {:error, reason} ->
-                Logger.error("Failed to save customer ID: #{inspect(reason)}")
-                # Continue with checkout even if save fails
-                {:ok, customer.id}
-            end
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-
-      existing_customer_id ->
-        {:ok, existing_customer_id}
-    end
+  # Handle real-time subscription updates from webhooks
+  def handle_info({:subscription_updated, plan_type, status}, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Your subscription has been updated to #{plan_type}")
+     |> load_billing_data()}
   end
 
   defp create_stripe_checkout_session(customer_id, price_id, organization) do

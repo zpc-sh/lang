@@ -182,7 +182,7 @@ defmodule Lang.Events do
     import Ash.Query
 
     Lang.Events.ApiUsageEvent
-    |> Ash.Query.filter(organization_id == ^organization_id)
+    |> Lang.AshHelpers.scope_to_org(organization_id)
     |> Ash.Query.sort(occurred_at: :desc)
     |> Ash.Query.limit(limit)
     |> Ash.read()

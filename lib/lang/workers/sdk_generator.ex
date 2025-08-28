@@ -291,27 +291,7 @@ defmodule Lang.Workers.SDKGenerator do
       ```
       \"\"\"
 
-      use Tesla
-
       @base_url "#{@api_base}"
-
-      plug Tesla.Middleware.BaseUrl, @base_url
-      plug Tesla.Middleware.Headers, [
-        {"content-type", "application/ld+json"},
-        {"accept", "application/ld+json"}
-      ]
-      plug Tesla.Middleware.JSON
-      plug Tesla.Middleware.Logger
-      plug Tesla.Middleware.Retry,
-        delay: 500,
-        max_retries: 3,
-        max_delay: 4_000,
-        should_retry: fn
-          {:ok, %{status: status}} when status in 500..599 -> true
-          {:ok, %{status: 429}} -> true
-          {:error, _} -> true
-          _ -> false
-        end
 
       @doc \"\"\"
       Create a new LANG client with API key authentication
@@ -322,19 +302,24 @@ defmodule Lang.Workers.SDKGenerator do
       - `:timeout` - Request timeout in milliseconds (default: 30_000)
       \"\"\"
       def new(api_key, opts \\\\ []) do
-        base_url = Keyword.get(opts, :base_url, @base_url)
+        %{
+          base_url: Keyword.get(opts, :base_url, @base_url),
+          headers: [
+            {"authorization", "Bearer #{""}" <> api_key},
+            {"content-type", "application/ld+json"},
+            {"accept", "application/ld+json"}
+          ],
+          timeout: Keyword.get(opts, :timeout, 30_000)
+        }
+      end
 
-        middleware = [
-          {Tesla.Middleware.BaseUrl, base_url},
-          {Tesla.Middleware.Headers, [
-            {"authorization", "Bearer \#{api_key}"},
-            {"content-type", "application/ld+json"}
-          ]},
-          Tesla.Middleware.JSON,
-          Tesla.Middleware.Logger
-        ]
-
-        Tesla.client(middleware)
+      defp request(client, method, path, body \\\\ nil, opts \\\\ []) do
+        url = client.base_url <> path
+        req_opts = [url: url, method: method, json: body, headers: client.headers, receive_timeout: client.timeout]
+        case Req.request(req_opts) do
+          {:ok, %Req.Response{status: status, body: body}} -> {:ok, %{status: status, body: body}}
+          {:error, reason} -> {:error, reason}
+        end
       end
 
       #{generate_elixir_methods(spec)}
@@ -543,7 +528,7 @@ defmodule Lang.Workers.SDKGenerator do
           #{Map.get(operation, "summary", "API method")}
           \"\"\"
           def #{method_name}(client, data, opts \\\\ []) do
-            case #{method}(client, "#{path}", data, opts) do
+            case request(client, :#{String.to_atom(method)}, "#{path}", data, opts) do
               {:ok, %{status: 200, body: body}} -> {:ok, body}
               {:ok, %{status: status, body: body}} -> {:error, {status, body}}
               error -> error

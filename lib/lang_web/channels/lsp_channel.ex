@@ -45,6 +45,7 @@ defmodule LangWeb.LspChannel do
       data: data,
       is_last: false
     })
+
     {:noreply, socket}
   end
 
@@ -53,6 +54,7 @@ defmodule LangWeb.LspChannel do
       request_id: request_id,
       is_last: true
     })
+
     {:noreply, socket}
   end
 end

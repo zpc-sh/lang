@@ -48,6 +48,8 @@ Complete documentation is available in the [`priv/docs/`](priv/docs/) directory:
 - **[Architecture](priv/docs/architecture/index.md)** - System architecture and components
 - **[Tutorials](priv/docs/tutorials/index.md)** - Step-by-step tutorials
 - **[Performance Guide](priv/docs/performance/optimization-guide.md)** - Optimization tips
+ - **[Dev Pipeline Checklist](docs/dev_pipeline_checklist.md)** - Run analysis pipeline locally
+ - **[Analysis Pipeline](docs/analysis_pipeline.md)** - Scan → Ingest → Analyze → Finalize flow
 
 ## 🛠️ Quick Start
 
@@ -91,6 +93,29 @@ require'lspconfig'.lang.setup{
   cmd = {"nc", "127.0.0.1", "4001"}
 }
 ```
+
+## 🧭 Architecture Snapshot
+
+- Phoenix 1.8 + LiveView: Real-time UI and API endpoints.
+- Ash Framework 3.0: Resources and domains (`Lang.Analyses.*`, `Lang.Accounts`, etc.).
+- Oban: Background jobs and orchestration (`:analysis`, `:lsp`, `:metrics`, `:cleanup`, `:billing`).
+- Native Rust NIFs: High-performance FS scanning and parsing (`Lang.Native.FSScanner`, `Lang.Native.LangParser`, `Lang.Native.PerfEngine`).
+- Analysis Pipeline: See `docs/analysis_pipeline.md` (Scan → Ingest → Analyze → Finalize).
+
+### Oban Queues & Workers
+
+- Queue `:analysis`
+  - `Lang.Workers.FileSystemScanWorker`: native FS scan, ingest files, schedule finalize
+  - `Lang.Workers.FileAnalyzeWorker`: per-file analysis (parser, TI, stylometrics)
+  - `Lang.Workers.RunFinalizeWorker`: aggregate stats, complete run, reschedule until done
+  - `Lang.Workers.SemanticAnalysisWorker`: advanced semantic analysis
+  - `Lang.Workers.SecurityScanWorker`: security scanning
+  - `Lang.Workers.DependencyAnalysisWorker`: dependency analysis
+
+- Queue `:lsp`: environment workers for LSP integrations
+- Queue `:metrics`: performance/telemetry jobs
+- Queue `:cleanup`: cleanup/maintenance
+- Queue `:billing`: billing/usage reporting
 
 ## 📖 Usage Examples
 

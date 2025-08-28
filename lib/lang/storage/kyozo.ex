@@ -58,7 +58,8 @@ defmodule Lang.Storage.Kyozo do
 
   # Internal HTTP helpers
   defp base_url do
-    Application.get_env(:lang, :kyozo_base_url) || System.get_env("KYOZO_URL") || "http://localhost:4100"
+    Application.get_env(:lang, :kyozo_base_url) || System.get_env("KYOZO_URL") ||
+      "http://localhost:4100"
   end
 
   defp get(path) do
@@ -100,4 +101,3 @@ defmodule Lang.Storage.Kyozo do
     if token, do: headers ++ [{"authorization", "Bearer #{token}"}], else: headers
   end
 end
-

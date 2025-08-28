@@ -86,6 +86,7 @@ defmodule LangWeb.Router do
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
       live "/billing", BillingLive, :index
+      live "/billing/usage", BillingUsageLive, :index
     end
   end
 
@@ -146,12 +147,18 @@ defmodule LangWeb.Router do
     get "/mcp/connections", McpController, :list_active
     # Billing usage for MCP
     get "/mcp/billing/usage", MCPBillingController, :usage
+    # Billing usage endpoints
+    get "/billing/aggregates", BillingUsageController, :aggregates
+    get "/billing/summary", BillingUsageController, :summary
+
+    # Spatial Map
+    get "/spatial/map/:project_id", SpatialController, :map_summary
   end
 
   # MCP JSON:API (AshJsonApi) - mounting Domain resources
   scope "/api/v2" do
     pipe_through [:api, :require_authenticated_api]
-    forward "/mcp", AshJsonApi.Router, domains: [Lang.MCP.Domain]
+    forward "/mcp", AshJsonApi.Router, domains: [Lang.MCP]
   end
 
   # Webhook routes
@@ -175,6 +182,14 @@ defmodule LangWeb.Router do
 
       live_dashboard "/dashboard", metrics: LangWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+
+    # Mount Oban Web UI only when available (dev only)
+    if Code.ensure_loaded?(Oban.Web) do
+      scope "/" do
+        pipe_through :browser
+        forward "/oban", Oban.Web, oban: Oban
+      end
     end
   end
 

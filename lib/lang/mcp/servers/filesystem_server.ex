@@ -76,7 +76,11 @@ defmodule Lang.MCP.Servers.FilesystemServer do
         {:ok, state}
 
       {:error, reason} ->
-        Logger.error("Failed to initialize filesystem server", reason: reason, root_path: root_path)
+        Logger.error("Failed to initialize filesystem server",
+          reason: reason,
+          root_path: root_path
+        )
+
         {:stop, {:invalid_root_path, reason}}
     end
   end
@@ -240,17 +244,18 @@ defmodule Lang.MCP.Servers.FilesystemServer do
 
     case File.ls(full_path) do
       {:ok, entries} ->
-        files = Enum.map(entries, fn entry ->
-          entry_path = Path.join(full_path, entry)
-          stat = File.stat!(entry_path)
+        files =
+          Enum.map(entries, fn entry ->
+            entry_path = Path.join(full_path, entry)
+            stat = File.stat!(entry_path)
 
-          %{
-            "name" => entry,
-            "type" => if(stat.type == :directory, do: "directory", else: "file"),
-            "size" => stat.size,
-            "modified" => DateTime.from_unix!(stat.mtime, :second) |> DateTime.to_iso8601()
-          }
-        end)
+            %{
+              "name" => entry,
+              "type" => if(stat.type == :directory, do: "directory", else: "file"),
+              "size" => stat.size,
+              "modified" => DateTime.from_unix!(stat.mtime, :second) |> DateTime.to_iso8601()
+            }
+          end)
 
         {:ok, files}
 
@@ -279,6 +284,7 @@ defmodule Lang.MCP.Servers.FilesystemServer do
             case String.valid?(content) do
               true ->
                 {:ok, content}
+
               false ->
                 # Return base64 for binary files
                 {:ok, Base.encode64(content)}
@@ -329,9 +335,12 @@ defmodule Lang.MCP.Servers.FilesystemServer do
     # Remove any path traversal attempts (already done by security layer, but double-check)
     clean_path =
       relative_path
-      |> String.replace(~r/\.\.+/, "")  # Remove .. sequences
-      |> String.replace(~r/\/+/, "/")   # Normalize slashes
-      |> String.trim("/")               # Remove leading/trailing slashes
+      # Remove .. sequences
+      |> String.replace(~r/\.\.+/, "")
+      # Normalize slashes
+      |> String.replace(~r/\/+/, "/")
+      # Remove leading/trailing slashes
+      |> String.trim("/")
 
     # Build full path within root directory
     Path.join(state.root_path, clean_path)
@@ -353,6 +362,7 @@ defmodule Lang.MCP.Servers.FilesystemServer do
         expanded_path: expanded_path,
         expanded_root: expanded_root
       )
+
       expanded_root
     end
   end
