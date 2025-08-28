@@ -30,10 +30,10 @@ defmodule Lang.Spatial.Path do
 
   attributes do
     uuid_primary_key(:id)
-    attribute :from_ref, :string
-    attribute :to_ref, :string
-    attribute :hops, {:array, :map}, default: []
-    attribute :rationale, :map, default: %{}
+    attribute(:project_id, :string, allow_nil?: false)
+    attribute(:from_label, :string)
+    attribute(:to_label, :string)
+    attribute(:metadata, :map, default: %{})
     create_timestamp(:inserted_at)
     update_timestamp(:updated_at)
   end
@@ -46,6 +46,7 @@ defmodule Lang.Spatial.Path do
 
   actions do
     defaults([:read, :destroy])
+
     create :create do
       accept([:project_id, :from_ref, :to_ref, :hops, :rationale])
     end

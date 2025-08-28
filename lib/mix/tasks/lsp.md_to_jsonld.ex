@@ -16,8 +16,8 @@ defmodule Mix.Tasks.Lsp.MdToJsonld do
 
   @impl true
   def run(args) do
-    # Compile the project without starting the application
-    Mix.Task.run("compile")
+    # Load paths without compiling the whole app
+    Mix.Task.run("loadpaths")
     out_dir = case args do
       [dir] -> dir
       _ -> @default_out

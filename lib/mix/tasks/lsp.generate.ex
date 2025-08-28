@@ -8,8 +8,8 @@ defmodule Mix.Tasks.Lsp.Generate do
 
   @impl true
   def run(args) do
-    # Compile without starting the full application
-    Mix.Task.run("compile")
+    # Load paths without compiling the whole app
+    Mix.Task.run("loadpaths")
     {opts, _rest, _} = OptionParser.parse(args, switches: [dry_run: :boolean])
 
     with {:ok, methods} <- Ash.read_all_methods(),

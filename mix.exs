@@ -192,7 +192,21 @@ defmodule Lang.MixProject do
       # Native compilation
       "compile.native": ["rustler.compile"],
       "clean.native": ["rustler.clean"],
-      "bench.native": ["compile.native", "run -e 'Lang.Native.Benchmarks.run_all()'"]
+      "bench.native": ["compile.native", "run -e 'Lang.Native.Benchmarks.run_all()'"],
+
+      # LSP pipeline helpers
+      "lsp.pipeline": [
+        "lsp.md_to_jsonld",
+        "lsp.validate",
+        "lsp.ingest_dir priv/lsp/specs",
+        "lsp.generate",
+        "lsp.sync"
+      ],
+      "lsp.db_pipeline": [
+        "ecto.create",
+        "ecto.migrate",
+        "lsp.pipeline"
+      ]
     ]
   end
 end

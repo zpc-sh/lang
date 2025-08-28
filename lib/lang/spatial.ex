@@ -6,22 +6,10 @@ defmodule Lang.Spatial do
   use Ash.Domain
   require Ash.Query
 
-  if Code.ensure_loaded?(Lang.Spatial.Map) do
-    resources do
-      resource(Lang.Spatial.Map)
-    end
-  end
-
-  if Code.ensure_loaded?(Lang.Spatial.Waypoint) do
-    resources do
-      resource(Lang.Spatial.Waypoint)
-    end
-  end
-
-  if Code.ensure_loaded?(Lang.Spatial.Path) do
-    resources do
-      resource(Lang.Spatial.Path)
-    end
+  resources do
+    resource(Lang.Spatial.Map)
+    resource(Lang.Spatial.Waypoint)
+    resource(Lang.Spatial.Path)
   end
 
   @doc """

@@ -6,6 +6,8 @@ defmodule Lang.LSP.LspMethod do
     domain: nil,
     data_layer: AshPostgres.DataLayer
 
+  require Ash.Query
+
   postgres do
     table "lsp_methods"
     repo Lang.Repo
@@ -64,9 +66,29 @@ defmodule Lang.LSP.LspMethod do
     end
   end
 
-  code_interface do
-    define :read_all, action: :read
-    define :upsert, action: :upsert
-    define :set_derived_status, args: [:derived_status]
+  # Ash v3 wrapper shims (no code_interface)
+  def read_all do
+    __MODULE__
+    |> Ash.read()
+  end
+
+  def upsert(attrs) when is_map(attrs) do
+    __MODULE__
+    |> Ash.Changeset.for_create(:upsert, attrs)
+    |> Ash.create()
+  end
+
+  def set_derived_status(name, status) when is_binary(name) do
+    case __MODULE__ |> Ash.Query.filter(name == ^name) |> Ash.read_one() do
+      {:ok, nil} -> {:error, :not_found}
+      {:ok, rec} -> set_derived_status(rec, status)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  def set_derived_status(rec, status) do
+    rec
+    |> Ash.Changeset.for_update(:set_derived_status, %{derived_status: status})
+    |> Ash.update()
   end
 end

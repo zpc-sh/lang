@@ -24,7 +24,7 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
       metadata: method_map[:metadata] || method_map["metadata"] || %{}
     }
     cond do
-      function_exported?(LspMethod, :upsert, 1) and Code.ensure_loaded?(Lang.Repo) ->
+      ensure_repo_started() and function_exported?(LspMethod, :upsert, 1) ->
         case LspMethod.upsert(attrs) do
           {:ok, rec} -> {:ok, rec}
           {:error, reason} -> {:error, reason}
@@ -38,7 +38,7 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
   @impl true
   def read_all_methods do
     cond do
-      function_exported?(LspMethod, :read_all, 0) and Code.ensure_loaded?(Lang.Repo) ->
+      ensure_repo_started() and function_exported?(LspMethod, :read_all, 0) ->
         case LspMethod.read_all() do
           {:ok, list} ->
             {:ok,
@@ -65,6 +65,26 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
 
       true ->
         read_all_from_specs_dir()
+    end
+  end
+
+  defp ensure_repo_started do
+    try do
+      case Process.whereis(Lang.Repo) do
+        pid when is_pid(pid) -> true
+        _ ->
+          # Start minimal dependencies needed for Repo
+          _ = Application.ensure_all_started(:logger)
+          _ = Application.ensure_all_started(:ssl)
+          _ = Application.ensure_all_started(:postgrex)
+          case Lang.Repo.start_link() do
+            {:ok, _} -> true
+            {:error, {:already_started, _}} -> true
+            _ -> false
+          end
+      end
+    rescue
+      _ -> false
     end
   end
 

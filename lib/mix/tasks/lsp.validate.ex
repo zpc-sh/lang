@@ -8,8 +8,8 @@ defmodule Mix.Tasks.Lsp.Validate do
 
   @impl true
   def run(args) do
-    # Compile the project without starting the application
-    Mix.Task.run("compile")
+    # Load paths without compiling the whole app
+    Mix.Task.run("loadpaths")
 
     out = Keyword.get(parse_args(args), :out, "priv/lsp/specs")
     errors = []
