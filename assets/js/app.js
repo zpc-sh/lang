@@ -25,6 +25,9 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/lang"
 import topbar from "../vendor/topbar"
 
+// RecurseEditor integration is optional and loaded externally when available.
+// Do not import here to avoid bundling issues; hooks will check window.RecurseEditor.
+
 
 // Import Stripe integration
 import "./stripe"

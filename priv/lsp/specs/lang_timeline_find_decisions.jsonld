@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.timeline.find_decisions",
+  "@type": "lang:Function",
+  "category": "timeline",
+  "description": "Key architectural decision points",
+  "implementation": {
+    "file": "lib/lang/timeline/decisions.ex",
+    "priority": "Medium",
+    "status": "not_implemented"
+  },
+  "name": "lang.timeline.find_decisions"
+}

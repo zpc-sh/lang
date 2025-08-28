@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.spawn",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Create agent with specific capabilities",
+  "implementation": {
+    "file": "lib/lang/agent/lifecycle.ex",
+    "priority": "Critical",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.spawn"
+}

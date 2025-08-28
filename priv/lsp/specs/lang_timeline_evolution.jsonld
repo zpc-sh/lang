@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.timeline.evolution",
+  "@type": "lang:Function",
+  "category": "timeline",
+  "description": "How code evolved over time",
+  "implementation": {
+    "file": "lib/lang/timeline/evolution.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.timeline.evolution"
+}

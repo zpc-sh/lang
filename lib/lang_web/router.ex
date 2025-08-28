@@ -91,19 +91,19 @@ defmodule LangWeb.Router do
   end
 
   # Admin routes (restricted access)
-  live_session :admin,
-    on_mount: [
-      {LangWeb.AuthOnMount, :mount_current_user},
-      {LangWeb.AuthOnMount, :require_authenticated},
-      {LangWeb.AuthOnMount, :mount_current_org},
-      {LangWeb.AuthOnMount, :require_admin}
-    ] do
-    scope "/admin", LangWeb.Admin do
-      pipe_through [:browser, :require_authenticated_user]
+  # live_session :admin,
+  #   on_mount: [
+  #     {LangWeb.AuthOnMount, :mount_current_user},
+  #     {LangWeb.AuthOnMount, :require_authenticated},
+  #     {LangWeb.AuthOnMount, :mount_current_org},
+  #     {LangWeb.AuthOnMount, :require_admin}
+  #   ] do
+  #   scope "/admin", LangWeb.Admin do
+  #     pipe_through [:browser, :require_authenticated_user]
 
-      live "/lsp-editor", LspEditor.LspEditorLive, :index
-    end
-  end
+  #     live "/lsp-editor", LspEditor.LspEditorLive, :index
+  #   end
+  # end
 
   # API routes
   scope "/api/v1", LangWeb.Api do
@@ -203,6 +203,8 @@ defmodule LangWeb.Router do
 
     scope "/dev" do
       pipe_through :browser
+
+      live "/lsp", LangWeb.LspEditor.LspEditorLive, :index
 
       live_dashboard "/dashboard", metrics: LangWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.workspace.save",
+  "@type": "lang:Function",
+  "category": "workspace",
+  "description": "Save workspace state",
+  "implementation": {
+    "file": "lib/lang/workspace/store.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.workspace.save"
+}

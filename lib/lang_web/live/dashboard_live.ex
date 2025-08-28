@@ -100,7 +100,7 @@ defmodule LangWeb.DashboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]}>
       <div class="min-h-screen bg-base-100">
         <!-- Header -->
         <div class="bg-white shadow">

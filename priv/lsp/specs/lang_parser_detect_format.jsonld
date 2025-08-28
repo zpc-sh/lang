@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.parser.detect_format",
+  "@type": "lang:Function",
+  "category": "parser",
+  "description": "Auto-detect text format",
+  "implementation": {
+    "file": "lib/kyozo/lang/universal_parser.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.parser.detect_format"
+}

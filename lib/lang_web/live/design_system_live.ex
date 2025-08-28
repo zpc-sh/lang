@@ -10,10 +10,8 @@ defmodule LangWeb.DesignSystemLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-950 text-gray-100">
-      <.navbar current_user={assigns[:current_user]} current_page={:design_system} />
-
-      <div class="design-system pt-16">
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
+      <div class="design-system pt-0">
         
     <!-- Hero Section -->
         <section class="hero">
@@ -324,7 +322,7 @@ defmodule LangWeb.DesignSystemLive do
           </div>
         </footer>
       </div>
-    </div>
+    </Layouts.app>
     """
   end
 

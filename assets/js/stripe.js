@@ -5,8 +5,17 @@
  * using Stripe Elements for secure payment collection.
  */
 
-// Initialize Stripe with publishable key from environment
-const stripe = Stripe(window.stripePublishableKey);
+// Initialize Stripe with publishable key from environment (guard if Stripe.js not loaded)
+let stripe = null;
+try {
+  if (window.Stripe && window.stripePublishableKey) {
+    stripe = window.Stripe(window.stripePublishableKey);
+  } else {
+    console.warn('[Stripe] Global Stripe.js not found or publishable key missing; payments disabled on this page');
+  }
+} catch (e) {
+  console.warn('[Stripe] initialization failed; payments disabled:', e);
+}
 
 // Stripe Elements configuration
 const stripeElementsConfig = {
@@ -51,6 +60,10 @@ class PaymentFormHandler {
    */
   async initializePaymentForm(planType, clientSecret) {
     try {
+      if (!stripe) {
+        this.displayError('Payment system unavailable. Please refresh or try again later.');
+        return;
+      }
       this.selectedPlan = planType;
 
       // Create Elements instance
@@ -82,6 +95,11 @@ class PaymentFormHandler {
     event.preventDefault();
 
     if (this.isProcessing) {
+      return;
+    }
+
+    if (!stripe) {
+      this.displayError('Payment system unavailable. Please refresh or try again later.');
       return;
     }
 

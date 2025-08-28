@@ -6,10 +6,22 @@ defmodule Lang.Spatial do
   use Ash.Domain
   require Ash.Query
 
-  resources do
-    resource(Lang.Spatial.Map)
-    resource(Lang.Spatial.Waypoint)
-    resource(Lang.Spatial.Path)
+  if Code.ensure_loaded?(Lang.Spatial.Map) do
+    resources do
+      resource(Lang.Spatial.Map)
+    end
+  end
+
+  if Code.ensure_loaded?(Lang.Spatial.Waypoint) do
+    resources do
+      resource(Lang.Spatial.Waypoint)
+    end
+  end
+
+  if Code.ensure_loaded?(Lang.Spatial.Path) do
+    resources do
+      resource(Lang.Spatial.Path)
+    end
   end
 
   @doc """
@@ -28,12 +40,16 @@ defmodule Lang.Spatial do
   @doc """
   Read latest spatial map for a project.
   """
-  @spec latest_map(String.t()) :: {:ok, Lang.Spatial.Map.t() | nil} | {:error, term()}
+  @spec latest_map(String.t()) :: {:ok, map() | struct() | nil} | {:error, term()}
   def latest_map(project_id) when is_binary(project_id) do
-    Lang.Spatial.Map
-    |> Ash.Query.filter(project_id == ^project_id)
-    |> Ash.Query.sort(inserted_at: :desc)
-    |> Ash.read_one()
+    if Code.ensure_loaded?(Lang.Spatial.Map) do
+      Lang.Spatial.Map
+      |> Ash.Query.filter(project_id == ^project_id)
+      |> Ash.Query.sort(inserted_at: :desc)
+      |> Ash.read_one()
+    else
+      {:ok, nil}
+    end
   end
 
   @doc """
@@ -41,17 +57,21 @@ defmodule Lang.Spatial do
   """
   @spec latest_map_summary(String.t()) :: {:ok, map() | nil} | {:error, term()}
   def latest_map_summary(project_id) do
-    with {:ok, %Lang.Spatial.Map{} = map} <- latest_map(project_id) do
-      gs = map.graph_summary || %{}
-      {:ok,
-       %{
-         map_id: map.id,
-         project_id: map.project_id,
-         generated_at: fetch_in(map.stats || %{}, ["generated_at", :generated_at]),
-         stats: map.stats || %{},
-         symbols: normalize_symbols(gs),
-         relations: normalize_relations(gs)
-       }}
+    case latest_map(project_id) do
+      {:ok, nil} -> {:ok, nil}
+      {:ok, map} when is_map(map) or is_struct(map) ->
+        gs = Map.get(map, :graph_summary) || %{}
+        {:ok,
+         %{
+           map_id: Map.get(map, :id),
+           project_id: Map.get(map, :project_id),
+           generated_at: fetch_in(Map.get(map, :stats) || %{}, ["generated_at", :generated_at]),
+           stats: Map.get(map, :stats) || %{},
+           symbols: normalize_symbols(gs),
+           relations: normalize_relations(gs)
+         }}
+
+      other -> other
     end
   end
 

@@ -19,7 +19,7 @@ defmodule LangWeb.FontShowcaseLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-950 text-gray-100">
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
       <!-- Hero Section -->
       <section class="relative overflow-hidden">
         <div class="absolute inset-0">
@@ -287,7 +287,7 @@ defmodule LangWeb.FontShowcaseLive do
           </div>
         </div>
       <% end %>
-    </div>
+    </Layouts.app>
 
     <style>
       @keyframes gradient {

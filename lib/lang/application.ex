@@ -16,40 +16,46 @@ defmodule Lang.Application do
         IO.puts("Fix configuration in config/billing.exs before starting")
     end
 
-    children = [
-      LangWeb.Telemetry,
-      Lang.Repo,
-      {DNSCluster, query: Application.get_env(:lang, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Lang.PubSub},
-      {Finch, name: Lang.Finch},
+    children =
+      [
+        optional_child(LangWeb.Telemetry),
+        optional_child(Lang.Repo),
+        optional_child(
+          {DNSCluster, query: Application.get_env(:lang, :dns_cluster_query) || :ignore}
+        ),
+        optional_child({Phoenix.PubSub, name: Lang.PubSub}),
+        optional_child({Finch, name: Lang.Finch}),
 
-      # Redis for caching and lightweight storage
-      {Redix, redis_config()},
+        # Redis for caching and lightweight storage
+        optional_child({Redix, redis_config()}),
 
-      # Core LANG services
-      {Lang.TextIntelligence.ParserRegistry, []},
-      {Lang.Conversation.RehearsalEngine, []},
-      {Lang.TimeMachine.StateManager, []},
-      {Lang.Security.RateLimiter, []},
+        # Core LANG services
+        optional_child({Lang.TextIntelligence.ParserRegistry, []}),
+        optional_child({Lang.Conversation.RehearsalEngine, []}),
+        optional_child({Lang.Timeline.StateManager, []}),
+        optional_child({Lang.Security.RateLimiter, []}),
 
-      # Background processing
-      {Oban, Application.fetch_env!(:lang, Oban)},
+        # Background processing
+        optional_child({Oban, Application.fetch_env!(:lang, Oban)}),
 
-      # Orchestration system
-      {Lang.Orchestration.Master, []},
+        # Orchestration system
+        optional_child({Lang.Orchestration.Master, []}),
 
-      # LSP Server Supervisor
-      {Lang.LSP.Supervisor, []},
+        # LSP Server Supervisor
+        optional_child({Lang.LSP.Supervisor, []}),
 
-      # MCP Broker Security Layer
-      {DynamicSupervisor, strategy: :one_for_one, name: Lang.MCP.ServerSupervisor},
-      Lang.MCP.Broker,
-      Lang.MCP.Pool,
-      Lang.MCP.StreamBridge,
+        # MCP Broker Security Layer
+        optional_child(
+          {DynamicSupervisor, strategy: :one_for_one, name: Lang.MCP.ServerSupervisor}
+        ),
+        optional_child(Lang.MCP.Broker),
+        optional_child(Lang.MCP.Pool),
+        optional_child(Lang.MCP.StreamBridge),
 
-      # Web endpoint
-      LangWeb.Endpoint
-    ]
+        # Web endpoint
+        optional_child(LangWeb.Endpoint)
+      ]
+      |> Enum.reject(&is_nil/1)
 
     opts = [strategy: :one_for_one, name: Lang.Supervisor]
     Supervisor.start_link(children, opts)
@@ -90,4 +96,14 @@ defmodule Lang.Application do
         ]
     end
   end
+
+  defp optional_child({mod, _opts} = child) when is_atom(mod) do
+    if Code.ensure_loaded?(mod), do: child, else: nil
+  end
+
+  defp optional_child(mod) when is_atom(mod) do
+    if Code.ensure_loaded?(mod), do: mod, else: nil
+  end
+
+  defp optional_child(other), do: other
 end

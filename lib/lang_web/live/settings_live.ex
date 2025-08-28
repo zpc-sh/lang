@@ -76,7 +76,7 @@ defmodule LangWeb.SettingsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
       <div class="max-w-6xl mx-auto px-6 py-8" id="settings-container" phx-hook="ClipboardHook">
         <!-- Header -->
         <div class="mb-8">

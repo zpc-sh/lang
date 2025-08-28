@@ -1,0 +1,12 @@
+<div class="min-h-screen bg-gray-950 text-gray-100">
+  <.navbar current_user={assigns[:current_user]} current_page={:home} />
+
+  <!-- Main Content -->
+  <div class="pt-16">
+    <.flash_group flash={@flash} />
+    {render_slot(@inner_block)}
+  </div>
+
+  <!-- Footer -->
+  <.footer />
+</div>

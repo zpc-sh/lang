@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.track_usage",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Track token/resource usage per agent",
+  "implementation": {
+    "file": "lib/lang/agent/resources.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.track_usage"
+}

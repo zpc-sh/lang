@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.analyze.document",
+  "@type": "lang:Function",
+  "category": "analyze",
+  "description": "Analyze single document",
+  "implementation": {
+    "file": "lib/lang/text_intelligence/analysis_engine.ex",
+    "priority": "Critical",
+    "status": "in_progress"
+  },
+  "name": "lang.analyze.document"
+}

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.query.dependency",
+  "@type": "lang:Function",
+  "category": "query",
+  "description": "\"What depends on this?\"",
+  "implementation": {
+    "file": "lib/lang/query/dependency.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.query.dependency"
+}

@@ -222,6 +222,7 @@ defmodule LangWeb.DemoLive do
   @impl true
   def render(assigns) do
     ~H"""
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
     <!-- Progress Bar -->
     <div class="fixed top-0 left-0 w-full z-50 bg-base-300 h-1">
       <div
@@ -510,6 +511,7 @@ defmodule LangWeb.DemoLive do
         animation: fade-in 0.5s ease-out forwards;
       }
     </style>
+    </Layouts.app>
     """
   end
 

@@ -13,45 +13,8 @@ defmodule LangWeb.Layouts do
   # and other static content.
   embed_templates "layouts/*"
 
-  @doc """
-  Renders your app layout.
-
-  This function is typically invoked from every template,
-  and it often contains your application menu, sidebar,
-  or similar.
-
-  ## Examples
-
-      <Layouts.app flash={@flash}>
-        <h1>Content</h1>
-      </Layouts.app>
-
-  """
-  attr :flash, :map, required: true, doc: "the map of flash messages"
-  attr :current_user, :map, default: nil, doc: "the current authenticated user"
-
-  attr :current_scope, :map,
-    default: nil,
-    doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
-
-  slot :inner_block, required: true
-
-  def app(assigns) do
-    ~H"""
-    <div class="min-h-screen bg-gray-950 text-gray-100">
-      <.navbar current_user={@current_user} current_page={:home} />
-      
-    <!-- Main Content -->
-      <div class="pt-16">
-        <.flash_group flash={@flash} />
-        {render_slot(@inner_block)}
-      </div>
-      
-    <!-- Footer -->
-      <.footer />
-    </div>
-    """
-  end
+  # The <Layouts.app> function component is generated from
+  # lib/lang_web/components/layouts/app.html.heex via embed_templates/1
 
   @doc """
   Shows the flash group with standard titles and content.

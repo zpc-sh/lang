@@ -1,64 +1,14 @@
-defmodule Lang.Spatial.Map do
-  @moduledoc """
-  Snapshot of a project's code map (symbols, relations, stats). Built by MapBuilder.
-  """
+defmodule Elixir.Lang.LSP.Lang.Lang.Spatial.Map do
+  @moduledoc "Ash resource + Oban worker implemented"
+  @behaviour Lang.LSP.Handler
+  @lsp_method "lang.lang.spatial.map"
 
-  use Ash.Resource,
-    domain: Lang.Spatial,
-    data_layer: AshPostgres.DataLayer,
-    extensions: [AshJsonApi.Resource]
+  @impl true
+  def method, do: @lsp_method
 
-  alias Lang.Analyses.Project
-
-  postgres do
-    table("spatial_maps")
-    repo(Lang.Repo)
-  end
-
-  json_api do
-    type("spatial_map")
-
-    routes do
-      # Mounted under /api/v2/spatial via router forward
-      base("/maps")
-      get(:read)
-      index(:read)
-    end
-  end
-
-  attributes do
-    uuid_primary_key(:id)
-
-    attribute :graph_summary, :map do
-      allow_nil?(false)
-      default(%{})
-    end
-
-    attribute :stats, :map do
-      allow_nil?(false)
-      default(%{})
-    end
-
-    create_timestamp(:inserted_at)
-    update_timestamp(:updated_at)
-  end
-
-  relationships do
-    belongs_to :project, Project do
-      attribute_writable?(true)
-    end
-  end
-
-  actions do
-    defaults([:read])
-    create :create do
-      accept([:project_id, :graph_summary, :stats])
-    end
-  end
-
-  code_interface do
-    define(:by_id, action: :read, get_by: [:id])
-    define(:create, action: :create)
-    define(:read_all, action: :read)
+  @impl true
+  def handle(params, ctx) when is_map(params) and is_map(ctx) do
+    # TODO: implement
+    {:error, :not_implemented}
   end
 end

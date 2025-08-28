@@ -1,9 +1,10 @@
-defmodule LangWeb.Admin.LspEditor.LspEditorLive do
+defmodule LangWeb.LspEditor.LspEditorLive do
   use LangWeb, :live_view
 
   alias Lang.Native.FSScanner
   alias Lang.TextIntelligence.MarkdownLDParser
   alias Lang.Analysis.AnalyzedFile
+  alias Kyozo.Lang.UniversalParser.LinkedDataExtractor
 
   @lsp_doc_path "docs/lsp.md"
 
@@ -33,29 +34,56 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
       |> assign(:stats, %{total: 0, implemented: 0, in_progress: 0, not_started: 0})
       |> assign(:last_saved, nil)
       |> assign(:unsaved_changes, false)
+      |> assign(:sticky_editor_open, false)
+      |> assign(:editor_hosts_status, %{})
 
     {:ok, load_lsp_data(socket), temporary_assigns: [lsp_methods: []]}
   end
 
+  @impl true
+  def handle_event("editor_status", %{"engine" => engine} = params, socket) do
+    host = Map.get(params, "host") || "unknown"
+    statuses = Map.put(socket.assigns.editor_hosts_status || %{}, host, engine)
+    {:noreply, assign(socket, :editor_hosts_status, statuses)}
+  end
+
   def handle_params(params, _url, socket) do
+    mode =
+      case params["mode"] do
+        "raw" -> :raw
+        "tiptap" -> :tiptap
+        "table" -> :table
+        _ -> :view
+      end
+
     socket =
       socket
       |> assign(:selected_category, params["category"] || "all")
       |> assign(:selected_priority, params["priority"] || "all")
       |> assign(:search_query, params["search"] || "")
-      |> assign(:edit_mode, String.to_atom(params["mode"] || "view"))
+      |> assign(:edit_mode, mode)
       |> apply_filters()
 
     {:noreply, socket}
   end
 
   def handle_event("toggle_edit_mode", %{"mode" => mode}, socket) do
-    new_mode = String.to_atom(mode)
+    mode_atom = String.to_atom(mode)
 
     socket =
       socket
-      |> assign(:edit_mode, new_mode)
-      |> push_patch(to: build_path(socket, %{"mode" => mode}))
+      |> assign(:edit_mode, mode_atom)
+      |> push_patch(to: build_path(socket, %{mode: mode}))
+
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_sticky_editor", _params, socket) do
+    current_state = Map.get(socket.assigns, :sticky_editor_open, false)
+
+    socket =
+      socket
+      |> assign(:sticky_editor_open, !current_state)
 
     {:noreply, socket}
   end
@@ -164,9 +192,10 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
       {:ok, content} ->
         socket =
           socket
-          |> assign(:editor_open, true)
+          |> assign(:editor_open, false)
           |> assign(:editing_file, file_path)
           |> assign(:file_content, content)
+          |> assign(:sticky_editor_open, true)
 
         {:noreply, socket}
 
@@ -176,9 +205,10 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
           {:ok, content} ->
             socket =
               socket
-              |> assign(:editor_open, true)
+              |> assign(:editor_open, false)
               |> assign(:editing_file, file_path)
               |> assign(:file_content, content)
+              |> assign(:sticky_editor_open, true)
               |> put_flash(:info, "Created stub file: #{file_path}")
 
             {:noreply, socket}
@@ -217,6 +247,40 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
     end
   end
 
+  def handle_event("open_file_modal", %{"file_path" => file_path}, socket) do
+    case read_implementation_file(file_path) do
+      {:ok, content} ->
+        socket =
+          socket
+          |> assign(:editor_open, true)
+          |> assign(:sticky_editor_open, false)
+          |> assign(:editing_file, file_path)
+          |> assign(:file_content, content)
+
+        {:noreply, socket}
+
+      {:error, :file_not_found} ->
+        case create_stub_file(file_path) do
+          {:ok, content} ->
+            socket =
+              socket
+              |> assign(:editor_open, true)
+              |> assign(:sticky_editor_open, false)
+              |> assign(:editing_file, file_path)
+              |> assign(:file_content, content)
+              |> put_flash(:info, "Created stub file: #{file_path}")
+
+            {:noreply, socket}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to create file: #{inspect(reason)}")}
+        end
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to open file: #{inspect(reason)}")}
+    end
+  end
+
   def handle_event("close_editor", _params, socket) do
     socket =
       socket
@@ -237,7 +301,9 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
   end
 
   def handle_event("save_all_changes", _params, socket) do
-    case save_markdown_changes(socket.assigns.raw_markdown) do
+    content = socket.assigns.raw_markdown
+
+    case save_markdown_changes(content) do
       :ok ->
         socket =
           socket
@@ -245,12 +311,12 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
           |> assign(:last_saved, DateTime.utc_now())
           |> put_flash(:info, "All changes saved successfully")
           |> load_lsp_data()
+          |> apply_filters()
 
         {:noreply, socket}
 
       {:error, reason} ->
-        socket = put_flash(socket, :error, "Failed to save changes: #{inspect(reason)}")
-        {:noreply, socket}
+        {:noreply, put_flash(socket, :error, "Failed to save changes: #{reason}")}
     end
   end
 
@@ -314,6 +380,57 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
     end
   end
 
+  def handle_event("update_file_content", %{"content" => content}, socket) do
+    socket = assign(socket, :file_content, content)
+    {:noreply, socket}
+  end
+
+  def handle_event("format_file", %{"content" => content}, socket) do
+    # For now, just return the content as-is
+    # In a full implementation, this would call `mix format` on the content
+    socket =
+      socket
+      |> assign(:file_content, content)
+      |> put_flash(:info, "File formatted (placeholder)")
+
+    {:noreply, socket}
+  end
+
+  def handle_event("update_raw_markdown", %{"content" => content}, socket) do
+    socket =
+      socket
+      |> assign(:raw_markdown, content)
+      |> assign(:unsaved_changes, true)
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "update_semantic_data",
+        %{"entities" => entities, "entity_count" => count},
+        socket
+      ) do
+    socket =
+      socket
+      |> assign(:semantic_entities, entities)
+      |> assign(:semantic_entity_count, count)
+      |> put_flash(:info, "Found #{count} semantic entities")
+
+    {:noreply, socket}
+  end
+
+  def handle_event("show_semantic_summary", summary, socket) do
+    socket =
+      socket
+      |> assign(:semantic_summary, summary)
+      |> put_flash(
+        :info,
+        "Semantic Summary: #{summary["total_entities"]} entities, #{summary["lsp_methods"]} methods"
+      )
+
+    {:noreply, socket}
+  end
+
   def handle_info({:method_updated, method_name, new_status}, socket) do
     socket =
       socket
@@ -336,30 +453,39 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
 
   defp load_lsp_data(socket) do
     case parse_lsp_markdown() do
-      {:ok, {methods, categories, raw_content}} ->
+      {:ok, {methods, raw_content}} ->
+        categories = extract_categories(methods)
         stats = calculate_stats(methods)
 
+        # Extract markdown_ld data if available
+        markdown_ld_data = extract_markdown_ld(raw_content)
+
         socket
-        |> assign(:loading, false)
         |> assign(:lsp_methods, methods)
         |> assign(:categories, categories)
         |> assign(:raw_markdown, raw_content)
+        |> assign(:markdown_ld_data, markdown_ld_data)
         |> assign(:stats, stats)
-        |> apply_filters()
+        |> assign(:loading, false)
 
       {:error, reason} ->
         socket
         |> assign(:loading, false)
-        |> put_flash(:error, "Failed to load LSP data: #{inspect(reason)}")
+        |> put_flash(:error, "Failed to load LSP data: #{reason}")
     end
   end
 
   defp parse_lsp_markdown do
-    case FSScanner.preview(@lsp_doc_path, max_lines: 10000) do
-      {:ok, content} ->
+    # Use native FSScanner for reading the markdown file
+    case FSScanner.preview(@lsp_doc_path, max_lines: 20_000) do
+      {:ok, lines} when is_list(lines) ->
+        content = Enum.join(lines, "\n")
         methods = extract_methods_from_markdown(content)
-        categories = extract_categories(methods)
-        {:ok, {methods, categories, content}}
+        {:ok, {methods, content}}
+
+      {:ok, content} when is_binary(content) ->
+        methods = extract_methods_from_markdown(content)
+        {:ok, {methods, content}}
 
       {:error, reason} ->
         {:error, reason}
@@ -369,63 +495,194 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
   defp extract_methods_from_markdown(content) do
     content
     |> String.split("\n")
-    |> Enum.with_index()
-    |> Enum.reduce([], &parse_markdown_line/2)
-    |> Enum.reverse()
+    |> Enum.with_index(1)
+    |> Enum.reduce(%{methods: [], current_category: nil}, &parse_markdown_line/2)
+    |> Map.get(:methods)
   end
 
   defp parse_markdown_line({line, index}, acc) do
-    # Enhanced parsing for table rows that contain LSP methods
-    case Regex.run(
-           ~r/^\|\s*`([^`]+)`\s*\|\s*([❌✅🔄])\s*\|\s*(\w+)\s*\|\s*([^|]+)\s*\|\s*`([^`]+)`\s*\|/,
-           line
-         ) do
-      [_, method, status, priority, description, file_path] ->
-        method_data = %{
-          id: "method-#{index}",
-          method: String.trim(method),
-          status: parse_status(String.trim(status)),
-          priority: String.trim(priority),
-          description: String.trim(description),
-          file_path: String.trim(file_path),
-          line_number: index + 1,
-          category: extract_category_from_method(method),
-          implementation_exists: file_exists?(String.trim(file_path)),
-          last_modified: get_file_last_modified(String.trim(file_path))
-        }
+    cond do
+      # Category headers (## or ###)
+      String.match?(line, ~r/^##+ /) ->
+        category =
+          line
+          |> String.replace(~r/^##+ /, "")
+          |> String.trim()
+          |> String.downcase()
 
-        [method_data | acc]
+        %{acc | current_category: category}
 
-      _ ->
-        # Try alternative parsing for methods without backticks around file path
-        case Regex.run(
-               ~r/^\|\s*`([^`]+)`\s*\|\s*([❌✅🔄])\s*\|\s*(\w+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/,
-               line
-             ) do
-          [_, method, status, priority, description, file_path] ->
-            method_data = %{
-              id: "method-#{index}",
-              method: String.trim(method),
-              status: parse_status(String.trim(status)),
-              priority: String.trim(priority),
-              description: String.trim(description),
-              file_path: String.trim(file_path),
-              line_number: index + 1,
-              category: extract_category_from_method(method),
-              implementation_exists: file_exists?(String.trim(file_path)),
-              last_modified: get_file_last_modified(String.trim(file_path))
-            }
-
-            [method_data | acc]
-
-          _ ->
-            acc
+      # Table rows: | `method` | status | priority | description | file |
+      String.match?(line, ~r/^\s*\|/) and String.contains?(line, "`") and
+          not String.contains?(line, "| Method |") and not String.match?(line, ~r/^\s*\|\s*-+/) ->
+        case parse_table_row(line, acc.current_category || "general", index) do
+          nil -> acc
+          method -> %{acc | methods: [method | acc.methods]}
         end
+
+      # Method lines (containing status indicators)
+      String.contains?(line, "❌") or String.contains?(line, "🚧") or String.contains?(line, "✅") ->
+        method = parse_method_line(line, acc.current_category || "general", index)
+        %{acc | methods: [method | acc.methods]}
+
+      true ->
+        acc
     end
   end
 
+  defp parse_table_row(line, category, line_number) do
+    parts =
+      line
+      |> String.trim()
+      |> String.trim_leading("|")
+      |> String.trim_trailing("|")
+      |> String.split("|")
+      |> Enum.map(&String.trim/1)
+
+    # Expect: [method, status, priority, description, file]
+    if length(parts) >= 5 do
+      [method_cell, status_cell, priority_cell, desc_cell | rest] = parts
+      file_cell = Enum.at(rest, 0, "")
+
+      method_name =
+        case Regex.run(~r/`([^`]+)`/, method_cell) do
+          [_, name] -> name
+          _ -> method_cell
+        end
+
+      status =
+        cond do
+          String.contains?(status_cell, "✅") -> :implemented
+          String.contains?(status_cell, "🚧") -> :in_progress
+          String.contains?(status_cell, "❌") -> :not_started
+          true -> :not_started
+        end
+
+      priority = String.trim(priority_cell)
+      description = String.trim(desc_cell)
+
+      file_path =
+        case Regex.run(~r/`([^`]+)`/, file_cell) do
+          [_, fp] -> fp
+          _ -> String.trim(file_cell)
+        end
+
+      %{
+        id: "method-#{line_number}-#{String.replace(method_name, ".", "-")}",
+        name: method_name,
+        status: status,
+        category: category,
+        description: description,
+        priority: priority,
+        file_path: if(file_path == "", do: extract_file_path(method_name, category), else: file_path),
+        line_number: line_number,
+        last_modified: get_file_last_modified(file_path)
+      }
+    else
+      nil
+    end
+  end
+
+  defp parse_method_line(line, category, line_number) do
+    # Extract status
+    status =
+      cond do
+        String.contains?(line, "✅") -> :implemented
+        String.contains?(line, "🚧") -> :in_progress
+        String.contains?(line, "❌") -> :not_started
+        true -> :not_started
+      end
+
+    # Extract method name (usually in backticks or after status)
+    method_name =
+      case Regex.run(~r/`([^`]+)`/, line) do
+        [_, name] ->
+          name
+
+        nil ->
+          line
+            |> String.replace(~r/[❌🚧✅]/, "")
+          |> String.trim()
+          |> String.split("|")
+          |> List.first()
+          |> String.trim()
+      end
+
+    # Extract description - handle both table format and simple format
+    description =
+      cond do
+        # Table format: | `method` | status | priority | description | file |
+        String.contains?(line, "|") ->
+          parts = String.split(line, "|")
+
+          if length(parts) >= 5 do
+            Enum.at(parts, 3, "") |> String.trim()
+          else
+            line
+            |> String.replace(~r/^[❌🚧✅]\s*/, "")
+            |> String.replace("`#{method_name}`", "")
+            |> String.replace(~r/^[|`\s-]+/, "")
+            |> String.trim()
+          end
+
+        # Simple format: ❌ `method` - description
+        true ->
+          line
+          |> String.replace(~r/^[❌🚧✅]\s*/, "")
+          |> String.replace("`#{method_name}`", "")
+          |> String.replace(~r/^[|`\s-]+/, "")
+          |> String.trim()
+      end
+
+    # Extract priority from description or default
+    {priority, clean_description} = extract_priority_from_description(description)
+
+    # Extract file path if present
+    file_path = extract_file_path(method_name, category)
+
+    %{
+      id: "method-#{line_number}-#{String.replace(method_name, ".", "-")}",
+      name: method_name,
+      status: status,
+      category: category,
+      description: clean_description,
+      priority: priority,
+      file_path: file_path,
+      line_number: line_number,
+      last_modified: get_file_last_modified(file_path)
+    }
+  end
+
+  defp extract_priority_from_description(description) do
+    cond do
+      String.contains?(description, "🔴") or String.contains?(description, "Critical") ->
+        {"Critical", String.replace(description, ~r/[🔴]|Critical/, "") |> String.trim()}
+
+      String.contains?(description, "🟡") or String.contains?(description, "High") ->
+        {"High", String.replace(description, ~r/[🟡]|High/, "") |> String.trim()}
+
+      String.contains?(description, "🟢") or String.contains?(description, "Medium") ->
+        {"Medium", String.replace(description, ~r/[🟢]|Medium/, "") |> String.trim()}
+
+      true ->
+        {"Medium", description}
+    end
+  end
+
+  defp extract_file_path(method_name, category) do
+    # Prefer semantic category from method prefix (e.g., "lang.think.foo" -> "think")
+    preferred_category = extract_category_from_method(method_name) || category || "other"
+
+    base_name =
+      method_name
+      |> String.replace(~r/[\/:]/, "_")
+      |> String.downcase()
+
+    "lib/lang/lsp/#{preferred_category}/#{base_name}.ex"
+  end
+
   defp parse_status("❌"), do: :not_started
-  defp parse_status("🔄"), do: :in_progress
+  defp parse_status("🚧"), do: :in_progress
   defp parse_status("✅"), do: :implemented
   defp parse_status(_), do: :not_started
 
@@ -477,7 +734,7 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
       |> filter_by_priority(priority)
       |> filter_by_search(query)
 
-    stream(socket, :filtered_methods, filtered_methods, reset: true)
+    assign(socket, :filtered_methods, filtered_methods)
   end
 
   defp filter_by_category(methods, "all"), do: methods
@@ -498,9 +755,9 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
     query_lower = String.downcase(query)
 
     Enum.filter(methods, fn method ->
-      String.contains?(String.downcase(method.method), query_lower) ||
+      String.contains?(String.downcase(method.name), query_lower) ||
         String.contains?(String.downcase(method.description), query_lower) ||
-        String.contains?(String.downcase(method.file_path), query_lower)
+        String.contains?(String.downcase(method.category), query_lower)
     end)
   end
 
@@ -541,13 +798,13 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
     status_emoji =
       case new_status do
         "not_started" -> "❌"
-        "in_progress" -> "🔄"
+        "in_progress" -> "🚧"
         "implemented" -> "✅"
         _ -> "❌"
       end
 
     # Replace the status for the specific method
-    pattern = ~r/^(\|\s*`#{Regex.escape(method_name)}`\s*\|\s*)([❌✅🔄])(\s*\|.*?)$/m
+    pattern = ~r/^(\|\s*`#{Regex.escape(method_name)}`\s*\|\s*)([❌✅🚧])(\s*\|.*?)$/m
 
     Regex.replace(pattern, content, fn _, prefix, _old_status, suffix ->
       prefix <> status_emoji <> suffix
@@ -557,7 +814,7 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
   defp update_description_in_content(content, method_name, new_description) do
     # Replace the description for the specific method
     pattern =
-      ~r/^(\|\s*`#{Regex.escape(method_name)}`\s*\|\s*[❌✅🔄]\s*\|\s*\w+\s*\|\s*)([^|]+)(\s*\|.*?)$/m
+      ~r/^(\|\s*`#{Regex.escape(method_name)}`\s*\|\s*[❌✅🚧]\s*\|\s*\w+\s*\|\s*)([^|]+)(\s*\|.*?)$/m
 
     Regex.replace(pattern, content, fn _, prefix, _old_description, suffix ->
       prefix <> new_description <> suffix
@@ -566,7 +823,7 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
 
   defp update_priority_in_content(content, method_name, new_priority) do
     # Replace the priority for the specific method
-    pattern = ~r/^(\|\s*`#{Regex.escape(method_name)}`\s*\|\s*[❌✅🔄]\s*\|\s*)(\w+)(\s*\|.*?)$/m
+    pattern = ~r/^(\|\s*`#{Regex.escape(method_name)}`\s*\|\s*[❌✅🚧]\s*\|\s*)(\w+)(\s*\|.*?)$/m
 
     Regex.replace(pattern, content, fn _, prefix, _old_priority, suffix ->
       prefix <> new_priority <> suffix
@@ -579,14 +836,14 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
         from_emoji =
           case from_status do
             "not_started" -> "❌"
-            "in_progress" -> "🔄"
+            "in_progress" -> "🚧"
             "implemented" -> "✅"
           end
 
         to_emoji =
           case to_status do
             "not_started" -> "❌"
-            "in_progress" -> "🔄"
+            "in_progress" -> "🚧"
             "implemented" -> "✅"
           end
 
@@ -645,7 +902,7 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
     "| `#{method_data["method"]}` | #{status_emoji} | #{method_data["priority"]} | #{method_data["description"]} | `#{method_data["file_path"]}` |"
   end
 
-  defp append_method_to_section(content, method_line, category) do
+  defp append_method_to_section(content, method_line, _category) do
     # Simple approach: append to end of appropriate category section
     # In a more sophisticated version, we'd parse the markdown structure
     content <> "\n" <> method_line
@@ -786,6 +1043,62 @@ defmodule LangWeb.Admin.LspEditor.LspEditorLive do
       {:error, _} ->
         nil
     end
+  end
+
+  defp extract_markdown_ld(content) do
+    case LinkedDataExtractor.extract_from_content(content, :markdown_ld) do
+      {:ok, linked_data} ->
+        %{
+          entities: linked_data.entities || [],
+          relationships: linked_data.relationships || [],
+          context: linked_data.context || %{},
+          triples: linked_data.triples || [],
+          confidence_scores: linked_data.confidence_scores || %{}
+        }
+
+      {:error, _reason} ->
+        %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}}
+    end
+  end
+
+  defp enhance_methods_with_semantic_data(methods, markdown_ld_data) do
+    Enum.map(methods, fn method ->
+      # Find related entities for this method
+      related_entities = find_related_entities(method, markdown_ld_data.entities)
+
+      # Calculate semantic confidence
+      semantic_confidence = calculate_semantic_confidence(method, markdown_ld_data)
+
+      method
+      |> Map.put(:related_entities, related_entities)
+      |> Map.put(:semantic_confidence, semantic_confidence)
+      |> Map.put(:has_semantic_data, length(related_entities) > 0)
+    end)
+  end
+
+  defp find_related_entities(method, entities) do
+    method_text = "#{method.name} #{method.description}" |> String.downcase()
+
+    Enum.filter(entities, fn entity ->
+      entity_text = "#{entity.text || ""} #{entity.type || ""}" |> String.downcase()
+      String.contains?(method_text, entity_text) or String.contains?(entity_text, method_text)
+    end)
+  end
+
+  defp calculate_semantic_confidence(method, markdown_ld_data) do
+    base_confidence = if method.status == :implemented, do: 0.9, else: 0.5
+
+    # Boost confidence if method has related entities
+    entity_boost =
+      if length(find_related_entities(method, markdown_ld_data.entities)) > 0, do: 0.1, else: 0.0
+
+    # Boost confidence if method has relationships
+    relationship_boost =
+      markdown_ld_data.relationships
+      |> Enum.any?(fn rel -> String.contains?("#{rel}", method.name) end)
+      |> if(do: 0.1, else: 0.0)
+
+    min(1.0, base_confidence + entity_boost + relationship_boost)
   end
 
   defp build_path(socket, extra_params \\ %{}) do

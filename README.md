@@ -73,7 +73,7 @@ mix setup
 mix phx.server
 ```
 
-Visit `https://lang.nocsi.com` to access the web interface.
+Visit `https://lang.nulity.com` to access the web interface.
 
 ### LSP Server
 
@@ -182,15 +182,15 @@ curl -X POST https://lang.nocsi.com/api/conversation/{session_id}/turn \
 ```elixir
 # Analyze writing style
 {:ok, analysis} = Lang.analyze_writing_style("""
-  I believe that artificial intelligence represents one of the most 
-  significant technological advances of our time. The implications 
+  I believe that artificial intelligence represents one of the most
+  significant technological advances of our time. The implications
   extend far beyond mere computational efficiency.
 """)
 
 IO.inspect(analysis.fingerprint)
 # => %{hash: "A1B2C3...", vector: [0.75, 0.82, ...]}
 
-# Compare two writing samples  
+# Compare two writing samples
 {:ok, comparison} = Lang.Stylometrics.AnalysisEngine.compare_writing_styles(
   sample1, sample2
 )
@@ -228,7 +228,7 @@ config :lang, :text_intelligence,
 
 config :lang, :lsp,
   port: 4001,
-  host: "127.0.0.1", 
+  host: "127.0.0.1",
   max_connections: 1000
 
 config :lang, :conversation_rehearsal,
@@ -286,24 +286,44 @@ mix precommit
 
 - Optional Recurse editor loading:
   - If `window.RecurseEditor` is defined (e.g., via your own bundle), `LspRecurseEditor` uses it.
-  - If not defined, the hook attempts a dynamic import of `@nocsi/recurse/dist/recurse/shadcn` during `mounted/1`.
-  - The dynamic import is handled by the Svelte compiler built into `build.mjs`; no extra plugins required.
+  - If not defined, the hook attempts a dynamic import of `@nocsi/recurse/dist/recurse/shadcn` during `mounted()`.
+  - The dynamic import is compiled into a separate chunk by `esbuild` and only fetched if needed; no extra plugins required.
 
 - Minimal usage flow:
-  1) Provide the hook container with `data-content` and `data-language` attributes.
-  2) Optionally set `window.RecurseEditor` in your own preload script, or let the hook dynamically import it.
-  3) Run one of the asset build scripts above.
+  1) Add a container for the editor with `phx-hook="LspRecurseEditor"` and supply `data-content` and `data-language`.
+  2) Option A (global): set `window.RecurseEditor` in your own preload script (see snippet below).
+  3) Option B (on-demand): do nothing; the hook dynamically imports the editor when mounted.
+  4) Build assets using one of the scripts above.
+
+- Global setup example (use if you want to provide the editor yourself and skip dynamic import):
+
+  Create a small preload script that runs before `app.js` and sets the global:
+
+  ```js
+  // assets/js/recurse_global.js (example preload)
+  import * as RecurseMod from '@nocsi/recurse/dist/recurse/shadcn/index.js'
+  // Prefer named export, fallback to default export
+  window.RecurseEditor = RecurseMod.RecurseEditor || RecurseMod.default
+  ```
+
+  Then import it in your HTML before the main app bundle, or add `import './recurse_global'` at the top of `assets/js/app.js` if you want it bundled.
+
+- LiveView container example (simplified):
+
+  ```heex
+  <div id="editor" phx-hook="LspRecurseEditor" data-language="elixir" data-content={@content} />
+  ```
 
 - Notes:
-  - The LSP editor hookup is resilience-first. If the editor cannot load, the hook logs a warning and continues without rich editing.
-  - No long-running processes are started by default. Use the watch script only for local dev; do not run it in CI.
+  - If the editor cannot load (global missing and dynamic import not available), the hook logs a warning and continues without rich editing.
+  - Avoid long-running processes in CI. Use `watch` only for local dev.
 
 ### Adding New Format Support
 
 1. **Register the format** in `ParserRegistry`:
 ```elixir
 "newformat" => %{
-  parser: :builtin_newformat, 
+  parser: :builtin_newformat,
   domain: "specialized"
 }
 ```
@@ -384,7 +404,7 @@ mix phx.server
 ## 📚 Documentation
 
 - [API Reference](docs/api.md)
-- [LSP Protocol Guide](docs/lsp.md)  
+- [LSP Protocol Guide](docs/lsp.md)
 - [Format Support Guide](docs/formats.md)
 - [Conversation Rehearsal](docs/rehearsal.md)
 - [Stylometric Analysis](docs/stylometrics.md)
@@ -396,7 +416,7 @@ mix phx.server
 LANG includes comprehensive security features:
 
 - **Rate Limiting** - Configurable limits per operation and user
-- **Content Validation** - Input sanitization and size limits  
+- **Content Validation** - Input sanitization and size limits
 - **Privacy Protection** - Style obfuscation for anonymity
 - **Audit Logging** - Complete activity tracking
 
@@ -424,7 +444,7 @@ Report security issues to: security@lang-platform.dev
 
 ### v1.1 (Next Release)
 - [ ] Machine Learning integration for better predictions
-- [ ] Real-time collaboration features  
+- [ ] Real-time collaboration features
 - [ ] Mobile app support
 - [ ] Advanced style transfer capabilities
 
@@ -442,7 +462,7 @@ Report security issues to: security@lang-platform.dev
 
 ## 📄 License
 
-Copyright (c) 2024 LANG Platform
+Copyright (c) 2025 NOCSI
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 

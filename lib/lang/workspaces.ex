@@ -5,7 +5,9 @@ defmodule Lang.Workspaces do
 
   use Ash.Domain
 
-  resources do
-    resource(Lang.Workspace.Workspace)
+  if Code.ensure_loaded?(Lang.Workspace.Workspace) do
+    resources do
+      resource(Lang.Workspace.Workspace)
+    end
   end
 end

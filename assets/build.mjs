@@ -75,8 +75,17 @@ const options = {
   entryNames: '[name]-[hash]',
   chunkNames: 'chunks/[name]-[hash]',
   assetNames: 'assets/[name]-[hash]',
-  // Preserve Phoenix asset externals
-  external: ['/fonts/*', '/images/*']
+  // Preserve Phoenix asset externals and mark optional libs as external so dynamic imports stay runtime-only
+  external: [
+    '/fonts/*',
+    '/images/*',
+    // Optional editors/libs loaded at runtime if present
+    '@tiptap/*',
+    'lowlight',
+    'highlight.js/*',
+    '@nocsi/recurse/*',
+    'phoenix-colocated/*'
+  ]
 }
 
 if (watch) {
@@ -86,4 +95,3 @@ if (watch) {
 } else {
   await build(options)
 }
-

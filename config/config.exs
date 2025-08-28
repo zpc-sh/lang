@@ -30,7 +30,9 @@ config :lang,
     Lang.Analyses,
     Lang.Think,
     Lang.Generate,
-    Lang.Spatial
+    Lang.Spatial,
+    Lang.Tokens,
+    Lang.Query
   ]
 
 # Configures the endpoint

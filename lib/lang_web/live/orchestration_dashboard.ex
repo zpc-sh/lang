@@ -42,6 +42,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
   @impl true
   def render(assigns) do
     ~H"""
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
     <div class="orchestration-dashboard min-h-screen bg-gray-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Header -->
@@ -287,6 +288,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
         </div>
       </div>
     </div>
+    </Layouts.app>
     """
   end
 

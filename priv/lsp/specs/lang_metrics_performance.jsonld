@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.metrics.performance",
+  "@type": "lang:Function",
+  "category": "metrics",
+  "description": "System performance metrics",
+  "implementation": {
+    "file": "lib/lang/telemetry/metrics.ex",
+    "priority": "High",
+    "status": "in_progress"
+  },
+  "name": "lang.metrics.performance"
+}

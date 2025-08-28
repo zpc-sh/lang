@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.storage.store_patterns",
+  "@type": "lang:Function",
+  "category": "storage",
+  "description": "Persist learned patterns to Kyozo",
+  "implementation": {
+    "file": "lib/lang/storage/patterns.ex",
+    "priority": "Critical",
+    "status": "not_implemented"
+  },
+  "name": "lang.storage.store_patterns"
+}

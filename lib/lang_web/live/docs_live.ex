@@ -87,11 +87,9 @@ defmodule LangWeb.DocsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-950 text-gray-100">
-      <.navbar current_user={assigns[:current_user]} current_page={:docs} />
-      
-    <!-- Main Content -->
-      <div class="flex pt-16">
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
+      <!-- Main Content -->
+      <div class="flex">
         <!-- Sidebar -->
         <aside class={[
           "fixed inset-y-0 left-0 z-40 w-64 bg-gray-900 border-r border-gray-800 pt-16 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
@@ -355,10 +353,7 @@ defmodule LangWeb.DocsLive do
           </div>
         </main>
       </div>
-      
-    <!-- Footer -->
-      <Footer.footer />
-    </div>
+    </Layouts.app>
     """
   end
 

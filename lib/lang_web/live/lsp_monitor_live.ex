@@ -58,6 +58,7 @@ defmodule LangWeb.LSPMonitorLive do
   @impl true
   def render(assigns) do
     ~H"""
+    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 class="text-3xl font-bold text-gray-900 mb-8">LSP Server Monitor</h1>
 
@@ -180,6 +181,7 @@ defmodule LangWeb.LSPMonitorLive do
         </ul>
       </div>
     </div>
+    </Layouts.app>
     """
   end
 

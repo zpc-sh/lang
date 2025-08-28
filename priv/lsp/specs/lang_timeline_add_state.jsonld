@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.timeline.add_state",
+  "@type": "lang:Function",
+  "category": "timeline",
+  "description": "Add new state to timeline + LSP integration",
+  "implementation": {
+    "file": "lib/lang/timeline/core.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.timeline.add_state"
+}

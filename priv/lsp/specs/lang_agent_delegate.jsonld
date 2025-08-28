@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.delegate",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Delegate task to agent",
+  "implementation": {
+    "file": "lib/lang/agent/coordinator.ex",
+    "priority": "Critical",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.delegate"
+}

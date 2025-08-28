@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.generate.cognitive.architecture",
+  "@type": "lang:Function",
+  "category": "generate",
+  "description": "Track 4: System-wide changes",
+  "implementation": {
+    "file": "lib/lang/generate/cognitive.ex",
+    "priority": "Medium",
+    "status": "not_implemented"
+  },
+  "name": "lang.generate.cognitive.architecture"
+}
