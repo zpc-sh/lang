@@ -60,10 +60,13 @@ defmodule Lang.Providers.XAI do
       "tactical_analysis" ->
         analyze_situation(params.context, params.question, opts)
 
-      method when method in ["lang.query.simple", "lang.generate.simple_task"] ->
+      "lang.query.simple" ->
         simple_task(params, opts)
 
-      method when String.starts_with?(method, "lang.think") ->
+      "lang.generate.simple_task" ->
+        simple_task(params, opts)
+
+      <<"lang.think", _::binary>> ->
         handle_think_method(method, params, opts)
 
       _ ->
