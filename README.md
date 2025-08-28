@@ -275,6 +275,29 @@ mix dialyzer
 mix precommit
 ```
 
+### Assets Build and Optional Recurse Editor
+
+- Build uses `assets/build.mjs` with a lightweight Svelte-in-esbuild pipeline. The Recurse editor integration remains optional and only loads when present.
+
+- Scripts:
+  - `npm run --prefix assets build` – single build (outputs to `priv/static/assets`)
+  - `NODE_ENV=production npm run --prefix assets deploy` – production build
+  - `npm run --prefix assets watch` – incremental rebuilds
+
+- Optional Recurse editor loading:
+  - If `window.RecurseEditor` is defined (e.g., via your own bundle), `LspRecurseEditor` uses it.
+  - If not defined, the hook attempts a dynamic import of `@nocsi/recurse/dist/recurse/shadcn` during `mounted/1`.
+  - The dynamic import is handled by the Svelte compiler built into `build.mjs`; no extra plugins required.
+
+- Minimal usage flow:
+  1) Provide the hook container with `data-content` and `data-language` attributes.
+  2) Optionally set `window.RecurseEditor` in your own preload script, or let the hook dynamically import it.
+  3) Run one of the asset build scripts above.
+
+- Notes:
+  - The LSP editor hookup is resilience-first. If the editor cannot load, the hook logs a warning and continues without rich editing.
+  - No long-running processes are started by default. Use the watch script only for local dev; do not run it in CI.
+
 ### Adding New Format Support
 
 1. **Register the format** in `ParserRegistry`:

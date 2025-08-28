@@ -4,16 +4,37 @@ const LspEditorHooks = {
   // Main LSP Editor Hook using @nocsi/recurse
   LspRecurseEditor: {
     mounted() {
+      // kick off async init to optionally load editor on-demand
+      this.__initialized = false
+      this.__initRecurseEditor().catch((err) => {
+        console.warn('Failed to initialize RecurseEditor (optional):', err)
+      })
+    },
+
+    async __initRecurseEditor() {
       const content = this.el.dataset.content || ''
       const language = this.el.dataset.language || 'elixir'
 
-      // Initialize Recurse editor if available; otherwise, skip gracefully
+      // Try dynamic import if global isn't present
       if (!window.RecurseEditor) {
-        console.warn("RecurseEditor not available; skipping rich editor init")
+        try {
+          const mod = await import('@nocsi/recurse/dist/recurse/shadcn/index.js')
+          // Prefer named export, fallback to default
+          window.RecurseEditor = window.RecurseEditor || mod.RecurseEditor || mod.default
+        } catch (e) {
+          console.warn('Optional editor not available; skipping rich editor init')
+          return
+        }
+      }
+
+      if (!window.RecurseEditor) {
+        console.warn('RecurseEditor not available; skipping rich editor init')
         return
       }
 
-      this.editor = new window.RecurseEditor({
+      // Instantiate provided editor; if incompatible, fail gracefully
+      try {
+        this.editor = new window.RecurseEditor({
         element: this.el,
         content: content,
         language: language,
@@ -83,46 +104,50 @@ const LspEditorHooks = {
           realTimeAnalysis: true
         }
       })
+      } catch (err) {
+        console.warn('RecurseEditor exists but could not be constructed; skipping init')
+        return
+      }
 
-      // Set up event listeners
-      this.setupEventListeners()
+      // Set up event listeners (if editor exposes required API)
+      this.setupEventListeners?.()
 
       // Initialize LANG LSP integration
-      this.initializeLangLSP()
+      this.initializeLangLSP?.()
 
-      // Focus the editor
+      // Focus the editor when ready
       setTimeout(() => {
-        this.editor
-.focus()
+        try { this.editor?.focus?.() } catch (_) {}
       }, 100)
+
+      this.__initialized = true
     },
 
     updated() {
+      if (!this.editor) return
       const newContent = this.el.dataset.content || ''
-      const currentContent = this.editor.getValue()
+      const currentContent = this.editor?.getValue?.()
 
-      if (newContent !== currentContent) {
-        const position = this.editor.getPosition()
-        this.editor.setValue(newContent)
-        this.editor.setPosition(position)
+      if (typeof currentContent === 'string' && newContent !== currentContent) {
+        const position = this.editor?.getPosition?.()
+        this.editor?.setValue?.(newContent)
+        if (position) this.editor?.setPosition?.(position)
       }
     },
 
     destroyed() {
-      if (this.editor) {
-        this.editor.dispose()
-      }
+      try { this.editor?.dispose?.() } catch (_) {}
     },
 
     setupEventListeners() {
       // Content changes
-      this.editor.onDidChangeModelContent(() => {
+      this.editor?.onDidChangeModelContent?.(() => {
         const content = this.editor.getValue()
         this.pushEvent('editor_content_changed', { content })
       })
 
       // Cursor position changes
-      this.editor.onDidChangeCursorPosition((e) => {
+      this.editor?.onDidChangeCursorPosition?.((e) => {
         const position = e.position
         this.pushEvent('cursor_position_changed', {
           line: position.lineNumber,
@@ -131,30 +156,28 @@ const LspEditorHooks = {
       })
 
       // Save command (Cmd/Ctrl + S)
-      this.editor.addCommand(2048 + 49, () => { // Monaco.KeyMod.CtrlCmd + Monaco.KeyCode.KeyS
+      this.editor?.addCommand?.(2048 + 49, () => { // Monaco.KeyMod.CtrlCmd + Monaco.KeyCode.KeyS
         const content = this.editor.getValue()
         this.pushEvent('save_file', { content })
       })
 
       // Format command (Shift + Alt + F)
-      this.editor.addCommand(1024 + 512 + 36, () => { // Shift + Alt + F
-        this.editor.getAction('editor.action.formatDocument').run()
+      this.editor?.addCommand?.(1024 + 512 + 36, () => { // Shift + Alt + F
+        try { this.editor?.getAction?.('editor.action.formatDocument')?.run?.() } catch (_) {}
       })
 
       // AI search command (Cmd/Ctrl + Shift + F)
-      this.editor.addCommand(2048 + 1024 + 36, () => {
+      this.editor?.addCommand?.(2048 + 1024 + 36, () => {
         this.triggerAISearch()
       })
 
       // Semantic navigation (Cmd/Ctrl + .)
-      this.editor.addCommand(2048 + 84, () => {
+      this.editor?.addCommand?.(2048 + 84, () => {
         this.triggerSemanticNavigation()
       })
 
       // Show references (Shift + F12)
-      this.editor.addCommand(1024 + 70, () => {
-        this.showReferences()
-      })
+      this.editor?.addCommand?.(1024 + 70, () => { this.showReferences() })
     },
 
     initializeLangLSP() {
@@ -261,7 +284,7 @@ const LspEditorHooks = {
         source: 'LANG LSP'
       }))
 
-      monaco.editor.setModelMarkers(this.editor.getModel(), 'lang-lsp', markers)
+      try { monaco.editor.setModelMarkers(this.editor.getModel(), 'lang-lsp', markers) } catch (_) {}
     },
 
     getSeverity(severity) {

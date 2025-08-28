@@ -4,9 +4,9 @@
   "description": "LANG Universal Text Intelligence Platform - Frontend Assets",
   "private": true,
   "scripts": {
-    "build": "esbuild js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*",
-    "deploy": "NODE_ENV=production npm run build",
-    "watch": "npm run build -- --watch"
+    "build": "node build.mjs",
+    "deploy": "NODE_ENV=production node build.mjs",
+    "watch": "node build.mjs --watch"
   },
   "dependencies": {
     "@nocsi/recurse": "1.0.0"
