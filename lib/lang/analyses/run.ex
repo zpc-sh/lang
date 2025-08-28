@@ -106,6 +106,27 @@ defmodule Lang.Analyses.Run do
         |> Ash.Changeset.change_attribute(:status, :pending)
         |> Ash.Changeset.change_attribute(:started_at, DateTime.utc_now())
       end)
+
+      change(fn changeset, _ ->
+        Ash.Changeset.after_action(changeset, fn _cs, run ->
+          # Initialize workspace store for this run if workspace_id present or create context
+          try do
+            ctx = %{
+              "session_id" => run.id,
+              "project_id" => run.project_id,
+              "root_path" => nil,
+              "file_tree_hash" => nil,
+              "active_files" => [],
+              "created_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+            }
+            _ = Lang.Workspace.Store.put_context(run.id, ctx)
+          rescue
+            _ -> :ok
+          end
+
+          {:ok, run}
+        end)
+      end)
     end
 
     update :update_status do

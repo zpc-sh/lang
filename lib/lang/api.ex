@@ -54,4 +54,22 @@ defmodule Lang.Api do
       }
     }
   end
+
+  @doc """
+  Return a summary of loaded Ash domains and their resources.
+  Used by deployment verification.
+  """
+  def resources do
+    domains = [Lang.Analyses, Lang.Spatial, Lang.Think, Lang.Generate, Lang.Accounts, Lang.Billing]
+    Enum.map(domains, fn domain ->
+      resources =
+        try do
+          domain.resources()
+        rescue
+          _ -> []
+        end
+
+      %{domain: domain, resources: resources}
+    end)
+  end
 end

@@ -1,0 +1,31 @@
+{
+  "name": "lang-assets",
+  "version": "1.0.0",
+  "description": "LANG Universal Text Intelligence Platform - Frontend Assets",
+  "private": true,
+  "scripts": {
+    "build": "esbuild js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*",
+    "deploy": "NODE_ENV=production npm run build",
+    "watch": "npm run build -- --watch"
+  },
+  "dependencies": {
+    "@nocsi/recurse": "1.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "phoenix",
+    "liveview",
+    "text-intelligence",
+    "lsp",
+    "ai-first",
+    "editor"
+  ],
+  "author": "LANG Platform",
+  "license": "UNLICENSED"
+}

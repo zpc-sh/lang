@@ -25,11 +25,20 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/lang"
 import topbar from "../vendor/topbar"
 
+// Import @nocsi/recurse editor for advanced text editing
+import { RecurseEditor } from "@nocsi/recurse"
+
 // Import Stripe integration
 import "./stripe"
 
+// Import LSP Editor hooks
+import LspEditorHooks from "./lsp_editor_hooks"
+
 // Get Stripe publishable key from environment
 window.stripePublishableKey = document.querySelector("meta[name='stripe-publishable-key']")?.getAttribute("content");
+
+// Make RecurseEditor available globally for LSP hooks
+window.RecurseEditor = RecurseEditor;
 
 // Custom hooks for LANG landing page
 const langHooks = {
@@ -186,7 +195,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ...langHooks},
+  hooks: {...colocatedHooks, ...langHooks, ...LspEditorHooks},
 })
 
 // Show progress bar on live navigation and form submits

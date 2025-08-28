@@ -5,13 +5,27 @@ defmodule Lang.Spatial.Waypoint do
 
   use Ash.Resource,
     domain: Lang.Spatial,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshJsonApi.Resource]
 
   alias Lang.Analyses.Project
 
   postgres do
     table("spatial_waypoints")
     repo(Lang.Repo)
+  end
+
+  json_api do
+    type("spatial_waypoint")
+
+    routes do
+      base("/waypoints")
+      get(:read)
+      index(:read)
+      post(:create)
+      patch(:update)
+      delete(:destroy)
+    end
   end
 
   attributes do
@@ -32,9 +46,13 @@ defmodule Lang.Spatial.Waypoint do
   end
 
   actions do
-    defaults([:read])
+    defaults([:read, :destroy])
     create :create do
       accept([:project_id, :label, :path, :position, :tags, :metadata])
+    end
+
+    update :update do
+      accept([:label, :path, :position, :tags, :metadata])
     end
   end
 
@@ -44,4 +62,3 @@ defmodule Lang.Spatial.Waypoint do
     define(:read_all, action: :read)
   end
 end
-

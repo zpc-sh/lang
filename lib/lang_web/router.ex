@@ -90,6 +90,21 @@ defmodule LangWeb.Router do
     end
   end
 
+  # Admin routes (restricted access)
+  live_session :admin,
+    on_mount: [
+      {LangWeb.AuthOnMount, :mount_current_user},
+      {LangWeb.AuthOnMount, :require_authenticated},
+      {LangWeb.AuthOnMount, :mount_current_org},
+      {LangWeb.AuthOnMount, :require_admin}
+    ] do
+    scope "/admin", LangWeb.Admin do
+      pipe_through [:browser, :require_authenticated_user]
+
+      live "/lsp-editor", LspEditor.LspEditorLive, :index
+    end
+  end
+
   # API routes
   scope "/api/v1", LangWeb.Api do
     pipe_through [:api, :require_authenticated_api]
@@ -151,14 +166,23 @@ defmodule LangWeb.Router do
     get "/billing/aggregates", BillingUsageController, :aggregates
     get "/billing/summary", BillingUsageController, :summary
 
-    # Spatial Map
+    # Spatial API
     get "/spatial/map/:project_id", SpatialController, :map_summary
+    get "/spatial/trace_path/:project_id", SpatialController, :trace_path
+    get "/spatial/find_related/:project_id", SpatialController, :find_related
+    get "/spatial/traverse/:project_id", SpatialController, :traverse
   end
 
   # MCP JSON:API (AshJsonApi) - mounting Domain resources
   scope "/api/v2" do
     pipe_through [:api, :require_authenticated_api]
     forward "/mcp", AshJsonApi.Router, domains: [Lang.MCP]
+  end
+
+  # Spatial JSON:API (AshJsonApi) - read-only maps
+  scope "/api/v2" do
+    pipe_through [:api, :require_authenticated_api]
+    forward "/spatial", AshJsonApi.Router, domains: [Lang.Spatial]
   end
 
   # Webhook routes

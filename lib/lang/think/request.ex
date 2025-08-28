@@ -94,6 +94,20 @@ defmodule Lang.Think.Request do
       change(set_attribute(:status, :pending))
     end
 
+    create :create_enqueued do
+      accept([:kind, :input, :user_id, :project_id, :run_id, :metadata])
+      validate(present([:kind]))
+      change(set_attribute(:status, :pending))
+      change(fn changeset, _ ->
+        Ash.Changeset.after_action(changeset, fn _cs, req ->
+          %{"request_id" => req.id}
+          |> Lang.Think.Workers.RequestWorker.new(queue: :analysis)
+          |> Oban.insert()
+          {:ok, req}
+        end)
+      end)
+    end
+
     update :update_status do
       accept([:error_message, :metadata])
       argument(:status, :atom, allow_nil?: false)
@@ -145,6 +159,7 @@ defmodule Lang.Think.Request do
     define(:read_all, action: :read)
     define(:by_id, action: :read, get_by: [:id])
     define(:create, action: :create)
+    define(:create_enqueued, action: :create_enqueued)
     define(:update_status, action: :update_status)
     define(:complete, action: :complete)
     define(:fail, action: :fail)
@@ -155,4 +170,3 @@ defmodule Lang.Think.Request do
     calculate(:duration_ms, :integer, expr(fragment("EXTRACT(EPOCH FROM (? - ?)) * 1000", completed_at, started_at)))
   end
 end
-

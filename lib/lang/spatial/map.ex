@@ -5,13 +5,25 @@ defmodule Lang.Spatial.Map do
 
   use Ash.Resource,
     domain: Lang.Spatial,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshJsonApi.Resource]
 
   alias Lang.Analyses.Project
 
   postgres do
     table("spatial_maps")
     repo(Lang.Repo)
+  end
+
+  json_api do
+    type("spatial_map")
+
+    routes do
+      # Mounted under /api/v2/spatial via router forward
+      base("/maps")
+      get(:read)
+      index(:read)
+    end
   end
 
   attributes do
@@ -50,4 +62,3 @@ defmodule Lang.Spatial.Map do
     define(:read_all, action: :read)
   end
 end
-
