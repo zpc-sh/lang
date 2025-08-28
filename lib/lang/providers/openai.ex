@@ -59,13 +59,13 @@ defmodule Lang.Providers.OpenAI do
   @impl Lang.Providers.Provider
   def handle_request(method, params, opts \\ []) do
     case method do
-      method when String.starts_with?(method, "lang.think.explain") ->
+      <<"lang.think.explain", _::binary>> ->
         handle_explanation(method, params, opts)
 
       "lang.think.trace_flow" ->
         handle_flow_tracing(params, opts)
 
-      method when String.starts_with?(method, "lang.generate") ->
+      <<"lang.generate", _::binary>> ->
         handle_generation(method, params, opts)
 
       "lang.query.natural" ->
@@ -379,8 +379,7 @@ defmodule Lang.Providers.OpenAI do
 
     base_overhead =
       case method do
-        # Generation prompts are longer
-        method when String.starts_with?(method, "lang.generate") -> 800
+        <<"lang.generate", _::binary>> -> 800
         _ -> 400
       end
 
