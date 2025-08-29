@@ -1,6 +1,7 @@
 defmodule LangWeb.Router do
   use LangWeb, :router
   use AshAuthentication.Phoenix.Router
+  import Phoenix.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -84,6 +85,11 @@ defmodule LangWeb.Router do
       pipe_through [:browser, :require_authenticated_user]
 
       live "/dashboard", DashboardLive, :index
+      live "/workspaces/:workspace_id/symbols", WorkspaceSymbolsLive, :index
+      live "/workspaces/:workspace_id/references", WorkspaceReferencesLive, :index
+      live "/proxy/pipeline/:pipeline_id", ProxyPipelineLive, :index
+      live "/proxy/intent", ProxyIntentLive, :index
+      live "/proxy/session", ProxySessionLive, :index
       live "/lsp/status", LspStatusLive, :index
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
@@ -92,21 +98,6 @@ defmodule LangWeb.Router do
       live "/fs/watch", FSWatchLive, :index
     end
   end
-
-  # Admin routes (restricted access)
-  # live_session :admin,
-  #   on_mount: [
-  #     {LangWeb.AuthOnMount, :mount_current_user},
-  #     {LangWeb.AuthOnMount, :require_authenticated},
-  #     {LangWeb.AuthOnMount, :mount_current_org},
-  #     {LangWeb.AuthOnMount, :require_admin}
-  #   ] do
-  #   scope "/admin", LangWeb.Admin do
-  #     pipe_through [:browser, :require_authenticated_user]
-
-  #     live "/lsp-editor", LspEditor.LspEditorLive, :index
-  #   end
-  # end
 
   # API routes
   scope "/api/v1", LangWeb.Api do
@@ -173,20 +164,20 @@ defmodule LangWeb.Router do
     get "/spatial/map/:project_id", SpatialController, :map_summary
     get "/spatial/trace_path/:project_id", SpatialController, :trace_path
     get "/spatial/find_related/:project_id", SpatialController, :find_related
-    get "/spatial/traverse/:project_id", SpatialController, :traverse
-  end
+        get "/spatial/traverse/:project_id", SpatialController, :traverse
 
-  # MCP JSON:API (AshJsonApi) - mounting Domain resources
-  scope "/api/v2" do
-    pipe_through [:api, :require_authenticated_api]
+    # Proxy endpoints
+    post "/proxy", ProxyController, :call
+    post "/proxy/intent", ProxyController, :issue_intent
+    post "/proxy/session", ProxyController, :run_session
+
+    # MCP JSON:API (AshJsonApi) - mounting Domain resources
     forward "/mcp", AshJsonApi.Router, domains: [Lang.MCP]
-  end
 
-  # Spatial JSON:API (AshJsonApi) - read-only maps
-  scope "/api/v2" do
-    pipe_through [:api, :require_authenticated_api]
+    # Spatial JSON:API (AshJsonApi) - read-only maps
     forward "/spatial", AshJsonApi.Router, domains: [Lang.Spatial]
   end
+
 
   # Webhook routes
   scope "/webhooks", LangWeb do
@@ -230,6 +221,7 @@ defmodule LangWeb.Router do
   end
 
   # Authentication helper plugs
+
   defp ensure_authenticated(conn, _opts) do
     case conn.assigns[:current_user] do
       nil ->

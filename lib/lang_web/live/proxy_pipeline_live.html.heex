@@ -1,0 +1,22 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="px-6 py-4">
+    <h1 class="text-xl font-semibold mb-4">Proxy Pipeline: {@pipeline_id}</h1>
+
+    <div id="events" phx-update="stream" class="divide-y border rounded">
+      <div class="hidden only:block p-6 text-gray-500">Awaiting events…</div>
+      <div :for={{id, ev} <- @streams.events} id={id} class="p-3 text-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class={[ev.type == :error && "text-red-600", ev.type == :start && "text-blue-600", ev.type == :stop && "text-green-600", ev.type == :partial && "text-amber-600"]}>
+              {to_string(ev.type)}
+            </span>
+            <span class="ml-2 font-mono text-xs">{ev.hop.service}:{ev.hop.method}</span>
+          </div>
+          <div class="text-xs text-gray-500">{Calendar.strftime(ev.ts, "%H:%M:%S")}</div>
+        </div>
+        <div class="text-xs text-gray-600 mt-1">{inspect(ev.meta)}</div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>
+

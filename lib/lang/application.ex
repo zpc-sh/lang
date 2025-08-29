@@ -16,12 +16,20 @@ defmodule Lang.Application do
         IO.puts("Fix configuration in config/billing.exs before starting")
     end
 
+    # Assert telnet disabled in production unless explicitly enabled
+    ensure_telnet_policy()
+
     children =
       [
         optional_child(LangWeb.Telemetry),
         # Attach optional LSP client telemetry logger
         (
           Lang.Telemetry.LSPClientLogger.maybe_attach()
+          nil
+        ),
+        # Attach proxy telemetry logger (dev-friendly)
+        (
+          Lang.Proxy.TelemetryLogger.maybe_attach()
           nil
         ),
         db_enabled?() && optional_child(Lang.Repo),
@@ -119,5 +127,17 @@ defmodule Lang.Application do
   defp db_enabled? do
     val = System.get_env("SKIP_DB") || "0"
     String.downcase(val) not in ["1", "true", "yes", "on"]
+  end
+
+  defp ensure_telnet_policy do
+    env = to_string(Mix.env())
+    enable_telnet = Application.get_env(:lang, :enable_telnet, false)
+    allowlist = Application.get_env(:lang, :telnet_allowlist, [])
+
+    if env == "prod" and (enable_telnet || (is_list(allowlist) and allowlist != [])) do
+      IO.warn("Telnet adapter is enabled or allowlisted in production; disabling for safety")
+      # Force disable by clearing allowlist
+      Application.put_env(:lang, :telnet_allowlist, [])
+    end
   end
 end

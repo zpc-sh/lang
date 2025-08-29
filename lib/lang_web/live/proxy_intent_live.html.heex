@@ -1,0 +1,33 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="px-6 py-4">
+    <h1 class="text-xl font-semibold mb-4">Issue Proxy Intent</h1>
+
+    <.form for={to_form(%{})} id="intent-form" phx-submit="issue">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="text-xs text-gray-600">Service</label>
+          <.input name="service" type="text" value={@service} />
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">Method</label>
+          <.input name="method" type="text" value={@method} />
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">Scopes (comma or space separated)</label>
+          <.input name="scopes" type="text" value={@scopes} />
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">TTL (seconds)</label>
+          <.input name="ttl" type="number" min="60" value={@ttl} />
+        </div>
+      </div>
+      <button type="submit" class="px-3 py-2 rounded bg-blue-600 text-white text-sm">Generate</button>
+    </.form>
+
+    <div :if={@token} class="mt-6">
+      <div class="text-sm text-gray-600">Token (expires at {@exp}):</div>
+      <pre class="p-3 bg-gray-50 border rounded break-all text-xs">{@token}</pre>
+    </div>
+  </div>
+</Layouts.app>
+

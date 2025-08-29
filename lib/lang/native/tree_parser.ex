@@ -379,8 +379,21 @@ defmodule Lang.Native.TreeParser do
   - **Python**: Decorators, type hints, context managers
   - **Rust**: Traits, lifetimes, ownership patterns
   """
-  @spec extract_symbols(reference()) :: {:ok, [String.t()]} | {:error, term()}
-  def extract_symbols(_ast), do: :erlang.nif_error(:nif_not_loaded)
+
+  # --------------------------------------------------------------------------
+  # Convenience wrapper: extract symbols directly from a file path
+  # Uses FSScanner to read content, parses to AST, then extracts symbols.
+  @spec extract_symbols(String.t()) :: {:ok, [map()]} | {:error, term()}
+  def extract_symbols(file_path) when is_binary(file_path) do
+    with {:ok, {content, language}} <- read_file_and_detect_language(file_path),
+         {:ok, ast} <- parse_source_code(language, content, file_path),
+         {:ok, symbols_json} <- extract_symbols(ast) do
+      {:ok, Enum.map(symbols_json, &Jason.decode!/1)}
+    else
+      {:error, reason} -> {:error, reason}
+      other -> other
+    end
+  end
 
   # ============================================================================
   # CODE COMPLEXITY ANALYSIS
@@ -593,6 +606,107 @@ defmodule Lang.Native.TreeParser do
   """
   @spec compress_ast(reference()) :: {:ok, binary()} | {:error, term()}
   def compress_ast(_ast), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ============================================================================
+  # ELIXIR CONVENIENCE WRAPPERS (used by Workspace modules)
+  # ============================================================================
+
+  @doc """
+  Extract a fragment (AST + content) from a file for a given line range.
+
+  Reads via FSScanner per project guidelines, detects language from file extension,
+  parses the content into an AST, and returns both.
+  """
+  @spec extract_fragment(String.t(), non_neg_integer(), non_neg_integer()) ::
+          {:ok, %{ast: reference(), content: String.t()}} | {:error, term()}
+  def extract_fragment(file_path, start_line, end_line)
+      when is_binary(file_path) and is_integer(start_line) and is_integer(end_line) do
+    case Lang.Native.FSScanner.read_lines(file_path, start_line, end_line) do
+      {:ok, lines} ->
+        content = Enum.join(lines, "\n")
+        language = detect_language_from_ext(file_path)
+
+        case parse_source_code(language, content, file_path) do
+          {:ok, ast} -> {:ok, %{ast: ast, content: content}}
+          {:error, reason} -> {:error, reason}
+        end
+
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Extract symbols near a specific line in a file.
+
+  Returns a list of decoded symbol maps filtered to be close to the target line.
+  """
+  @spec extract_symbols_near_line(String.t(), non_neg_integer()) :: {:ok, [map()]} | {:error, term()}
+  def extract_symbols_near_line(file_path, line) when is_binary(file_path) and is_integer(line) do
+    with {:ok, {content, language}} <- read_file_and_detect_language(file_path),
+         {:ok, ast} <- parse_source_code(language, content, file_path),
+         {:ok, symbols_json} <- extract_symbols(ast) do
+      symbols = Enum.map(symbols_json, &Jason.decode!/1)
+      target_row = max(line - 1, 0)
+
+      filtered =
+        Enum.filter(symbols, fn s ->
+          loc = s["location"] || %{}
+          row = loc["row"] || 0
+          abs(row - target_row) <= 5
+        end)
+
+      {:ok, filtered}
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:ok, []}
+    end
+  end
+
+  @doc """
+  Parse and return the AST for a file (optionally centered around a line).
+
+  For now returns the full AST; callers can focus as needed.
+  """
+  @spec extract_ast_at_line(String.t(), non_neg_integer()) :: {:ok, reference()} | {:error, term()}
+  def extract_ast_at_line(file_path, line) when is_binary(file_path) and is_integer(line) do
+    with {:ok, {content, language}} <- read_file_and_detect_language(file_path),
+         {:ok, ast} <- parse_source_code(language, content, file_path) do
+      {:ok, ast}
+    else
+      {:error, reason} -> {:error, reason}
+      other -> other
+    end
+  end
+
+  # --- Internal helpers ---
+  defp read_file_and_detect_language(file_path) do
+    case Lang.Native.FSScanner.preview(file_path, max_lines: 1_000_000) do
+      {:ok, content} -> {:ok, {content, detect_language_from_ext(file_path)}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp detect_language_from_ext(file_path) do
+    case Path.extname(file_path) do
+      ".ex" -> "elixir"
+      ".exs" -> "elixir"
+      ".rs" -> "rust"
+      ".js" -> "javascript"
+      ".jsx" -> "javascript"
+      ".ts" -> "typescript"
+      ".tsx" -> "typescript"
+      ".py" -> "python"
+      ".go" -> "go"
+      ".json" -> "json"
+      ".yaml" -> "yaml"
+      ".yml" -> "yaml"
+      ".md" -> "markdown"
+      ".html" -> "html"
+      ".css" -> "css"
+      ".sql" -> "sql"
+      _ -> "text"
+    end
+  end
 
   @doc """
   Decompress a binary AST back to JSON representation.
@@ -1008,7 +1122,7 @@ defmodule Lang.Native.TreeParser do
     try do
       # Test basic parser creation and parsing
       case create_parser("javascript") do
-        {:ok, parser} ->
+        {:ok, _parser} ->
           case parse_source_code("javascript", "function test() { return 42; }", nil) do
             {:ok, _ast} -> {:ok, :healthy}
             {:error, reason} -> {:error, reason}

@@ -43,6 +43,29 @@ defmodule Lang.Workspace.Service do
     end
   end
 
+  @doc "Queue async symbol ingestion for a file in a workspace"
+  def ingest_symbols_async(workspace_id, file_path) when is_binary(file_path) do
+    %{"workspace_id" => workspace_id, "file_path" => file_path}
+    |> Lang.Workers.SymbolIngestWorker.new(queue: :lsp)
+    |> Oban.insert()
+  end
+
+  @doc """
+  Scan a workspace root and ingest symbols for all files.
+
+  opts: see Lang.Workspace.Indexer.ingest_workspace_symbols/3
+  """
+  def ingest_all_symbols(workspace_id, root, opts \\ []) do
+    Lang.Workspace.Indexer.ingest_workspace_symbols(workspace_id, root, opts)
+  end
+
+  @doc """
+  Ingest symbols for a single file synchronously.
+  """
+  def ingest_file_symbols_now(workspace_id, file_path) do
+    Lang.Workspace.Indexer.sync_ingest_file(workspace_id, file_path)
+  end
+
   def snapshot(workspace_id) do
     with {:ok, ws} <- Workspace.by_id(workspace_id) do
       Workspace.snapshot_state(ws)

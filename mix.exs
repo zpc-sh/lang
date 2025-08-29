@@ -235,6 +235,16 @@ defmodule Lang.MixProject do
       "clean.native": ["rustler.clean"],
       "bench.native": ["compile.native", "run -e 'Lang.Native.Benchmarks.run_all()'"],
 
+      # Add this for Ash
+      "ash.setup": [
+        "ash_postgres.create",
+        "ash_postgres.generate_migrations",
+        "ash_postgres.migrate"
+      ],
+      "ash.reset": [
+        "ecto.drop",
+        "ash.setup"
+      ],
       # LSP pipeline helpers
       "lsp.pipeline": [
         "lsp.md_to_jsonld",

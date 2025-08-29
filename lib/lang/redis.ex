@@ -15,4 +15,16 @@ defmodule Lang.Redis do
 
   def incr(key) when is_binary(key), do: cmd(["INCR", key])
   def expire(key, ttl) when is_binary(key) and is_integer(ttl), do: cmd(["EXPIRE", key, ttl])
+
+  @doc """
+  Check if named Redix connection is available.
+  """
+  def available? do
+    case Process.whereis(@name) do
+      pid when is_pid(pid) -> true
+      _ -> false
+    end
+  rescue
+    _ -> false
+  end
 end

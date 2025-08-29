@@ -173,7 +173,7 @@ config :lang, :stylometrics,
   confidence_threshold: 0.7,
   obfuscation_intensity_default: 0.5
 
-config :lang, :timemachine,
+config :lang, :timeline,
   max_states_per_timeline: 10000,
   cleanup_interval_minutes: 30,
   snapshot_retention_days: 90

@@ -111,8 +111,6 @@ config/test.local.exs
 stripe_*
 *_key
 *_secret
-*api_key*
-*webhook*
 
 # Documentation build
 #/docs/

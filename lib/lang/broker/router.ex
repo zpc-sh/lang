@@ -8,6 +8,7 @@ defmodule Lang.Broker.Router do
 
   @protocols %{
     mcp: Lang.MCP.Protocol,
+    proxy: Lang.Proxy.Protocol,
     dap: nil
   }
 

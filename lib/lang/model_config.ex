@@ -57,6 +57,26 @@ defmodule Lang.ModelConfig do
       "codestral:22b" => %{input: 0.0, output: 0.0},
       "mixtral:8x7b" => %{input: 0.0, output: 0.0},
       "phi3:3.8b" => %{input: 0.0, output: 0.0}
+    },
+    qwen: %{
+      "qwen2.5-72b-instruct" => %{input: 0.9, output: 0.9},
+      "qwen2.5-32b-instruct" => %{input: 0.7, output: 0.7},
+      "qwen2.5-14b-instruct" => %{input: 0.3, output: 0.3},
+      "qwen2.5-7b-instruct" => %{input: 0.18, output: 0.18},
+      "qwen2-72b-instruct" => %{input: 0.9, output: 0.9},
+      "qwen2-7b-instruct" => %{input: 0.18, output: 0.18},
+      "qwen-turbo" => %{input: 0.3, output: 0.6},
+      "qwen-plus" => %{input: 4.0, output: 4.0},
+      "qwen-max" => %{input: 20.0, output: 20.0}
+    },
+    codex: %{
+      "code-davinci-002" => %{input: 10.0, output: 10.0},
+      "code-davinci-001" => %{input: 10.0, output: 10.0},
+      "code-cushman-002" => %{input: 2.0, output: 2.0},
+      "code-cushman-001" => %{input: 2.0, output: 2.0},
+      # Subscription-based
+      "github-copilot" => %{input: 0.0, output: 0.0},
+      "codex-instruct" => %{input: 8.0, output: 8.0}
     }
   }
 
