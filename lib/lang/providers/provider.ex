@@ -59,7 +59,8 @@ defmodule Lang.Providers.Provider do
   @providers %{
     xai: Lang.Providers.XAI,
     openai: Lang.Providers.OpenAI,
-    anthropic: Lang.Providers.Anthropic
+    anthropic: Lang.Providers.Anthropic,
+    gemini: Lang.Providers.Gemini
   }
 
   @doc """
@@ -70,7 +71,7 @@ defmodule Lang.Providers.Provider do
   @doc """
   Get provider module by name
   """
-  def get_provider(name) when name in [:xai, :openai, :anthropic] do
+  def get_provider(name) when name in [:xai, :openai, :anthropic, :gemini, :opencode] do
     Map.get(@providers, name)
   end
 
@@ -269,6 +270,21 @@ defmodule Lang.Providers.Provider do
         best_for: [:security_analysis, :code_review, :diagnostics, :safety],
         avoid_for: [:simple_tasks, :cost_optimization],
         specializes_in: [:security, :analysis, :safety_critical_tasks]
+      },
+      gemini: %{
+        best_for: [
+          :multimodal_analysis,
+          :performance_optimization,
+          :large_context,
+          :fast_generation
+        ],
+        avoid_for: [:simple_completion, :cost_sensitive_operations],
+        specializes_in: [:multimodal, :optimization, :pattern_analysis, :large_context_processing]
+      },
+      opencode: %{
+        best_for: [:testing, :development, :cost_optimization, :rapid_prototyping],
+        avoid_for: [:production_critical, :complex_reasoning],
+        specializes_in: [:testing, :development, :simulation, :cost_free_operations]
       }
     }
   end
@@ -338,6 +354,13 @@ defmodule Lang.Providers.Provider do
       # Generation goes to OpenAI if available
       String.contains?(method, "generate") -> :openai
       String.contains?(method, "explain") -> :openai
+      # Performance and optimization go to Gemini
+      String.contains?(method, "performance") -> :gemini
+      String.contains?(method, "optimize") -> :gemini
+      # Multimodal queries go to Gemini
+      String.contains?(method, "multimodal") -> :gemini
+      # For testing or development, use OpenCode (free)
+      String.contains?(method, "test") -> :opencode
       # Everything else goes to Grok (cheapest)
       true -> :xai
     end

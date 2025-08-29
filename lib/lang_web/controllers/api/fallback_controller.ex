@@ -8,18 +8,30 @@ defmodule LangWeb.Api.FallbackController do
 
   # This clause handles errors returned by Ecto's insert/update/delete.
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> put_view(json: LangWeb.Api.AnalysisView)
-    |> render("errors.json", changeset: changeset)
+    if jsonld?(conn) do
+      details = %{changes: changeset.changes, errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+        Enum.reduce(opts, msg, fn {k, v}, acc -> String.replace(acc, "%{#{k}}", to_string(v)) end)
+      end)}
+
+      LangWeb.ApiError.json(conn, :unprocessable_entity, "Validation failed", details)
+    else
+      conn
+      |> put_status(:unprocessable_entity)
+      |> put_view(json: LangWeb.Api.AnalysisView)
+      |> render("errors.json", changeset: changeset)
+    end
   end
 
   # This clause is an example of how to handle resources that cannot be found.
   def call(conn, {:error, :not_found}) do
-    conn
-    |> put_status(:not_found)
-    |> put_view(json: LangWeb.ErrorView)
-    |> render(:"404")
+    if jsonld?(conn) do
+      LangWeb.ApiError.json(conn, :not_found, "Not found")
+    else
+      conn
+      |> put_status(:not_found)
+      |> put_view(json: LangWeb.ErrorView)
+      |> render(:"404")
+    end
   end
 
   alias LangWeb.ApiError
@@ -65,10 +77,13 @@ defmodule LangWeb.Api.FallbackController do
 
   # Handle validation errors with custom messages
   def call(conn, {:error, :validation_failed, errors}) when is_map(errors) do
-    # Keep structured validation errors shape
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{errors: errors})
+    if jsonld?(conn) do
+      LangWeb.ApiError.json(conn, :unprocessable_entity, "Validation failed", %{errors: errors})
+    else
+      conn
+      |> put_status(:unprocessable_entity)
+      |> json(%{errors: errors})
+    end
   end
 
   # Handle file upload errors
@@ -82,10 +97,13 @@ defmodule LangWeb.Api.FallbackController do
 
   # Handle analysis errors
   def call(conn, {:error, :analysis_failed, reason}) when is_binary(reason) do
-    # Preserve extra reason field for debugging
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{error: "Analysis failed", reason: reason})
+    if jsonld?(conn) do
+      LangWeb.ApiError.json(conn, :unprocessable_entity, "Analysis failed", %{reason: reason})
+    else
+      conn
+      |> put_status(:unprocessable_entity)
+      |> json(%{error: "Analysis failed", reason: reason})
+    end
   end
 
   def call(conn, {:error, :analysis_failed}) do
@@ -119,4 +137,6 @@ defmodule LangWeb.Api.FallbackController do
     Logger.error("Unhandled fallback error: #{inspect(error)}")
     ApiError.json(conn, :internal_server_error, "Internal server error")
   end
+
+  defp jsonld?(conn), do: Phoenix.Controller.get_format(conn) == "jsonld"
 end

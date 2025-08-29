@@ -1,14 +1,30 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Agent.BehaviorBaseline do
-  @moduledoc "Establish normal behavior patterns"
-  @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.agent.behavior_baseline"
+defmodule Lang.Agent.Behavioral do
+  @moduledoc "Behavioral utilities for baselines and anomaly sampling."
 
-  @impl true
-  def method, do: @lsp_method
+  alias Lang.Agent.BehavioralSample
+  alias Lang.Events.Agent, as: AgentEvents
 
-  @impl true
-  def handle(params, ctx) when is_map(params) and is_map(ctx) do
-    # TODO: implement
-    {:error, :not_implemented}
+  def baseline(agent_id, baseline_data \\ %{}, context \\ %{}) do
+    with {:ok, _sample} <-
+           BehavioralSample
+           |> Ash.Changeset.for_create(:record_baseline, %{
+             agent_id: agent_id,
+             baseline_data: baseline_data,
+             context: context
+           })
+           |> Ash.create() do
+      AgentEvents.track_baseline_establishment(agent_id, baseline_data, context)
+      {:ok, :recorded}
+    end
+  end
+
+  def record_anomaly_sample(agent_id, anomaly_data, severity \\ :medium) do
+    BehavioralSample
+    |> Ash.Changeset.for_create(:record_anomaly, %{
+      agent_id: agent_id,
+      anomaly_data: anomaly_data,
+      severity: severity
+    })
+    |> Ash.create()
   end
 end

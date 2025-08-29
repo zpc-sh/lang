@@ -1,363 +1,162 @@
-# LANG LSP Editor Implementation Guide
+# LANG LSP — Editor Integration Guide
+
+This guide explains how to connect an editor or tool to the LANG Language Server (LSP) for local development and testing.
 
 ## Overview
 
-The LANG LSP Editor is a sophisticated, first-of-its-kind text editor specifically designed for AI-first LSP development. It provides a comprehensive interface for managing, editing, and tracking LSP method implementations with real-time semantic analysis and markdown_ld parsing.
+- Server: custom Elixir LSP server (`Lang.LSP.Server`)
+- Transport: TCP (default), or stdio (for editor-embedded mode)
+- Default TCP port: `4001` (configurable via `LSP_PORT` env var)
+- Protocol: JSON‑RPC 2.0 + LSP 3.x
 
-## Architecture
+Do not start `mix phx.server`. For one‑off checks use `mix run -e` (terminates after the command).
 
-### Core Components
+## Quick Start (Local)
 
-1. **LiveView Module**: `LangWeb.Admin.LspEditor.LspEditorLive`
-   - Real-time state management
-   - Method tracking and status updates
-   - File editing capabilities
-   - Semantic data processing
-
-2. **Template**: `lsp_editor_live.html.heex`
-   - Three editing modes: Table, Raw, and TipTap
-   - Real-time semantic information panel
-   - Inline editing capabilities
-
-3. **JavaScript Hooks**: `assets/js/lsp_editor_hooks.js`
-   - Recurse editor integration
-   - TipTap rich text editing
-   - LSP client connectivity
-   - Semantic entity processing
-
-4. **Master Data File**: `docs/lsp.md`
-   - Central tracker for all LSP methods
-   - Status indicators (❌ 🔄 ✅)
-   - Implementation file paths
-   - Priority and description metadata
-
-## Features
-
-### 1. Multi-Mode Editing
-
-#### Table View (Default)
-- Interactive table with inline editing
-- Status dropdown selection
-- Priority and description editing
-- File creation/opening buttons
-- Real-time filtering and search
-
-#### Raw Markdown Editor
-- Direct editing of `docs/lsp.md`
-- Syntax highlighting
-- Auto-save capabilities
-- Live preview of changes
-
-#### TipTap Rich Editor
-- WYSIWYG markdown editing
-- Semantic entity highlighting
-- Real-time collaboration features
-- Advanced keyboard shortcuts
-
-### 2. Semantic Analysis
-
-#### Markdown_LD Integration
-```elixir
-# Automatic extraction of semantic entities
-def extract_markdown_ld(content) do
-  case LinkedDataExtractor.extract_from_content(content, :markdown_ld) do
-    {:ok, linked_data} -> process_entities(linked_data)
-    {:error, _reason} -> fallback_processing()
-  end
-end
-```
-
-#### Real-time Entity Detection
-- LSP method recognition
-- Status indicator tracking
-- Relationship mapping
-- Confidence scoring
-
-### 3. File Management
-
-#### Recurse Editor Integration
-- Full Elixir syntax highlighting
-- LSP client connectivity
-- Auto-completion and diagnostics
-- Real-time collaboration
-
-#### Stub Generation
-```elixir
-def generate_stub_content(file_path) do
-  module_name = path_to_module_name(file_path)
-  """
-  defmodule #{module_name} do
-    @moduledoc \"\"\"
-    LSP implementation for #{Path.basename(file_path, ".ex")}
-    Generated stub - implement the required functionality.
-    \"\"\"
-
-    use Lang.LSP.Handler
-
-    @impl true
-    def handle_request(method, params, state) do
-      {:reply, %{result: nil}, state}
-    end
-  end
-  """
-end
-```
-
-## Usage Guide
-
-### Accessing the Editor
-
-Navigate to `/admin/lsp-editor` (requires authentication)
-
-### Managing LSP Methods
-
-1. **View Methods**: Table view shows all methods with current status
-2. **Edit Status**: Click status dropdown to update implementation progress
-3. **Edit Details**: Click on description or priority to edit inline
-4. **Create Files**: Click "Create" button to generate stub implementation
-5. **Open Files**: Click "Edit" button to open in Recurse editor
-
-### Editing Modes
-
-#### Switch Between Modes
-- **Table View**: Interactive method management
-- **Raw Editor**: Direct markdown editing
-- **TipTap**: Rich text editing with semantic features
-
-#### Keyboard Shortcuts
-
-**Global Shortcuts:**
-- `Cmd/Ctrl + S`: Save current content
-- `Cmd/Ctrl + R`: Reload LSP data
-
-**TipTap Mode:**
-- `Cmd/Ctrl + B`: Bold text
-- `Cmd/Ctrl + I`: Italic text
-- `Cmd/Ctrl + Shift + E`: Jump to next entity
-- `Cmd/Ctrl + Shift + S`: Show semantic summary
-
-**Recurse Editor:**
-- `Cmd/Ctrl + S`: Save file
-- `Cmd/Ctrl + F`: Format Elixir code
-- Auto-indentation for Elixir constructs
-
-### Semantic Features
-
-#### Entity Recognition
-The editor automatically recognizes:
-- LSP method names (in backticks)
-- Status indicators (❌ 🔄 ✅)
-- Priority markers (🔴 🟡 🟢)
-- Implementation file paths
-
-#### Real-time Analysis
-```javascript
-// Automatic semantic processing
-processMarkdownLD(content) {
-  const entities = MarkdownLDProcessor.extractEntities(content);
-  this.pushEventTo(this.el, "update_semantic_data", {
-    entities: entities,
-    entity_count: entities.length
-  });
-}
-```
-
-## Integration Points
-
-### LSP Server Connectivity
-```javascript
-// Real-time LSP integration
-setupLSPIntegration(textarea) {
-  this.lspClient = {
-    serverUrl: 'ws://localhost:4001/lsp',
-    sendRequest(method, params) { /* LSP protocol */ }
-  };
-}
-```
-
-### Native Rust Integration
-```elixir
-# High-performance file operations
-alias Lang.Native.FSScanner
-
-case FSScanner.preview(file_path, max_lines: 1000) do
-  {:ok, content} -> {:ok, content}
-  {:error, reason} -> {:error, reason}
-end
-```
-
-### Oban Background Processing
-```elixir
-# Queue long-running operations
-%{method: method_name, action: :implement}
-|> Lang.Workers.LspImplementationWorker.new()
-|> Oban.insert()
-```
-
-## File Structure
+1) Ensure the app boots the LSP supervisor (default in dev):
 
 ```
-lib/lang_web/live/admin/lsp_editor/
-├── lsp_editor_live.ex           # Main LiveView module
-└── lsp_editor_live.html.heex    # Template with three edit modes
-
-assets/js/
-└── lsp_editor_hooks.js          # JavaScript integration
-
-docs/
-└── lsp.md                       # Master LSP method tracker
+mix run -e "Application.ensure_all_started(:lang)"
 ```
+
+2) Verify the LSP server is listening on the configured port (default 4001):
+
+```
+lsof -iTCP:4001 -sTCP:LISTEN || echo "LSP not listening on 4001"
+```
+
+3) Send a minimal LSP initialize request over TCP to sanity‑check:
+
+```
+cat > /tmp/lsp-init.json <<'JSON'
+Content-Length: 182\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":null,"capabilities":{},"clientInfo":{"name":"probe","version":"0.1"}}}
+JSON
+nc 127.0.0.1 ${LSP_PORT:-4001} < /tmp/lsp-init.json
+```
+
+You should receive an `initialize` response with server capabilities, followed by an `initialized` notification.
 
 ## Configuration
 
-### Environment Variables
-```elixir
-# config/config.exs
-config :lang, :lsp_editor,
-  auto_save_interval: 5000,      # Auto-save every 5 seconds
-  semantic_analysis: true,        # Enable semantic features
-  recurse_integration: true      # Enable Recurse editor
+- Port: set `LSP_PORT` in your environment (`.env.local` or export):
+
+```
+export LSP_PORT=4001
 ```
 
-### Route Configuration
-```elixir
-# lib/lang_web/router.ex
-scope "/admin", LangWeb.Admin do
-  pipe_through [:browser, :require_authenticated_user]
-  live "/lsp-editor", LspEditor.LspEditorLive, :index
+- The LSP supervisor uses `Application.get_env(:lang, :lsp_port, 4001)`.
+- The central secrets helper `Lang.Security.Secrets.lsp_port/0` also reads `LSP_PORT`.
+
+## VS Code (extension authors)
+
+Use the VS Code Language Client to connect via stdio or TCP. Two options:
+
+- Stdio (spawn the app with stdio mode): implement a server command that runs your release/script in stdio mode and wire it as the language server `command`.
+- TCP (simpler for dev): connect to localhost/`LSP_PORT`.
+
+Minimal TCP client (TypeScript):
+
+```ts
+import * as net from 'net';
+import { StreamMessageReader, StreamMessageWriter } from 'vscode-jsonrpc/node';
+import { createMessageConnection } from 'vscode-jsonrpc';
+
+const socket = net.connect({ host: '127.0.0.1', port: Number(process.env.LSP_PORT || 4001) });
+const reader = new StreamMessageReader(socket);
+const writer = new StreamMessageWriter(socket);
+const connection = createMessageConnection(reader, writer);
+
+connection.onNotification((method, params) => console.log('notif', method, params));
+connection.onRequest((method, params) => console.log('req', method, params));
+
+connection.listen();
+
+connection.sendRequest('initialize', {
+  processId: null,
+  rootUri: null,
+  capabilities: {},
+  clientInfo: { name: 'vscode-ext', version: '0.1.0' },
+}).then((result) => {
+  console.log('initialized', result);
+  connection.sendNotification('initialized', {});
+});
+```
+
+## Neovim (nvim‑lspconfig)
+
+You can start a TCP client via `vim.lsp.start_client` and attach to buffers.
+
+```lua
+local client_id = vim.lsp.start_client({
+  name = 'lang-lsp',
+  cmd = nil,            -- no stdio command
+  transport = 'tcp',    -- use TCP transport
+  host = '127.0.0.1',
+  port = tonumber(os.getenv('LSP_PORT') or '4001'),
+})
+if client_id then
+  vim.lsp.buf_attach_client(0, client_id)
 end
 ```
 
-## Development Workflow
+Alternatively, wrap the above in a small custom nvim‑lspconfig.
 
-### 1. Add New LSP Method
-1. Open LSP Editor at `/admin/lsp-editor`
-2. Switch to Raw or TipTap mode
-3. Add method entry following the format:
-   ```markdown
-   | `lang.new.method` | ❌ | High | Method description | `lib/lang/new/method.ex` |
-   ```
-4. Save and return to Table view
-5. Click "Create" to generate stub implementation
-6. Implement the method in Recurse editor
+## Emacs (lsp‑mode)
 
-### 2. Update Method Status
-1. In Table view, find the method
-2. Update status dropdown: ❌ → 🔄 → ✅
-3. Changes are automatically saved to `docs/lsp.md`
+Emacs lsp‑mode supports TCP connections via a custom client.
 
-### 3. Bulk Operations
-- Use bulk update buttons for mass status changes
-- Export current state to CSV for external processing
-- Use semantic analysis to identify related methods
+```elisp
+(require 'lsp-mode)
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-tcp-connection (lambda () (list "127.0.0.1" (string-to-number (or (getenv "LSP_PORT") "4001")))))
+                  :major-modes '(elixir-mode heex-ts-mode)
+                  :server-id 'lang-lsp))
+```
 
-## Advanced Features
+Then enable with `M-x lsp` in your buffer.
 
-### Real-time Collaboration
-- Multiple developers can edit simultaneously
-- Changes are broadcast via Phoenix PubSub
-- Conflict resolution with last-write-wins
+## Basic LSP Flow (for tools/tests)
 
-### AI-First Integration
-- Semantic understanding of method relationships
-- Intelligent stub generation based on context
-- Automatic priority assignment based on dependencies
+- initialize → server returns capabilities
+- initialized (client notification)
+- textDocument/didOpen → send initial text
+- completion/hover/formatting/etc.
 
-### Performance Optimization
-- Native Rust NIFs for file operations
-- Efficient LiveView streaming for large method lists
-- Lazy loading of implementation files
+Example JSON‑RPC message headers:
+
+```
+Content-Length: <byte_length>\r\n
+\r\n
+{"jsonrpc":"2.0","id":1,"method":"initialize",...}
+```
+
+Ensure the `Content-Length` includes only the JSON body bytes (no headers), and lines end with `\r\n` per LSP.
+
+## Stdio Mode (advanced)
+
+`Lang.LSP.Server` supports stdio mode for embedding inside an editor‑spawned process. This mode is typically wired by an editor extension that launches the app with a flag and speaks LSP over the process stdio. If you need this, add a small wrapper binary that sets mode `:stdio` when starting the server process.
 
 ## Troubleshooting
 
-### Common Issues
+- Port not listening:
+  - Confirm `mix run -e "Application.ensure_all_started(:lang)"` succeeds.
+  - Check `LSP_PORT` and that no other process is bound to it.
+- No response to initialize:
+  - Validate `Content-Length` and CRLF in headers.
+  - Ensure your client sends `initialized` after `initialize` response.
+- Editor doesn’t attach:
+  - Verify the client actually connects to `127.0.0.1:LSP_PORT`.
+  - Check logs from `Lang.LSP.Server` for connections and errors.
 
-1. **Semantic Analysis Not Working**
-   - Ensure markdown_ld dependencies are installed
-   - Check that content follows markdown_ld format
-   - Verify LinkedDataExtractor is properly configured
+## Safety Notes
 
-2. **Recurse Editor Not Loading**
-   - Confirm `@nocsi/recurse` package is installed
-   - Check JavaScript console for integration errors
-   - Verify WebSocket connection to LSP server
-
-3. **Auto-save Conflicts**
-   - Multiple users editing same file
-   - Network connectivity issues
-   - File permission problems
-
-### Debug Mode
-```elixir
-# Enable debug logging
-config :lang, :lsp_editor, debug: true
-
-# In browser console
-window.liveSocket.enableDebug()
-```
-
-## Contributing
-
-### Adding New Edit Modes
-1. Create new JavaScript hook in `lsp_editor_hooks.js`
-2. Add mode toggle in template header
-3. Implement event handlers in LiveView
-4. Update routing and navigation logic
-
-### Extending Semantic Analysis
-1. Add new entity types to `MarkdownLDProcessor`
-2. Implement extraction patterns
-3. Update confidence scoring algorithms
-4. Add visualization components
-
-## Security Considerations
-
-- Authentication required for admin access
-- File operations sandboxed to project directory
-- LSP communication over secure WebSocket
-- Input sanitization for all user content
-
-## Performance Metrics
-
-- **Initial Load**: < 2 seconds for 500+ methods
-- **Real-time Updates**: < 100ms response time
-- **File Operations**: 60-100x faster with Rust NIFs
-- **Memory Usage**: Efficient streaming for large documents
-
-## Future Enhancements
-
-1. **AI-Powered Features**
-   - Automatic method implementation suggestions
-   - Intelligent test generation
-   - Code review automation
-
-2. **Advanced Collaboration**
-   - Real-time cursors and selections
-   - Conflict resolution UI
-   - Change history and rollback
-
-3. **Integration Expansions**
-   - GitHub/GitLab integration
-   - Jira/Linear task linking
-   - Slack/Discord notifications
+- Local dev only; the TCP endpoint is unauthenticated and should not be exposed publicly.
+- For CI/probes, use a short‑lived `mix run -e` boot to verify LSP without running long‑lived servers.
 
 ---
 
-## Quick Start
+For deeper internals, see:
+- `lib/lang/lsp/server.ex` — TCP/stdio implementation
+- `lib/lang/lsp/supervisor.ex` — LSP supervisor
+- `lib/lang/lsp/dispatch.ex` — request routing to handlers
 
-```bash
-# 1. Navigate to LSP Editor
-# Open browser: http://localhost:4000/admin/lsp-editor
-
-# 2. Start editing LSP methods
-# - Switch between Table/Raw/TipTap modes
-# - Create new method implementations
-# - Track progress with status indicators
-
-# 3. Leverage semantic features
-# - View entity analysis in sidebar
-# - Use keyboard shortcuts for navigation
-# - Export data for external tools
-```
-
-**The LANG LSP Editor represents the first implementation of its kind - a truly AI-first approach to language server development with unprecedented integration of semantic analysis, real-time collaboration, and native performance optimization.**

@@ -23,28 +23,34 @@ use ahash::AHashMap;
 // ============================================================================
 
 rustler::init!(
-    "Elixir.Lang.Native.FsWatcher",
+    "Elixir.Lang.Native.FSWatcher",
     [
-        create_fs_watcher,
-        destroy_watcher,
-        add_watch_path,
-        remove_watch_path,
-        set_architectural_rules,
-        get_events,
-        get_statistics,
-        coalesce_events,
-        batch_validate_rules,
-        scan_directory_tree,
-        get_file_metadata_batch,
-        setup_real_time_monitoring,
-        check_architecture_violations
+        start_watch,
+        stop_watch,
+        subscribe
     ],
     load = on_load
 );
 
 fn on_load(env: Env, _info: Term) -> bool {
-    rustler::resource!(FsWatcherResource, env);
+    let _ = rustler::resource!(FsWatcherResource, env);
     true
+}
+
+// Minimal bindings matching Elixir surface. For now these are placeholders.
+#[rustler::nif]
+fn start_watch<'a>(_env: Env<'a>, _path: String, _opts: HashMap<String, Term<'a>>) -> NifResult<Term<'a>> {
+    Ok((error(), rustler::types::atom::Atom::from_str(_env, "not_implemented").unwrap()).to_term(_env))
+}
+
+#[rustler::nif]
+fn stop_watch<'a>(_env: Env<'a>, _watch_id: String) -> NifResult<Term<'a>> {
+    Ok((error(), rustler::types::atom::Atom::from_str(_env, "not_implemented").unwrap()).to_term(_env))
+}
+
+#[rustler::nif]
+fn subscribe<'a>(_env: Env<'a>, _watch_id: String) -> NifResult<Term<'a>> {
+    Ok((error(), rustler::types::atom::Atom::from_str(_env, "not_implemented").unwrap()).to_term(_env))
 }
 
 // Atoms for Elixir communication

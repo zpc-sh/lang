@@ -11,6 +11,7 @@ defmodule Lang.Agent do
   resources do
     resource(Lang.Agent.Agent)
     resource(Lang.Agent.BehavioralSample)
+    resource(Lang.Agent.CoordinationSummary)
   end
 
   authorization do

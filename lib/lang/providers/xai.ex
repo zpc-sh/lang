@@ -51,6 +51,17 @@ defmodule Lang.Providers.XAI do
   end
 
   @impl Lang.Providers.Provider
+  def pricing do
+    %{
+      # XAI is cost-effective
+      input_tokens_per_dollar: 2000,
+      output_tokens_per_dollar: 1500,
+      base_cost_per_request: 0.001,
+      bulk_discount_threshold: 200_000
+    }
+  end
+
+  @impl Lang.Providers.Provider
   def available? do
     case Application.get_env(:lang, :ai_providers)[:xai_api_key] do
       nil -> false

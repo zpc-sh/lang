@@ -347,9 +347,35 @@ defmodule Lang.LSP.Server do
   defp handle_lsp_request(client_id, message, state) do
     start_time = System.monotonic_time(:millisecond)
 
+    # Tag logs with client metadata if available
+    case Map.get(state.clients || %{}, client_id) do
+      %{uri: uri, label: label} -> Logger.metadata(client_id: label || client_id, uri: uri)
+      %{uri: uri} -> Logger.metadata(client_id: client_id, uri: uri)
+      %{label: label} -> Logger.metadata(client_id: label || client_id)
+      _ -> :ok
+    end
+
     # Route based on method
     response =
       case message do
+        # Identify notification to correlate logs per external client id
+        %{"method" => "lang/tester/identify", "params" => params} ->
+          cid = params["clientId"] || params["client_id"]
+          token = params["token"]
+
+          Logger.metadata(client_id: cid || client_id)
+          Logger.info("LSP identify received#{if cid, do: ": #{cid}", else: ""}")
+
+          clients =
+            case Map.get(state.clients, client_id) do
+              nil -> state.clients
+              meta -> Map.put(state.clients, client_id, Map.put(meta, :label, cid))
+            end
+
+          # No response for notifications
+          _ = clients
+          nil
+
         %{"method" => "initialize", "id" => id, "params" => params} ->
           handle_initialize(id, params, state)
 
@@ -372,6 +398,17 @@ defmodule Lang.LSP.Server do
           nil
 
         %{"method" => "textDocument/didOpen", "params" => params} ->
+          uri = get_in(params, ["textDocument", "uri"]) || get_in(params, ["textDocument", "uriString"]) || ""
+
+          # Store last opened URI on the client for log correlation
+          clients =
+            case Map.get(state.clients, client_id) do
+              nil -> state.clients
+              meta -> Map.put(state.clients, client_id, Map.put(meta, :uri, uri))
+            end
+
+          Logger.metadata(uri: uri)
+          state = %{state | clients: clients}
           handle_did_open(params, state)
 
         %{"method" => "textDocument/didChange", "params" => params} ->
@@ -395,8 +432,17 @@ defmodule Lang.LSP.Server do
         %{"method" => "textDocument/references", "id" => id, "params" => params} ->
           handle_references(id, params, state)
 
+        %{"method" => "textDocument/documentHighlight", "id" => id, "params" => params} ->
+          handle_document_highlight(id, params, state)
+
         %{"method" => "textDocument/documentSymbol", "id" => id, "params" => params} ->
           handle_document_symbol(id, params, state)
+
+        %{"method" => "textDocument/semanticTokens/full", "id" => id, "params" => %{"textDocument" => %{"uri" => uri}}} ->
+          handle_semantic_tokens_full(id, uri, state)
+
+        %{"method" => "textDocument/semanticTokens/range", "id" => id, "params" => %{"textDocument" => %{"uri" => uri}, "range" => range}} ->
+          handle_semantic_tokens_range(id, uri, range, state)
 
         %{"method" => "textDocument/formatting", "id" => id, "params" => params} ->
           handle_formatting(id, params, state)
@@ -462,8 +508,17 @@ defmodule Lang.LSP.Server do
       },
       "hoverProvider" => true,
       "definitionProvider" => true,
+      "documentHighlightProvider" => true,
       "referencesProvider" => true,
       "documentSymbolProvider" => true,
+      "semanticTokensProvider" => %{
+        "legend" => %{
+          "tokenTypes" => semantic_token_types(),
+          "tokenModifiers" => semantic_token_modifiers()
+        },
+        "full" => true,
+        "range" => true
+      },
       "workspaceSymbolProvider" => true,
       "documentFormattingProvider" => true,
       "executeCommandProvider" => %{
@@ -713,11 +768,19 @@ defmodule Lang.LSP.Server do
                  document.text,
                  document.language_id
                ) do
-            {:ok, syms} ->
+            {:ok, syms} when is_list(syms) and syms != [] ->
               Enum.map(syms, &format_document_symbol/1)
 
-            {:error, _reason} ->
-              []
+            _ ->
+              case document.language_id do
+                "elixir" ->
+                  document.text
+                  |> fallback_extract_elixir_symbols()
+                  |> Enum.map(&format_document_symbol/1)
+
+                _ ->
+                  []
+              end
           end
 
         %{
@@ -725,6 +788,365 @@ defmodule Lang.LSP.Server do
           "id" => id,
           "result" => symbols
         }
+    end
+  end
+
+  defp handle_semantic_tokens_full(id, uri, state) do
+    case Map.get(state.documents, uri) do
+      nil ->
+        error_response(id, :document_not_found)
+
+      document ->
+        data = build_semantic_tokens(document)
+        %{"jsonrpc" => "2.0", "id" => id, "result" => %{"data" => data}}
+    end
+  end
+
+  defp handle_semantic_tokens_range(id, uri, range, state) do
+    case Map.get(state.documents, uri) do
+      nil ->
+        error_response(id, :document_not_found)
+
+      document ->
+        # Compute full then filter to range; simple and sufficient for now
+        tokens = decode_semantic_tokens(build_semantic_tokens(document))
+        %{"start" => %{"line" => sl, "character" => sc}, "end" => %{"line" => el, "character" => ec}} = range
+
+        filtered =
+          Enum.filter(tokens, fn {line, start, length, _type, _mods} ->
+            cond do
+              line < sl -> false
+              line > el -> false
+              line == sl and start + length <= sc -> false
+              line == el and start >= ec -> false
+              true -> true
+            end
+          end)
+
+        data = encode_semantic_tokens(filtered)
+        %{"jsonrpc" => "2.0", "id" => id, "result" => %{"data" => data}}
+    end
+  end
+
+  defp semantic_token_types do
+    [
+      "namespace",
+      "type",
+      "class",
+      "enum",
+      "interface",
+      "struct",
+      "typeParameter",
+      "parameter",
+      "variable",
+      "property",
+      "enumMember",
+      "event",
+      "function",
+      "method",
+      "macro",
+      "keyword",
+      "modifier",
+      "comment",
+      "string",
+      "number",
+      "regexp",
+      "operator",
+      "typeAlias",
+      "attribute",
+      "boolean"
+    ]
+  end
+
+  defp semantic_token_modifiers do
+    [
+      "declaration",
+      "static",
+      "async",
+      "readonly",
+      "deprecated",
+      "documentation",
+      "defaultLibrary"
+    ]
+  end
+
+  defp token_type_index(type) do
+    Enum.find_index(semantic_token_types(), &(&1 == type)) || 0
+  end
+
+  defp token_mods_bitset(mods) when is_list(mods) do
+    Enum.reduce(mods, 0, fn m, acc ->
+      case Enum.find_index(semantic_token_modifiers(), &(&1 == m)) do
+        nil -> acc
+        idx -> Bitwise.bor(acc, Bitwise.bsl(1, idx))
+      end
+    end)
+  end
+
+  defp token_mods_bitset(_), do: 0
+
+  defp build_semantic_tokens(%{text: text, language_id: lang}) do
+    tokens =
+      case lang do
+        "elixir" -> semantic_tokens_elixir(text)
+        "javascript" -> semantic_tokens_javascript(text)
+        "typescript" -> semantic_tokens_javascript(text)
+        "python" -> semantic_tokens_python(text)
+        _ -> []
+      end
+
+    encode_semantic_tokens(tokens)
+  end
+
+  # Encode list of {line, start, length, type, mods_bitset} into LSP data array
+  defp encode_semantic_tokens(tokens) do
+    sorted = Enum.sort_by(tokens, fn {l, s, _len, _t, _m} -> {l, s} end)
+    {data, _} =
+      Enum.reduce(sorted, {[], {0, 0}}, fn {line, start, len, type, mods}, {acc, {pl, ps}} ->
+        delta_line = line - pl
+        delta_start = if delta_line == 0, do: start - ps, else: start
+        entry = [delta_line, delta_start, len, token_type_index(type), token_mods_bitset(mods)]
+        {[acc | [entry]] |> List.flatten(), {line, start}}
+      end)
+
+    data
+  end
+
+  # Decode back to absolute tuples (used for simple range filter)
+  defp decode_semantic_tokens(data) do
+    {_line, _start, out} =
+      Enum.reduce(data, {0, 0, []}, fn [dl, ds, len, tix, mods], {pl, ps, acc} ->
+        line = pl + dl
+        start = if dl == 0, do: ps + ds, else: ds
+        type = Enum.at(semantic_token_types(), tix) || "variable"
+        {line, start, acc ++ [{line, start, len, type, mods}]}
+      end)
+
+    out
+  end
+
+  # Very lightweight Elixir tokenization; per-line regex scanning
+  defp semantic_tokens_elixir(text) do
+    lines = String.split(text, "\n")
+    keywords = ~w(def defp defmodule defmacro defstruct alias import require use fn do end if else elif cond case receive after try catch rescue raise quote unquote when with for true false nil)
+
+    # Heredocs first (triple-quoted strings across lines)
+    heredoc_tokens = scan_elixir_heredocs(text)
+
+    line_tokens =
+      Enum.with_index(lines)
+    |> Enum.flat_map(fn {line, ln} ->
+      # Comments (take precedence)
+      comment_idx = String.index(line, "#") || -1
+      {code_part, comment_tokens} =
+        if comment_idx >= 0 do
+          len = String.length(line)
+          {String.slice(line, 0, comment_idx), [{ln, comment_idx, len - comment_idx, "comment", []}]}
+        else
+          {line, []}
+        end
+
+      tokens = []
+      tokens = add_string_tokens(tokens, code_part, ln)
+      tokens = add_elixir_sigil_tokens(tokens, code_part, ln)
+      tokens = add_number_tokens(tokens, code_part, ln)
+      tokens = add_keyword_tokens(tokens, code_part, ln, keywords)
+      tokens = add_defmodule_tokens(tokens, code_part, ln)
+      tokens = add_def_like_tokens(tokens, code_part, ln)
+      tokens = add_attribute_tokens(tokens, code_part, ln)
+
+      comment_tokens ++ Enum.sort_by(tokens, fn {_, s, _, _, _} -> s end)
+    end)
+
+    heredoc_tokens ++ line_tokens
+  end
+
+  defp add_string_tokens(acc, line, ln) do
+    # naive per-line string detection (both ' and ")
+    re = ~r/("[^"]*"|'[^']*')/u
+    Enum.reduce(Regex.scan(re, line, return: :index), acc, fn [{pos, len}], a ->
+      a ++ [{ln, pos, len, "string", []}]
+    end)
+  end
+
+  defp add_number_tokens(acc, line, ln) do
+    re = ~r/\b\d+(?:_\d+)*(?:\.\d+)?\b/u
+    Enum.reduce(Regex.scan(re, line, return: :index), acc, fn [{pos, len}], a ->
+      a ++ [{ln, pos, len, "number", []}]
+    end)
+  end
+
+  defp add_keyword_tokens(acc, line, ln, keywords) do
+    Enum.reduce(keywords, acc, fn kw, a ->
+      re = ~r/(^|[^A-Za-z0-9_])#{Regex.escape(kw)}(?![A-Za-z0-9_])/u
+      Enum.reduce(Regex.scan(re, line, return: :index), a, fn
+        [{pos, _len}, {wpos, wlen}], a2 -> a2 ++ [{ln, wpos, wlen, "keyword", []}]
+        [{pos, len}], a2 -> a2 # safety
+      end)
+    end)
+  end
+
+  defp add_defmodule_tokens(acc, line, ln) do
+    case Regex.run(~r/\bdefmodule\s+([A-Z][A-Za-z0-9_.]*)/u, line, return: :index) do
+      nil -> acc
+      [{_mpos, _mlen}, {npos, nlen}] -> acc ++ [{ln, npos, nlen, "type", ["declaration"]}]
+    end
+  end
+
+  defp add_def_like_tokens(acc, line, ln) do
+    cond do
+      match = Regex.run(~r/\bdefp?\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/u, line, return: :index) ->
+        [{_mpos, _mlen}, {npos, nlen}] = match
+        acc ++ [{ln, npos, nlen, "function", ["declaration"]}]
+      match2 = Regex.run(~r/\bdefmacro\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/u, line, return: :index) ->
+        [{_mpos, _mlen}, {npos, nlen}] = match2
+        acc ++ [{ln, npos, nlen, "macro", ["declaration"]}]
+      true -> acc
+    end
+  end
+
+  defp add_attribute_tokens(acc, line, ln) do
+    re = ~r/@([a-z_][A-Za-z0-9_]*)/u
+    Enum.reduce(Regex.scan(re, line, return: :index), acc, fn
+      [{_mpos, _mlen}, {npos, nlen}], a -> a ++ [{ln, npos, nlen, "attribute", []}]
+      list, a -> a
+    end)
+  end
+
+  defp scan_elixir_heredocs(text) do
+    tokens =
+      Regex.scan(~r/"""[\s\S]*?"""|'''[\s\S]*?'''/m, text, return: :index)
+      |> Enum.map(fn [{pos, len}] -> {pos, len} end)
+
+    lines = String.split(text, "\n", include_captures: true)
+
+    Enum.flat_map(tokens, fn {abs_pos, len} ->
+      # Convert absolute byte range to line/char segments
+      segments_for_range(lines, abs_pos, len)
+      |> Enum.map(fn {ln, start, seg_len} -> {ln, start, seg_len, "string", []} end)
+    end)
+  end
+
+  defp segments_for_range(lines, abs_pos, len) do
+    # Walk through lines accumulating positions
+    {_off, ln, col, acc} =
+      Enum.reduce_while(Enum.with_index(lines), {0, 0, 0, []}, fn {line, idx}, {off, _ln, _col, acc} ->
+        line_len = String.length(line)
+        line_end = off + line_len
+
+        cond do
+          abs_pos >= line_end ->
+            {:cont, {line_end, idx + 1, 0, acc}}
+
+          abs_pos + len <= off ->
+            {:halt, {off, idx, 0, acc}}
+
+          true ->
+            # Overlap exists in this line
+            start = max(abs_pos - off, 0)
+            take_len = min(line_len - start, abs_pos + len - (off + start))
+            acc = acc ++ [{idx, start, take_len}]
+            if abs_pos + len <= line_end do
+              {:halt, {line_end, idx, 0, acc}}
+            else
+              {:cont, {line_end, idx + 1, 0, acc}}
+            end
+        end
+      end)
+
+    acc
+  end
+
+  defp add_elixir_sigil_tokens(acc, line, ln) do
+    # ~s"...", ~S'...', ~r/.../ ~w|...|
+    re = ~r/~[a-zA-Z]("[^"]*"|'[^']*'|\/[^^\/]*\/|\|[^\|]*\|)/u
+    Enum.reduce(Regex.scan(re, line, return: :index), acc, fn
+      [{mpos, mlen}], a -> a ++ [{ln, mpos, mlen, "string", []}]
+      _, a -> a
+    end)
+  end
+
+  # ---------------- JavaScript / TypeScript ----------------
+  defp semantic_tokens_javascript(text) do
+    lines = String.split(text, "\n")
+    keywords = ~w(function const let var class if else return import from export new try catch finally switch case default for while do break continue throw await async yield this super)
+
+    Enum.with_index(lines)
+    |> Enum.flat_map(fn {line, ln} ->
+      # Line comments
+      comment_idx = String.index(line, "//") || -1
+      {code_part, comment_tokens} =
+        if comment_idx >= 0 do
+          len = String.length(line)
+          {String.slice(line, 0, comment_idx), [{ln, comment_idx, len - comment_idx, "comment", []}]}
+        else
+          {line, []}
+        end
+
+      tokens = []
+      tokens = add_string_tokens(tokens, code_part, ln)
+      tokens = add_number_tokens(tokens, code_part, ln)
+      tokens = add_keyword_tokens(tokens, code_part, ln, keywords)
+      tokens = add_js_def_tokens(tokens, code_part, ln)
+      tokens = add_js_class_tokens(tokens, code_part, ln)
+
+      comment_tokens ++ Enum.sort_by(tokens, fn {_, s, _, _, _} -> s end)
+    end)
+  end
+
+  defp add_js_def_tokens(acc, line, ln) do
+    case Regex.run(~r/\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)/u, line, return: :index) do
+      nil -> acc
+      [{_mpos, _mlen}, {npos, nlen}] -> acc ++ [{ln, npos, nlen, "function", ["declaration"]}]
+    end
+  end
+
+  defp add_js_class_tokens(acc, line, ln) do
+    case Regex.run(~r/\bclass\s+([A-Za-z_][A-Za-z0-9_]*)/u, line, return: :index) do
+      nil -> acc
+      [{_mpos, _mlen}, {npos, nlen}] -> acc ++ [{ln, npos, nlen, "class", ["declaration"]}]
+    end
+  end
+
+  # ---------------- Python ----------------
+  defp semantic_tokens_python(text) do
+    lines = String.split(text, "\n")
+    keywords = ~w(def class import from as if elif else try except finally with for while return yield lambda pass break continue True False None and or not in is raise assert global nonlocal async await)
+
+    Enum.with_index(lines)
+    |> Enum.flat_map(fn {line, ln} ->
+      # Line comments
+      comment_idx = String.index(line, "#") || -1
+      {code_part, comment_tokens} =
+        if comment_idx >= 0 do
+          len = String.length(line)
+          {String.slice(line, 0, comment_idx), [{ln, comment_idx, len - comment_idx, "comment", []}]}
+        else
+          {line, []}
+        end
+
+      tokens = []
+      tokens = add_string_tokens(tokens, code_part, ln)
+      tokens = add_number_tokens(tokens, code_part, ln)
+      tokens = add_keyword_tokens(tokens, code_part, ln, keywords)
+      tokens = add_py_def_tokens(tokens, code_part, ln)
+      tokens = add_py_class_tokens(tokens, code_part, ln)
+
+      comment_tokens ++ Enum.sort_by(tokens, fn {_, s, _, _, _} -> s end)
+    end)
+  end
+
+  defp add_py_def_tokens(acc, line, ln) do
+    case Regex.run(~r/\bdef\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/u, line, return: :index) do
+      nil -> acc
+      [{_mpos, _mlen}, {npos, nlen}] -> acc ++ [{ln, npos, nlen, "function", ["declaration"]}]
+    end
+  end
+
+  defp add_py_class_tokens(acc, line, ln) do
+    case Regex.run(~r/\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\b/u, line, return: :index) do
+      nil -> acc
+      [{_mpos, _mlen}, {npos, nlen}] -> acc ++ [{ln, npos, nlen, "class", ["declaration"]}]
     end
   end
 
@@ -793,6 +1215,68 @@ defmodule Lang.LSP.Server do
           "id" => id,
           "result" => []
         }
+    end
+  end
+
+  defp handle_document_highlight(
+         id,
+         %{"textDocument" => %{"uri" => uri}, "position" => position},
+         state
+       ) do
+    case Map.get(state.documents, uri) do
+      nil ->
+        error_response(id, :document_not_found)
+
+      document ->
+        word = get_word_at_position(document.text, position)
+
+        result =
+          if word == "" do
+            []
+          else
+            document.text
+            |> String.split("\n")
+            |> Enum.with_index()
+            |> Enum.flat_map(fn {line_text, ln} ->
+              scan_line_for_word(line_text, word)
+              |> Enum.map(fn {start_char, len} ->
+                %{
+                  "range" => %{
+                    "start" => %{"line" => ln, "character" => start_char},
+                    "end" => %{"line" => ln, "character" => start_char + len}
+                  },
+                  # 1 = Text (default), 2 = Read, 3 = Write
+                  "kind" => 1
+                }
+              end)
+            end)
+          end
+
+        %{"jsonrpc" => "2.0", "id" => id, "result" => result}
+    end
+  end
+
+  defp scan_line_for_word(line_text, word) do
+    wlen = String.length(word)
+    max_i = max(String.length(line_text) - wlen, 0)
+    Enum.reduce(0..max_i, [], fn i, acc ->
+      segment = String.slice(line_text, i, wlen)
+      if segment == word and boundary_ok?(line_text, i - 1) and boundary_ok?(line_text, i + wlen) do
+        [{i, wlen} | acc]
+      else
+        acc
+      end
+    end)
+    |> Enum.reverse()
+  end
+
+  defp boundary_ok?(line_text, idx) do
+    cond do
+      idx < 0 -> true
+      idx >= String.length(line_text) -> true
+      true ->
+        ch = String.at(line_text, idx)
+        not Regex.match?(~r/[A-Za-z0-9_]/u, ch)
     end
   end
 
@@ -926,6 +1410,8 @@ defmodule Lang.LSP.Server do
   end
 
   defp apply_range_change(text, range, new_text) do
+    # Normalize incoming text newlines (LSP may send CRLF)
+    new_text = String.replace(new_text, "\r\n", "\n")
     lines = String.split(text, "\n", parts: :infinity)
 
     start_line = range["start"]["line"]
@@ -933,9 +1419,27 @@ defmodule Lang.LSP.Server do
     end_line = range["end"]["line"]
     end_char = range["end"]["character"]
 
-    # Apply the change (simplified - real implementation would be more complex)
-    # This is a placeholder that would need proper line/character handling
-    new_text
+    # Guard against out-of-bounds indices gracefully
+    total_lines = length(lines)
+    start_line = min(max(start_line, 0), max(total_lines - 1, 0))
+    end_line = min(max(end_line, 0), max(total_lines - 1, 0))
+
+    start_line_text = Enum.at(lines, start_line, "")
+    end_line_text = Enum.at(lines, end_line, "")
+
+    start_char = min(max(start_char, 0), String.length(start_line_text))
+    end_char = min(max(end_char, 0), String.length(end_line_text))
+
+    before_lines = Enum.take(lines, start_line)
+    after_lines = Enum.drop(lines, end_line + 1)
+
+    prefix = String.slice(start_line_text, 0, start_char)
+    suffix = String.slice(end_line_text, end_char..-1)
+
+    merged = prefix <> new_text <> suffix
+    merged_lines = String.split(merged, "\n", parts: :infinity)
+
+    Enum.join(before_lines ++ merged_lines ++ after_lines, "\n")
   end
 
   defp get_completion_context(text, %{"line" => line, "character" => character}) do
@@ -1055,6 +1559,44 @@ defmodule Lang.LSP.Server do
       "name" => name,
       "kind" => kind,
       "location" => format_location(location)
+    }
+  end
+
+  # Fallback symbol extraction for Elixir when analyzer isn't available
+  defp fallback_extract_elixir_symbols(text) when is_binary(text) do
+    lines = String.split(text, "\n")
+
+    Enum.with_index(lines)
+    |> Enum.flat_map(fn {line, ln} ->
+      mods =
+        case Regex.run(~r/^\s*defmodule\s+([A-Z][A-Za-z0-9_.]*)/, line, return: :index) do
+          nil -> []
+          [{_mpos, _mlen}, {npos, nlen}] ->
+            [%{name: String.slice(line, npos, nlen), kind: 2, range: one_line_range(ln, npos, nlen)}]
+        end
+
+      funs =
+        case Regex.run(~r/^\s*defp?\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/, line, return: :index) do
+          nil -> []
+          [{_mpos, _mlen}, {npos, nlen}] ->
+            [%{name: String.slice(line, npos, nlen), kind: 12, range: one_line_range(ln, npos, nlen)}]
+        end
+
+      macros =
+        case Regex.run(~r/^\s*defmacro\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/, line, return: :index) do
+          nil -> []
+          [{_mpos, _mlen}, {npos, nlen}] ->
+            [%{name: String.slice(line, npos, nlen), kind: 12, range: one_line_range(ln, npos, nlen)}]
+        end
+
+      mods ++ funs ++ macros
+    end)
+  end
+
+  defp one_line_range(line, start_char, len) do
+    %{
+      "start" => %{"line" => line, "character" => start_char},
+      "end" => %{"line" => line, "character" => start_char + len}
     }
   end
 

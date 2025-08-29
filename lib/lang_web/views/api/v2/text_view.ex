@@ -1,9 +1,10 @@
 defmodule LangWeb.Api.V2.TextView do
   use LangWeb, :view
   alias LangWeb.Api.V2.TextView
+  alias MarkdownLD.Hash
 
-  def render("parse_result.json", %{document: document, analysis: analysis, metadata: metadata}) do
-    %{
+  def render("parse_result.json", %{document: document, analysis: analysis, metadata: metadata, integrity?: integrity?}) do
+    base = %{
       "@context" => "https://lang.nulity.com/context/text",
       "@type" => "ParseResult",
       "status" => "success",
@@ -13,10 +14,13 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+    maybe_integrity(base, integrity?)
   end
 
-  def render("entities.json", %{entities: entities, metadata: metadata}) do
-    %{
+  def render("parse_result.json", assigns), do: render("parse_result.json", Map.put(assigns, :integrity?, false))
+
+  def render("entities.json", %{entities: entities, metadata: metadata, integrity?: integrity?}) do
+    base = %{
       "@context" => "https://schema.org",
       "@type" => "EntityExtractionResult",
       "status" => "success",
@@ -25,7 +29,10 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+    maybe_integrity(base, integrity?)
   end
+
+  def render("entities.json", assigns), do: render("entities.json", Map.put(assigns, :integrity?, false))
 
   def render("semantic.json", %{
         triples: triples,
@@ -33,9 +40,10 @@ defmodule LangWeb.Api.V2.TextView do
         entities: entities,
         context: context,
         job_id: job_id,
-        metadata: metadata
+        metadata: metadata,
+        integrity?: integrity?
       }) do
-    %{
+    base = %{
       "@context" => context["@context"] || "https://schema.org",
       "@type" => "SemanticAnalysisResult",
       "status" => "success",
@@ -48,7 +56,10 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+    maybe_integrity(base, integrity?)
   end
+
+  def render("semantic.json", assigns), do: render("semantic.json", Map.put(assigns, :integrity?, false))
 
   def render("stylometry.json", %{
         fingerprint: fingerprint,
@@ -56,9 +67,10 @@ defmodule LangWeb.Api.V2.TextView do
         complexity: complexity,
         authorship: authorship,
         transformations: transformations,
-        metadata: metadata
+        metadata: metadata,
+        integrity?: integrity?
       }) do
-    %{
+    base = %{
       "@context" => "https://lang.nulity.com/context/stylometry",
       "@type" => "StylometricAnalysisResult",
       "status" => "success",
@@ -71,16 +83,20 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+    maybe_integrity(base, integrity?)
   end
+
+  def render("stylometry.json", assigns), do: render("stylometry.json", Map.put(assigns, :integrity?, false))
 
   def render("markdown_ld.json", %{
         markdown: markdown,
         html: html,
         linked_data: linked_data,
         entities: entities,
-        metadata: metadata
+        metadata: metadata,
+        integrity?: integrity?
       }) do
-    %{
+    base = %{
       "@context" => "https://lang.nulity.com/context/markdown-ld",
       "@type" => "MarkdownLDResult",
       "status" => "success",
@@ -96,10 +112,14 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+    maybe_integrity(base, integrity?)
   end
 
+  def render("markdown_ld.json", assigns), do: render("markdown_ld.json", Map.put(assigns, :integrity?, false))
+
   def render("comprehensive.json", results) do
-    %{
+    integrity? = Map.get(results, :integrity?, false)
+    base = %{
       "@context" => "https://lang.nulity.com/context/comprehensive",
       "@type" => "ComprehensiveAnalysisResult",
       "status" => "success",
@@ -115,6 +135,7 @@ defmodule LangWeb.Api.V2.TextView do
         }
       }
     }
+    maybe_integrity(base, integrity?)
   end
 
   def render("error.json", %{error: error, details: details}) do
@@ -335,6 +356,17 @@ defmodule LangWeb.Api.V2.TextView do
   end
 
   defp render_linked_data(linked_data), do: linked_data || %{}
+
+  # Integrity helper
+  defp maybe_integrity(map, true) do
+    data = Map.get(map, "data")
+    case Hash.dataset_hash(data) do
+      {:ok, integ} -> Map.put(map, "integrity", integ)
+      _ -> map
+    end
+  end
+
+  defp maybe_integrity(map, _), do: map
 
   # Conditional rendering helpers
   defp render_entities_if_present(nil), do: nil

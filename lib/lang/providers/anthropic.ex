@@ -24,6 +24,11 @@ defmodule Lang.Providers.Anthropic do
   def capabilities do
     %{
       methods: [
+        "completion",
+        "hover",
+        "explain",
+        "refactor",
+        "generate_tests",
         "lang.think.diagnose",
         "lang.think.predict_bugs",
         "lang.think.security_scan",
@@ -55,6 +60,21 @@ defmodule Lang.Providers.Anthropic do
   @impl Lang.Providers.Provider
   def handle_request(method, params, opts \\ []) do
     case method do
+      "completion" ->
+        handle_completion(params, opts)
+
+      "hover" ->
+        handle_hover(params, opts)
+
+      "explain" ->
+        handle_explain(params, opts)
+
+      "refactor" ->
+        handle_refactor(params, opts)
+
+      "generate_tests" ->
+        handle_generate_tests(params, opts)
+
       "lang.think.diagnose" ->
         handle_diagnostics(params, opts)
 
@@ -122,7 +142,223 @@ defmodule Lang.Providers.Anthropic do
   end
 
   # =============================================================================
-  # Method Handlers
+  # LSP Method Handlers
+  # =============================================================================
+
+  defp handle_completion(params, opts) do
+    prefix = Map.get(params, :prefix, "")
+    language = Map.get(params, :language, "text")
+    context = Map.get(params, :context, "")
+
+    prompt = """
+    Complete this #{language} code:
+
+    ```#{language}
+    #{prefix}
+    ```
+
+    #{if String.length(context) > 0, do: "Context:\n#{context}\n", else: ""}
+
+    Provide only the code to complete, without explanations.
+    """
+
+    case message_request(prompt, Keyword.put(opts, :max_tokens, 150)) do
+      {:ok, response} ->
+        {:ok,
+         %{
+           completion: String.trim(response.content),
+           confidence: 0.88,
+           provider: "anthropic",
+           model: @default_model,
+           metadata: %{
+             language: language,
+             completion_length: String.length(response.content),
+             context_used: String.length(context) > 0
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Completion failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_hover(params, opts) do
+    symbol = Map.get(params, :symbol, "unknown")
+    language = Map.get(params, :language, "text")
+    context = Map.get(params, :context, "")
+
+    prompt = """
+    Provide information about this #{language} symbol: `#{symbol}`
+
+    #{if String.length(context) > 0, do: "Context:\n```#{language}\n#{context}\n```\n", else: ""}
+
+    Provide:
+    1. Type/signature information
+    2. Brief description
+    3. Usage notes if relevant
+
+    Format as markdown for hover display.
+    """
+
+    case message_request(prompt, Keyword.put(opts, :max_tokens, 300)) do
+      {:ok, response} ->
+        {:ok,
+         %{
+           hover_content: response.content,
+           confidence: 0.85,
+           provider: "anthropic",
+           model: @default_model,
+           metadata: %{
+             symbol: symbol,
+             language: language,
+             info_length: String.length(response.content)
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Hover failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_explain(params, opts) do
+    code = Map.get(params, :code, "")
+    language = Map.get(params, :language, "text")
+    question = Map.get(params, :question, "What does this code do?")
+
+    prompt = """
+    Explain this #{language} code in detail.
+
+    Question: #{question}
+
+    Code:
+    ```#{language}
+    #{code}
+    ```
+
+    Provide a comprehensive explanation covering:
+    1. What the code does (purpose)
+    2. How it works (implementation details)
+    3. Key concepts or patterns used
+    4. Potential issues or improvements
+    """
+
+    case message_request(prompt, Keyword.put(opts, :max_tokens, 1000)) do
+      {:ok, response} ->
+        {:ok,
+         %{
+           explanation: response.content,
+           confidence: 0.92,
+           provider: "anthropic",
+           model: @default_model,
+           metadata: %{
+             language: language,
+             code_length: String.length(code),
+             question: question
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Explanation failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_refactor(params, opts) do
+    code = Map.get(params, :code, "")
+    language = Map.get(params, :language, "text")
+    goal = Map.get(params, :goal, "improve code quality")
+
+    prompt = """
+    Refactor this #{language} code to #{goal}.
+
+    Original code:
+    ```#{language}
+    #{code}
+    ```
+
+    Provide:
+    1. The refactored code
+    2. A summary of changes made
+    3. Explanation of improvements
+
+    Focus on: readability, maintainability, performance, and best practices.
+    """
+
+    case message_request(prompt, Keyword.put(opts, :max_tokens, 1200)) do
+      {:ok, response} ->
+        # Extract refactored code and summary from response
+        parts = String.split(response.content, "```", trim: true)
+        refactored_code = if length(parts) >= 2, do: Enum.at(parts, 1), else: response.content
+
+        {:ok,
+         %{
+           refactored_code: String.trim(refactored_code),
+           changes_summary: extract_summary_from_response(response.content),
+           confidence: 0.89,
+           provider: "anthropic",
+           model: @default_model,
+           metadata: %{
+             language: language,
+             original_length: String.length(code),
+             refactored_length: String.length(refactored_code),
+             goal: goal
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Refactoring failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_generate_tests(params, opts) do
+    code = Map.get(params, :code, "")
+    language = Map.get(params, :language, "text")
+    framework = Map.get(params, :framework, "auto")
+
+    prompt = """
+    Generate comprehensive test cases for this #{language} code.
+
+    Code to test:
+    ```#{language}
+    #{code}
+    ```
+
+    #{if framework != "auto", do: "Use testing framework: #{framework}", else: "Use appropriate testing framework for #{language}"}
+
+    Generate:
+    1. Unit tests covering main functionality
+    2. Edge case tests
+    3. Error condition tests
+    4. Clear test descriptions
+
+    Provide complete, runnable test code.
+    """
+
+    case message_request(prompt, Keyword.put(opts, :max_tokens, 1500)) do
+      {:ok, response} ->
+        test_code = extract_code_from_response(response.content)
+        test_count = count_tests_in_code(test_code)
+
+        {:ok,
+         %{
+           test_code: test_code,
+           test_count: test_count,
+           confidence: 0.87,
+           provider: "anthropic",
+           model: @default_model,
+           metadata: %{
+             language: language,
+             framework: framework,
+             original_code_length: String.length(code)
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Test generation failed: #{inspect(error)}"}
+    end
+  end
+
+  # =============================================================================
+  # Analysis Method Handlers
   # =============================================================================
 
   defp handle_diagnostics(params, opts) do
@@ -628,5 +864,53 @@ defmodule Lang.Providers.Anthropic do
       true ->
         "lang.analyze.document"
     end
+  end
+
+  # =============================================================================
+  # Helper Functions
+  # =============================================================================
+
+  defp extract_summary_from_response(content) do
+    # Extract summary from response content
+    lines = String.split(content, "\n")
+
+    summary_lines =
+      lines
+      |> Enum.filter(fn line ->
+        String.contains?(String.downcase(line), ["change", "improvement", "refactor", "summary"])
+      end)
+      |> Enum.take(3)
+
+    case summary_lines do
+      [] -> "Code refactored successfully"
+      lines -> Enum.join(lines, " ")
+    end
+  end
+
+  defp extract_code_from_response(content) do
+    # Extract code blocks from markdown response
+    case Regex.run(~r/```[a-zA-Z]*\n(.*?)\n```/s, content) do
+      [_, code] -> String.trim(code)
+      nil -> content
+    end
+  end
+
+  defp count_tests_in_code(test_code) do
+    # Count test functions/cases in the generated test code
+    test_patterns = [
+      ~r/test\s+"/,
+      ~r/it\s*\(/,
+      ~r/describe\s*\(/,
+      ~r/def test_/,
+      ~r/function test/
+    ]
+
+    count =
+      Enum.reduce(test_patterns, 0, fn pattern, acc ->
+        matches = Regex.scan(pattern, test_code)
+        acc + length(matches)
+      end)
+
+    max(1, count)
   end
 end

@@ -1,7 +1,7 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Workspace.Load do
+defmodule Lang.Workspace.Load do
   @moduledoc "Load existing workspace"
   @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.workspace.load"
+  @lsp_method "lang.workspace.load"
 
   @impl true
   def method, do: @lsp_method

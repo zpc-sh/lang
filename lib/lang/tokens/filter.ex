@@ -1,7 +1,7 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Tokens.Filter do
+defmodule Lang.LSP.Handlers.Tokens.Filter do
   @moduledoc "Filter by relevance"
   @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.tokens.filter"
+  @lsp_method "lang.tokens.filter"
 
   @impl true
   def method, do: @lsp_method

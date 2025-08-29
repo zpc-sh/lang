@@ -11,7 +11,7 @@ defmodule Lang.LSP.Handlers.Completion do
 
   require Logger
   alias Lang.Providers.Router
-  alias Lang.TextIntelligence.ContextAnalyzer
+  alias Lang.TextIntelligence.{ContextAnalyzer, ParserRegistry}
 
   @type position :: %{String.t() => integer()}
   @type completion_context :: %{
@@ -92,17 +92,59 @@ defmodule Lang.LSP.Handlers.Completion do
            stop_sequences: get_stop_sequences(context),
            n: opts[:num_completions] || 5
          }) do
-      {:ok, %{completions: completions}} ->
+      {:ok, %{completions: completions}} when is_list(completions) and completions != [] ->
         {:ok, completions}
 
-      {:ok, %{choices: choices}} ->
-        # Handle different response formats
+      {:ok, %{choices: choices}} when is_list(choices) and choices != [] ->
         completions = Enum.map(choices, &(&1["text"] || &1["content"]))
         {:ok, completions}
 
-      {:error, _} = error ->
-        error
+      other ->
+        # Fallback to local, AST-driven identifiers if provider empty/error
+        Logger.debug("AI completion fallback: #{inspect(other)}")
+        {:ok, local_completions(context)}
     end
+  end
+
+  # Local, fast fallback completions based on parsed identifiers and context
+  defp local_completions(%{language: lang, last_token: last, completion_type: ctype} = ctx) do
+    content = Enum.join(ctx.previous_lines, "\n") <> "\n" <> ctx.line <> "\n" <> Enum.join(ctx.next_lines, "\n")
+
+    ids =
+      case ParserRegistry.parse(content, lang) do
+        {:ok, %{"functions" => funs}} when is_list(funs) ->
+          Enum.map(funs, fn
+            %{"name" => n} -> n
+            %{name: n} -> n
+            n when is_binary(n) -> n
+            _ -> nil
+          end)
+        {:ok, %{:functions => funs}} when is_list(funs) -> Enum.map(funs, &to_string/1)
+        {:ok, parsed} when is_map(parsed) -> Map.values(parsed) |> List.flatten() |> Enum.map(&to_string/1)
+        _ -> []
+      end
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
+
+    base =
+      case ctype do
+        :function_name -> ids
+        :member_access -> ids
+        :import -> ids
+        _ -> ids
+      end
+
+    # Filter by current token prefix if present
+    prefix = last || ""
+    filtered =
+      if prefix == "" do
+        base
+      else
+        Enum.filter(base, &String.starts_with?(&1, prefix))
+      end
+
+    # Return as short strings; formatter will shape into LSP items
+    Enum.take(filtered, 20)
   end
 
   # Format completions as LSP CompletionItems

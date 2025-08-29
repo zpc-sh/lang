@@ -19,7 +19,9 @@ defmodule Lang.Application do
     children =
       [
         optional_child(LangWeb.Telemetry),
-        optional_child(Lang.Repo),
+        # Attach optional LSP client telemetry logger
+        (Lang.Telemetry.LSPClientLogger.maybe_attach(); nil),
+        (db_enabled?() && optional_child(Lang.Repo)),
         optional_child(
           {DNSCluster, query: Application.get_env(:lang, :dns_cluster_query) || :ignore}
         ),
@@ -35,14 +37,18 @@ defmodule Lang.Application do
         optional_child({Lang.Timeline.StateManager, []}),
         optional_child({Lang.Security.RateLimiter, []}),
 
+        # AST snapshot store (ETS-backed)
+        optional_child({Lang.AST.Store, []}),
+
         # Background processing
-        optional_child({Oban, Application.fetch_env!(:lang, Oban)}),
+        (db_enabled?() && optional_child({Oban, Application.fetch_env!(:lang, Oban)})),
 
         # Orchestration system
         optional_child({Lang.Orchestration.Master, []}),
 
-        # LSP Server Supervisor
+        # LSP Server Supervisor (keep late so deps are ready)
         optional_child({Lang.LSP.Supervisor, []}),
+        optional_child({Lang.LSP.ClientPool, []}),
 
         # MCP Broker Security Layer
         optional_child(
@@ -106,4 +112,9 @@ defmodule Lang.Application do
   end
 
   defp optional_child(other), do: other
+
+  defp db_enabled? do
+    val = System.get_env("SKIP_DB") || "0"
+    String.downcase(val) not in ["1", "true", "yes", "on"]
+  end
 end

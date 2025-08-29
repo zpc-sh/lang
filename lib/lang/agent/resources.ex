@@ -1,14 +1,15 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Agent.TrackUsage do
-  @moduledoc "Track token/resource usage per agent"
-  @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.agent.track_usage"
+defmodule Lang.Agent.Resources do
+  @moduledoc "Resource and constraint helpers for agents."
 
-  @impl true
-  def method, do: @lsp_method
+  alias Lang.Agent.Supervisor
+  alias Lang.Agent.Runtime
 
-  @impl true
-  def handle(params, ctx) when is_map(params) and is_map(ctx) do
-    # TODO: implement
-    {:error, :not_implemented}
+  def limit_resources(agent_id, resource_limits) when is_map(resource_limits) do
+    case Supervisor.find_agent_pid(agent_id) do
+      {:ok, pid} ->
+        :ok = Runtime.update_constraints(pid, resource_limits)
+        :ok
+      _ -> {:error, :agent_not_running}
+    end
   end
 end

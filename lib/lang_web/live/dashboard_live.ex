@@ -152,6 +152,11 @@ defmodule LangWeb.DashboardLive do
 
         <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <!-- Statistics Cards -->
+          <div class="mb-6">
+            <.link href="/fs/watch" class="btn btn-outline btn-sm">
+              <.icon name="hero-eye" class="w-4 h-4 mr-2" /> Filesystem Watch Demo
+            </.link>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="stats shadow bg-white">
               <div class="stat">

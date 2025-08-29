@@ -13,7 +13,8 @@ defmodule LangWeb.Router do
   end
 
   pipeline :api do
-    plug :accepts, ["json"]
+    plug :accepts, ["json", "jsonld", "mdld"]
+    plug LangWeb.Plugs.JSONLDNegotiationPlug
     plug LangWeb.Plugs.AuthPlug, :load_from_bearer
   end
 
@@ -83,10 +84,12 @@ defmodule LangWeb.Router do
       pipe_through [:browser, :require_authenticated_user]
 
       live "/dashboard", DashboardLive, :index
+      live "/lsp/status", LspStatusLive, :index
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
       live "/billing", BillingLive, :index
       live "/billing/usage", BillingUsageLive, :index
+      live "/fs/watch", FSWatchLive, :index
     end
   end
 
@@ -190,6 +193,13 @@ defmodule LangWeb.Router do
     pipe_through :webhook
 
     post "/stripe", WebhooksController, :stripe
+  end
+
+  # Internal diagnostics webhook (HMAC-signed)
+  scope "/internal", LangWeb.Internal do
+    pipe_through :api
+
+    post "/agent/diagnostics", AgentDiagnosticsController, :create
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

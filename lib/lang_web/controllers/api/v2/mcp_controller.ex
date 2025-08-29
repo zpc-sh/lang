@@ -81,6 +81,7 @@ defmodule LangWeb.Api.V2.McpController do
       })
 
       response = %{
+        "@context" => "https://lang.nulity.com/context/mcp",
         connection_id: connection_id,
         stream_id: stream_id,
         status: "connected",
@@ -148,6 +149,7 @@ defmodule LangWeb.Api.V2.McpController do
       conn_status = get_connection_status(stream_status.connection_id)
 
       response = %{
+        "@context" => "https://lang.nulity.com/context/mcp",
         stream_id: stream_id,
         connection_id: stream_status.connection_id,
         connection_status: conn_status,
@@ -227,6 +229,7 @@ defmodule LangWeb.Api.V2.McpController do
       })
 
       response = %{
+        "@context" => "https://lang.nulity.com/context/mcp",
         stream_id: stream_id,
         connection_id: stream_status.connection_id,
         status: "disconnected",
@@ -266,7 +269,12 @@ defmodule LangWeb.Api.V2.McpController do
         }
       })
 
-      json(conn, %{connection_id: connection_id, status: "disconnected", cleanup: "complete"})
+      json(conn, %{
+        "@context" => "https://lang.nulity.com/context/mcp",
+        connection_id: connection_id,
+        status: "disconnected",
+        cleanup: "complete"
+      })
     else
       {:error, :not_found} ->
         ApiError.json(conn, :not_found, "MCP connection not found")
@@ -575,7 +583,11 @@ defmodule LangWeb.Api.V2.McpController do
           })
         end)
 
-      json(conn, %{connections: enriched, pool: Lang.MCP.Pool.get_stats()})
+      json(conn, %{
+        "@context" => "https://lang.nulity.com/context/mcp",
+        connections: enriched,
+        pool: Lang.MCP.Pool.get_stats()
+      })
     else
       {:error, :not_authenticated} ->
         ApiError.json(conn, :unauthorized, "Authentication required")

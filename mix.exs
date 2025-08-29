@@ -12,7 +12,8 @@ defmodule Lang.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      rustler_crates: rustler_crates()
+      rustler_crates: rustler_crates(),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -126,7 +127,7 @@ defmodule Lang.MixProject do
       {:tidewave, "~> 0.4", only: [:dev, :test]},
       {:jsonld_ex, "~> 0.4.0"},
       {:markdown_ld, "~> 0.4.0"},
-
+      {:testcontainers, "~> 1.13", only: [:dev, :test]},
       # Performance profiling and optimization
       {:ash_profiler, "~> 0.1.0", only: [:dev, :test]},
       # SAT solver for Spark/Ash DSL verification without adding a NIF
@@ -136,7 +137,10 @@ defmodule Lang.MixProject do
 
   # Rustler configuration for native NIFs
   defp rustler_crates do
-    [
+    if skip_nifs?() do
+      []
+    else
+      [
       lang_parser: [
         path: "native/lang_parser",
         mode: rustler_mode(Mix.env())
@@ -157,11 +161,39 @@ defmodule Lang.MixProject do
         path: "native/fs_scanner",
         mode: rustler_mode(Mix.env())
       ]
-    ]
+      ]
+    end
   end
 
   defp rustler_mode(:prod), do: :release
   defp rustler_mode(_), do: :debug
+
+  defp skip_nifs? do
+    val = System.get_env("SKIP_NIFS") || "0"
+    String.downcase(val) in ["1", "true", "yes", "on"]
+  end
+
+  # Dialyzer configuration
+  defp dialyzer do
+    [
+      plt_core_path: "_build",
+      plt_file: {:no_warn, "_build/#{Mix.env()}/dialyzer.plt"},
+      plt_add_apps: [
+        :mix, :iex, :ex_unit,
+        :phoenix, :phoenix_live_view, :phoenix_html, :phoenix_ecto,
+        :ecto, :ecto_sql, :postgrex,
+        :ash, :ash_postgres, :ash_phoenix,
+        :oban
+      ],
+      flags: [
+        :unmatched_returns,
+        :error_handling,
+        :race_conditions,
+        :underspecs
+      ],
+      ignore_warnings: ".dialyzer_ignore.exs"
+    ]
+  end
 
   # Aliases are shortcuts or tasks specific to the current project.
   # For example, to install project dependencies and perform other setup tasks, run:

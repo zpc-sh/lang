@@ -43,39 +43,85 @@ defmodule Lang.Workers.AgentTaskWorker do
   end
 
   defp handle_action("behavior_baseline", %{"params" => params}) do
-    _ = params
-    :ok
+    agent_id = params["agent_id"]
+    baseline_data = Map.get(params, "baseline_data") || %{}
+    context = Map.drop(params, ["agent_id", "baseline_data"])
+
+    case Lang.Agent.Behavioral.baseline(agent_id, baseline_data, context) do
+      {:ok, _} -> :ok
+      {:error, _} -> :ok
+    end
   end
 
   defp handle_action("anomaly_score", %{"params" => params}) do
-    _ = params
-    :ok
+    agent_id = params["agent_id"]
+    case Lang.Agent.Security.scan(agent_id, %{}) do
+      {:ok, result} ->
+        _ = Lang.Agent.Behavioral.record_anomaly_sample(agent_id, %{strength: result.anomaly_score})
+        :ok
+      {:error, _} -> :ok
+    end
   end
 
   defp handle_action("trust_level", %{"params" => params}) do
-    _ = params
-    :ok
+    agent_id = params["agent_id"]
+    threshold = parse_float(params["threshold"]) || 0.0
+    with {:ok, status} <- Lang.Agent.Lifecycle.get_status(agent_id) do
+      trust = case status[:trust_score] do
+        %Decimal{} = d -> Decimal.to_float(d)
+        n when is_number(n) -> n * 1.0
+        _ -> 0.0
+      end
+      _ = Lang.Events.Agent.track_trust_update(agent_id, trust, trust, "check", %{threshold: threshold})
+      if trust < threshold do
+        Logger.warning("Agent trust below threshold", agent_id: agent_id, trust: trust, threshold: threshold)
+      end
+      :ok
+    else
+      _ -> :ok
+    end
   end
 
   defp handle_action("audit_trail", %{"params" => params}) do
-    _ = params
+    agent_id = params["agent_id"]
+    _ = Lang.Agent.Audit.get_audit_trail(agent_id, %{})
     :ok
   end
 
   defp handle_action("track_usage", %{"params" => params}) do
-    _ = params
-    :ok
+    agent_id = params["agent_id"]
+    case Lang.Agent.Supervisor.get_agent_status(agent_id) do
+      {:ok, status} ->
+        _ = Lang.Events.Agent.track_resource_usage(agent_id, :memory_mb, status.memory_mb, %{})
+        :ok
+      _ -> :ok
+    end
   end
 
   defp handle_action("limit_resources", %{"params" => params}) do
-    _ = params
-    :ok
+    agent_id = params["agent_id"]
+    limits = params["resource_limits"] || %{}
+    case Lang.Agent.Resources.limit_resources(agent_id, limits) do
+      :ok -> :ok
+      _ -> :ok
+    end
   end
 
   defp handle_action("monitor_performance", %{"params" => params}) do
-    _ = params
+    agent_id = params["agent_id"]
+    duration = params["duration_ms"] || 60_000
+    _ = Lang.Agent.Monitor.monitor_performance(agent_id, duration)
     :ok
   end
+
+  defp parse_float(v) when is_number(v), do: v * 1.0
+  defp parse_float(v) when is_binary(v) do
+    case Float.parse(v) do
+      {f, _} -> f
+      _ -> nil
+    end
+  end
+  defp parse_float(_), do: nil
 
   defp handle_action(other, _args) do
     Logger.warning("Unknown agent task action", action: other)

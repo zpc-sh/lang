@@ -26,6 +26,7 @@ defmodule LangWeb.HealthController do
     checks = %{
       database: check_database(),
       redis: check_redis(),
+      lsp: check_lsp(),
       disk_space: check_disk_space(),
       memory: check_memory()
     }
@@ -56,6 +57,22 @@ defmodule LangWeb.HealthController do
       failed_checks: failed_checks,
       degraded_checks: degraded_checks
     }
+  end
+
+  defp check_lsp do
+    try do
+      t0 = System.monotonic_time(:millisecond)
+      case Lang.LSP.Client.ping(timeout: 1_000) do
+        {:ok, %{"status" => "pong"}} = _ok ->
+          latency = System.monotonic_time(:millisecond) - t0
+          %{status: :ok, message: "LSP reachable", details: %{latency_ms: latency}}
+
+        {:error, reason} ->
+          %{status: :warning, message: "LSP ping failed", details: %{reason: inspect(reason)}}
+      end
+    rescue
+      e -> %{status: :warning, message: "LSP check exception", details: %{error: inspect(e)}}
+    end
   end
 
   defp check_database do

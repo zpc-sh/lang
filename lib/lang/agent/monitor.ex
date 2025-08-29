@@ -1,14 +1,16 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Agent.MonitorPerformance do
-  @moduledoc "Real-time performance monitoring"
-  @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.agent.monitor_performance"
+defmodule Lang.Agent.Monitor do
+  @moduledoc "Monitoring helpers for agent performance and health."
 
-  @impl true
-  def method, do: @lsp_method
+  alias Lang.Agent.Supervisor
+  alias Lang.Events.Agent, as: AgentEvents
 
-  @impl true
-  def handle(params, ctx) when is_map(params) and is_map(ctx) do
-    # TODO: implement
-    {:error, :not_implemented}
+  def monitor_performance(agent_id, _duration_ms \\ 60_000) do
+    case Supervisor.get_agent_status(agent_id) do
+      {:ok, status} ->
+        qcp = %{"load" => status[:message_queue_len] || 0, "memory_mb" => status[:memory_mb] || 0.0}
+        AgentEvents.track_cognitive_load(agent_id, qcp, 0.5, %{})
+        {:ok, status}
+      err -> err
+    end
   end
 end

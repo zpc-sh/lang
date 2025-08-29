@@ -328,8 +328,10 @@ defmodule Lang.Providers.Router do
   end
 
   defp check_provider_health(:xai), do: XAI.health_check()
-  defp check_provider_health(:openai), do: {:ok, "Not implemented yet"}
-  defp check_provider_health(:anthropic), do: {:ok, "Not implemented yet"}
+  defp check_provider_health(:openai), do: Lang.Providers.OpenAI.health_check()
+  defp check_provider_health(:anthropic), do: Lang.Providers.Anthropic.health_check()
+  defp check_provider_health(:gemini), do: Lang.Providers.Gemini.health_check()
+  defp check_provider_health(:opencode), do: Lang.Providers.OpenCode.health_check()
 
   defp determine_overall_health(results) do
     if Enum.any?(results, fn {_, {status, _}} -> status == :ok end) do

@@ -4,6 +4,7 @@ defmodule Lang.LSP.Dispatch do
   @not_impl_methods ~w(
     lang.think.suggest_refactor
     lang.generate.from_diagram
+    lang.generate.from_spec
     lang.generate.compose
     lang.generate.terraform
     lang.generate.ci_pipeline
@@ -26,6 +27,7 @@ defmodule Lang.LSP.Dispatch do
     lang.timeline.predict_changes
     lang.timeline.find_decisions
     lang.timeline.regression_risk
+    lang.agent.spawn
   )
 
   def process(%{"method" => method} = msg) do
@@ -49,7 +51,8 @@ defmodule Lang.LSP.Dispatch do
       "lang.spatial.find_related" -> spatial_find_related(msg)
       "lang.capabilities" -> capabilities(msg)
       "lang.generate.complete_partial" -> generate(:complete_partial, msg)
-      "lang.generate.from_spec" -> generate(:from_spec, msg)
+      # Marked as planned/not implemented
+      "lang.generate.from_spec" -> not_implemented(msg)
       "lang.generate.from_tests" -> generate(:from_tests, msg)
       "lang.generate.variations" -> generate(:variations, msg)
       "lang.generate.optimize" -> generate(:optimize, msg)
@@ -110,6 +113,14 @@ defmodule Lang.LSP.Dispatch do
       "lang.storage.store_patterns" -> storage_store_patterns(msg)
       "lang.storage.get_patterns" -> storage_get_patterns(msg)
       "lang.storage.search_patterns" -> storage_search_patterns(msg)
+      "lang.storage.connect" -> storage_connect(msg)
+      "lang.storage.get_status" -> storage_get_status(msg)
+      "lang.storage.create_scratch" -> storage_create_scratch(msg)
+      "lang.storage.get_scratch" -> storage_get_scratch(msg)
+      "lang.storage.update_scratch" -> storage_update_scratch(msg)
+      "lang.storage.cleanup_scratch" -> storage_cleanup_scratch(msg)
+      "lang.storage.get_project_context" -> storage_get_project_context(msg)
+      "lang.storage.validate_auth" -> storage_validate_auth(msg)
       # Analysis operations
       "lang.analyze.document" -> analyze_document(msg)
       "lang.analyze.batch" -> analyze_batch(msg)
@@ -146,6 +157,9 @@ defmodule Lang.LSP.Dispatch do
       "mcp.connection.create" -> mcp_connection_create(msg)
       "mcp.connection.destroy" -> mcp_connection_destroy(msg)
       "mcp.connection.status" -> mcp_connection_status(msg)
+      # JSON-LD helpers
+      "lang.jsonld.compact" -> jsonld_compact(msg)
+      "lang.jsonld.expand" -> jsonld_expand(msg)
       # RPC operations
       "rpc.initialize" -> rpc_initialize(msg)
       "rpc.shutdown" -> rpc_shutdown(msg)
@@ -160,8 +174,10 @@ defmodule Lang.LSP.Dispatch do
   # ----------------------------------------------------------------------------
   # Minimal FS handlers (stubs route to native NIFs when possible)
   # ----------------------------------------------------------------------------
-  defp fs_scan(%{"id" => id, "params" => %{"path" => path} = params}) do
-    opts = [max_depth: Map.get(params, "max_depth", 10)]
+  defp fs_scan(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    path = Lang.JSONLD.get(params, "path") || Lang.JSONLD.get(params, "root")
+    opts = [max_depth: Lang.JSONLD.get(params, "max_depth", 10)]
 
     result =
       case Lang.Native.FSScanner.scan(path, opts) do
@@ -172,27 +188,33 @@ defmodule Lang.LSP.Dispatch do
     wrap_result(id, result)
   end
 
-  defp fs_search(%{"id" => id, "params" => %{"path" => path, "query" => query} = params}) do
-    opts = [max_results: Map.get(params, "max_results", 100)]
+  defp fs_search(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    path = Lang.JSONLD.get(params, "path") || Lang.JSONLD.get(params, "root")
+    query = Lang.JSONLD.get(params, "query") || Lang.JSONLD.get(params, "pattern")
+    opts = [max_results: Lang.JSONLD.get(params, "max_results", 100)]
     result = Lang.Native.FSScanner.search(path, query, opts)
     wrap_result(id, result)
   end
 
-  defp fs_search_code(%{
-         "id" => id,
-         "params" => %{"path" => path, "language" => lang, "pattern" => pat} = params
-       }) do
+  defp fs_search_code(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    path = Lang.JSONLD.get(params, "path") || Lang.JSONLD.get(params, "root")
+    lang = Lang.JSONLD.get(params, "language")
+    pat = Lang.JSONLD.get(params, "pattern")
     opts = [
-      max_results: Map.get(params, "max_results", 100),
-      max_depth: Map.get(params, "max_depth", 15)
+      max_results: Lang.JSONLD.get(params, "max_results", 100),
+      max_depth: Lang.JSONLD.get(params, "max_depth", 15)
     ]
 
     result = Lang.Native.FSScanner.search_code(path, lang, pat, opts)
     wrap_result(id, result)
   end
 
-  defp fs_preview(%{"id" => id, "params" => %{"path" => path} = params}) do
-    max_lines = Map.get(params, "max_lines", 200)
+  defp fs_preview(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    path = Lang.JSONLD.get(params, "path")
+    max_lines = Lang.JSONLD.get(params, "max_lines", 200)
 
     result =
       case Lang.Native.FSScanner.preview(path, max_lines: max_lines) do
@@ -204,7 +226,63 @@ defmodule Lang.LSP.Dispatch do
   end
 
   defp fs_watch(%{"id" => id}) do
-    wrap_result(id, {:error, :not_implemented})
+    # Bounded watcher: periodically scans and broadcasts snapshots to PubSub.
+    # Avoids indefinite processes per process management guidelines.
+    wrap_result(id, {:error, -32602, "Missing required parameters: params"})
+  end
+
+  defp fs_watch(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+
+    path =
+      Lang.JSONLD.get(params, "path") ||
+        Lang.JSONLD.get(params, "root")
+
+    interval_ms = Lang.JSONLD.get(params, "interval_ms", 5_000)
+    duration_ms = Lang.JSONLD.get(params, "duration_ms", 30_000)
+
+    include_globs = List.wrap(Lang.JSONLD.get(params, "include_globs", []))
+    exclude_globs = List.wrap(Lang.JSONLD.get(params, "exclude_globs", []))
+    max_depth = Lang.JSONLD.get(params, "max_depth", 10)
+
+    cond do
+      is_nil(path) or path == "" ->
+        wrap_result(id, {:error, -32602, "Missing required parameters: path"})
+
+      true ->
+        stream_id = "fsw_" <> Integer.to_string(:erlang.unique_integer([:positive]))
+        topic = "lsp:fs_watch:" <> stream_id
+
+        scans = max(div(duration_ms, max(interval_ms, 1)), 1)
+
+        Task.Supervisor.start_child(Lang.LSP.TaskSupervisor, fn ->
+          Enum.reduce_while(1..scans, nil, fn n, _acc ->
+            opts = [
+              max_depth: max_depth,
+              include_globs: include_globs,
+              exclude_globs: exclude_globs
+            ]
+
+            evt =
+              case Lang.Native.FSScanner.scan(path, opts) do
+                {:ok, result} -> {:fs_snapshot, stream_id, %{seq: n, result: result}}
+                {:error, reason} -> {:fs_error, stream_id, %{seq: n, reason: reason}}
+              end
+
+            Phoenix.PubSub.broadcast(Lang.PubSub, topic, evt)
+
+            if n < scans do
+              Process.sleep(interval_ms)
+              {:cont, nil}
+            else
+              Phoenix.PubSub.broadcast(Lang.PubSub, topic, {:fs_watch_complete, stream_id})
+              {:halt, nil}
+            end
+          end)
+        end)
+
+        wrap_result(id, {:ok, %{stream_id: stream_id, topic: topic, interval_ms: interval_ms, duration_ms: duration_ms}})
+    end
   end
 
   defp wrap_result(id, {:ok, data}), do: %{"jsonrpc" => "2.0", "id" => id, "result" => data}
@@ -213,74 +291,160 @@ defmodule Lang.LSP.Dispatch do
     do: %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
 
   # ----------------------------------------------------------------------------
-  # Minimal Storage stubs
+  # Storage handlers (Dirup-backed)
   # ----------------------------------------------------------------------------
-  defp storage_create_session(%{"id" => id, "params" => %{"project_id" => project_id} = params}) do
-    session_id = Ecto.UUID.generate()
-    metadata = Map.get(params, "metadata", %{})
-
-    session = %{
-      id: session_id,
-      project_id: project_id,
-      metadata: metadata,
-      created_at: DateTime.utc_now()
-    }
-
-    :ok = Lang.InMemory.Store.put(:storage_sessions, session_id, session)
-    wrap_result(id, {:ok, session})
+  defp storage_connect(%{"id" => id}) do
+    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.get_status()), else: wrap_result(id, {:error, :dirup_disabled})
   end
 
-  defp storage_get_session(%{"id" => id, "params" => %{"session_id" => session_id}}) do
-    case Lang.InMemory.Store.get(:storage_sessions, session_id) do
-      nil -> wrap_result(id, {:error, :not_found})
-      session -> wrap_result(id, {:ok, session})
+  defp storage_get_status(%{"id" => id}) do
+    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.get_status()), else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  defp storage_create_scratch(%{"id" => id, "params" => raw}) do
+    params = maybe_json_map(raw)
+    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.create_scratch(params)), else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  defp storage_get_scratch(%{"id" => id, "params" => raw}) do
+    params = maybe_json_map(raw)
+    scratch_id = Lang.JSONLD.get(params, "id") || Lang.JSONLD.get(params, "scratch_id")
+    if dirup_enabled?(), do: wrap_result(id, (scratch_id && Lang.Storage.Dirup.get_scratch(scratch_id)) || {:error, :missing_id}), else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  defp storage_update_scratch(%{"id" => id, "params" => raw}) do
+    params = maybe_json_map(raw)
+    scratch_id = Lang.JSONLD.get(params, "id") || Lang.JSONLD.get(params, "scratch_id")
+    attrs = Lang.JSONLD.get(params, "attrs") || Map.drop(params, ["id", "scratch_id"])
+    if dirup_enabled?() do
+      wrap_result(id,
+        if scratch_id do
+          Lang.Storage.Dirup.update_scratch(scratch_id, attrs)
+        else
+          {:error, :missing_id}
+        end
+      )
+    else
+      wrap_result(id, {:error, :dirup_disabled})
     end
   end
 
+  defp storage_cleanup_scratch(%{"id" => id, "params" => raw}) do
+    params = maybe_json_map(raw)
+    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.cleanup_scratch(params)), else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  defp storage_get_project_context(%{"id" => id, "params" => raw}) do
+    params = maybe_json_map(raw)
+    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+    if dirup_enabled?(), do: wrap_result(id, (project_id && Lang.Storage.Dirup.get_project_context(project_id)) || {:error, :missing_project_id}), else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  defp storage_validate_auth(%{"id" => id}) do
+    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.validate_auth()), else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  defp dirup_enabled? do
+    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    String.downcase(val) in ["1", "true", "yes", "on"]
+  end
+
+  # ----------------------------------------------------------------------------
+  # Minimal Storage stubs
+  # ----------------------------------------------------------------------------
+  defp storage_create_session(%{"id" => id, "params" => %{"project_id" => project_id} = params}) do
+    metadata = Map.get(params, "metadata", %{})
+    wrap_result(id, Lang.Storage.Session.create(project_id, metadata))
+  end
+
+  defp storage_get_session(%{"id" => id, "params" => %{"session_id" => session_id}}) do
+    wrap_result(id, Lang.Storage.Session.get(session_id))
+  end
+
   defp storage_close_session(%{"id" => id, "params" => %{"session_id" => session_id}}) do
-    :ok = Lang.InMemory.Store.delete(:storage_sessions, session_id)
+    :ok = Lang.Storage.Session.close(session_id)
     wrap_result(id, {:ok, %{closed: true, session_id: session_id}})
   end
 
   defp storage_sync_session(%{"id" => id, "params" => %{"session_id" => session_id}}) do
-    case Lang.InMemory.Store.get(:storage_sessions, session_id) do
-      nil -> wrap_result(id, {:error, :not_found})
-      session -> wrap_result(id, {:ok, %{synced: true, session: session}})
+    case Lang.Storage.Session.sync(session_id) do
+      {:ok, session} -> wrap_result(id, {:ok, %{synced: true, session: session}})
+      other -> wrap_result(id, other)
     end
   end
 
-  defp storage_update_user_context(%{"id" => id, "params" => %{"user_id" => user_id, "context" => context}}) do
-    :ok = Lang.InMemory.Store.put(:user_contexts, user_id, context)
-    wrap_result(id, {:ok, %{updated: true, user_id: user_id}})
+  defp storage_update_user_context(%{
+         "id" => id,
+         "params" => %{"user_id" => user_id, "context" => context}
+       }) do
+    result =
+      if dirup_enabled?() do
+        Lang.Storage.Dirup.update_user_context(user_id, context)
+      else
+        :ok = Lang.InMemory.Store.put(:user_contexts, user_id, context)
+        {:ok, %{updated: true, user_id: user_id}}
+      end
+
+    wrap_result(id, result)
   end
 
   defp storage_get_user_context(%{"id" => id, "params" => %{"user_id" => user_id}}) do
-    ctx = Lang.InMemory.Store.get(:user_contexts, user_id, %{})
-    wrap_result(id, {:ok, %{user_id: user_id, context: ctx}})
+    result =
+      if dirup_enabled?() do
+        Lang.Storage.Dirup.get_user_context(user_id)
+      else
+        ctx = Lang.InMemory.Store.get(:user_contexts, user_id, %{})
+        {:ok, %{user_id: user_id, context: ctx}}
+      end
+
+    wrap_result(id, result)
   end
 
   defp storage_store_patterns(%{"id" => id, "params" => %{"patterns" => patterns}}) do
-    pattern_ids =
-      Enum.map(patterns, fn p ->
-        id = Ecto.UUID.generate()
-        :ok = Lang.InMemory.Store.put(:patterns, id, p)
-        id
-      end)
-    wrap_result(id, {:ok, %{stored: length(patterns), pattern_ids: pattern_ids}})
+    result =
+      if dirup_enabled?() do
+        Lang.Storage.Dirup.store_patterns(patterns)
+      else
+        with {:ok, recs} <- Lang.Storage.PatternStore.store_many(patterns) do
+          {:ok, %{stored: length(recs), pattern_ids: Enum.map(recs, & &1.id)}}
+        end
+      end
+
+    wrap_result(id, result)
   end
 
   defp storage_get_patterns(%{"id" => id, "params" => %{"pattern_ids" => pattern_ids}}) do
-    patterns = Enum.map(pattern_ids, fn pid -> %{id: pid, pattern: Lang.InMemory.Store.get(:patterns, pid)} end)
-    wrap_result(id, {:ok, %{patterns: patterns}})
+    result =
+      if dirup_enabled?() do
+        Lang.Storage.Dirup.get_patterns(pattern_ids)
+      else
+        with {:ok, recs} <- Lang.Storage.PatternStore.get_many(pattern_ids) do
+          {:ok,
+           %{
+             patterns:
+               Enum.map(recs, fn rec ->
+                 %{id: rec.id, pattern: rec.content, confidence: rec.confidence}
+               end)
+           }}
+        end
+      end
+
+    wrap_result(id, result)
   end
 
   defp storage_search_patterns(%{"id" => id, "params" => %{"query" => query}}) do
     all = Lang.InMemory.Store.list(:patterns)
+
     results =
-      Enum.filter_map(all, fn {pid, pat} ->
-        str = to_string(pat)
-        String.contains?(String.downcase(str), String.downcase(query))
-      end, fn {pid, pat} -> %{id: pid, pattern: pat, score: 1.0} end)
+      Enum.filter_map(
+        all,
+        fn {pid, pat} ->
+          str = to_string(pat)
+          String.contains?(String.downcase(str), String.downcase(query))
+        end,
+        fn {pid, pat} -> %{id: pid, pattern: pat, score: 1.0} end
+      )
+
     wrap_result(id, {:ok, %{patterns: results, total: length(results)}})
   end
 
@@ -321,43 +485,40 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp analyze_stream(%{"id" => id, "params" => params}) do
-    # Return stream ID for real-time analysis updates
+  defp analyze_stream(%{"id" => id, "params" => %{"content" => content} = params}) do
     stream_id = "analysis_#{:erlang.unique_integer([:positive])}"
+    format = Map.get(params, "format", "text")
 
-    # Start streaming analysis in background
-    Task.start_link(fn ->
-      # This would stream analysis results via PubSub
-      Phoenix.PubSub.broadcast(Lang.PubSub, "lsp:analysis:#{stream_id}", {:started, %{}})
-    end)
-
-    wrap_result(id, {:ok, %{stream_id: stream_id, status: "streaming"}})
-  end
-
-  defp parser_parse(%{"id" => id, "params" => %{"content" => content, "format" => format}}) do
-    result =
-      case Lang.TextIntelligence.ParserRegistry.parse(content, format) do
-        {:ok, ast} ->
-          {:ok, %{ast: ast, format: format}}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
-
-    wrap_result(id, result)
-  end
-
-  defp parser_parse_batch(%{"id" => id, "params" => %{"files" => files}}) do
-    # Queue batch parsing job
-    job = Lang.Workers.ParserWorker.new(%{files: files}, queue: :parsing)
-
-    case Oban.insert(job) do
-      {:ok, job} ->
-        wrap_result(id, {:ok, %{status: "queued", job_id: job.id}})
-
-      {:error, reason} ->
-        wrap_result(id, {:error, reason})
+    callback = fn evt ->
+      Phoenix.PubSub.broadcast(Lang.PubSub, "lsp:analysis:#{stream_id}", evt)
     end
+
+    case Lang.TextIntelligence.AnalysisEngine.analyze_stream(content, format, callback) do
+      {:ok, _sid} -> wrap_result(id, {:ok, %{stream_id: stream_id, status: "streaming"}})
+      {:error, reason} -> wrap_result(id, {:error, reason})
+    end
+  end
+
+  defp parser_parse(%{"id" => id, "params" => %{"content" => content} = params}) do
+    fmt = Map.get(params, "format") || Lang.TextIntelligence.FormatDetector.detect(content)
+    wrap_result(id, parse_by_format(fmt, content))
+  end
+
+  defp parser_parse_batch(%{"id" => id, "params" => %{"documents" => files}}) do
+    parsed =
+      Enum.map(files, fn
+        %{"uri" => uri, "content" => content} ->
+          fmt =
+            Lang.TextIntelligence.FormatDetector.detect_from_uri(uri) ||
+              Lang.TextIntelligence.FormatDetector.detect(content)
+
+          {uri, parse_by_format(fmt, content)}
+
+        _ ->
+          {nil, {:error, :invalid_document}}
+      end)
+
+    wrap_result(id, {:ok, %{documents: parsed}})
   end
 
   defp parser_parse_stream(%{"id" => id, "params" => params}) do
@@ -365,64 +526,151 @@ defmodule Lang.LSP.Dispatch do
     wrap_result(id, {:ok, %{stream_id: stream_id, status: "streaming"}})
   end
 
-  defp parser_detect_format(%{"id" => id, "params" => %{"content" => content}}) do
-    format = Lang.TextIntelligence.FormatDetector.detect(content)
+  defp parser_detect_format(%{"id" => id, "params" => params}) do
+    content = Map.get(params, "content")
+    uri = Map.get(params, "uri")
+
+    format =
+      cond do
+        is_binary(content) -> Lang.TextIntelligence.FormatDetector.detect(content)
+        is_binary(uri) -> Lang.TextIntelligence.FormatDetector.detect_from_uri(uri)
+        true -> "unknown"
+      end
+
     wrap_result(id, {:ok, %{format: format}})
   end
 
-  defp graph_build(%{"id" => id, "params" => %{"project_id" => project_id} = params}) do
-    # Enqueue graph building job
-    job =
-      Lang.Workers.GraphBuilder.new(
-        %{
-          project_id: project_id,
-          options: Map.get(params, "options", %{})
-        },
-        queue: :graph
-      )
-
-    case Oban.insert(job) do
-      {:ok, job} ->
-        wrap_result(id, {:ok, %{status: "building", job_id: job.id}})
-
-      {:error, reason} ->
-        wrap_result(id, {:error, reason})
+  # Shared parser helpers
+  defp parse_by_format("json", content) do
+    case Jason.decode(content) do
+      {:ok, data} -> {:ok, %{format: "json", data: data}}
+      {:error, reason} -> {:error, {:json_parse_error, reason}}
     end
   end
 
-  defp graph_update(%{"id" => id, "params" => params}) do
-    wrap_result(id, {:error, :not_implemented})
+  defp parse_by_format("yaml", content) do
+    try do
+      {:ok, YamlElixir.read_from_string(content)}
+    rescue
+      e -> {:error, {:yaml_parse_error, e}}
+    end
   end
 
-  defp graph_traverse(%{"id" => id, "params" => %{"start_node" => start, "depth" => depth}}) do
-    # This would use the knowledge graph to traverse relationships
-    wrap_result(id, {:ok, %{nodes: [], edges: [], depth: depth}})
+  defp parse_by_format("markdown", content) do
+    case Kyozo.Lang.UniversalParser.Formats.Markdown.parse_minimal(content) do
+      {:ok, basic} -> {:ok, %{format: "markdown", structure: basic}}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
-  defp graph_query(%{"id" => id, "params" => %{"query" => query}}) do
-    # Graph query would use a graph database or in-memory graph
-    wrap_result(id, {:ok, %{results: [], query: query}})
+  defp parse_by_format(fmt, content) when is_binary(fmt) do
+    {:ok, %{format: fmt, content: content}}
   end
 
-  defp graph_visualize(%{"id" => id, "params" => %{"graph_id" => graph_id}}) do
-    # Generate visualization data (nodes, edges, layout)
-    wrap_result(
-      id,
-      {:ok,
-       %{
-         nodes: [],
-         edges: [],
-         layout: "force-directed",
-         format: "d3"
-       }}
-    )
+  defp graph_build(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+    nodes = Lang.JSONLD.get_list(params, "nodes")
+    edges = Lang.JSONLD.get_list(params, "edges")
+    graph = %{nodes: nodes, edges: edges, updated_at: DateTime.utc_now()}
+    :ok = Lang.InMemory.Store.put(:graphs, project_id, graph)
+    wrap_result(id, {:ok, %{project_id: project_id, nodes: length(nodes), edges: length(edges)}})
+  end
+
+  defp graph_update(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+    add_nodes = Lang.JSONLD.get_list(params, "nodes")
+    add_edges = Lang.JSONLD.get_list(params, "edges")
+    current = Lang.InMemory.Store.get(:graphs, project_id, %{nodes: [], edges: []})
+    nodes = Enum.uniq_by(current.nodes ++ add_nodes, fn n -> n["id"] || n[:id] end)
+
+    edges =
+      Enum.uniq_by(current.edges ++ add_edges, fn e ->
+        {e["from"] || e[:from], e["to"] || e[:to]}
+      end)
+
+    :ok =
+      Lang.InMemory.Store.put(:graphs, project_id, %{
+        nodes: nodes,
+        edges: edges,
+        updated_at: DateTime.utc_now()
+      })
+
+    wrap_result(id, {:ok, %{project_id: project_id, nodes: length(nodes), edges: length(edges)}})
+  end
+
+  defp graph_traverse(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+    start = Lang.JSONLD.get(params, "start_node") || Lang.JSONLD.get(params, "start")
+    depth = Lang.JSONLD.get(params, "depth", 1)
+    graph = Lang.InMemory.Store.get(:graphs, project_id, %{nodes: [], edges: []})
+    {nodes, edges} = bfs(graph, start, max(0, depth))
+    wrap_result(id, {:ok, %{nodes: nodes, edges: edges, depth: depth}})
+  end
+
+  defp graph_query(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+    graph = Lang.InMemory.Store.get(:graphs, project_id, %{nodes: [], edges: []})
+    q = Lang.JSONLD.get(params, "query", "") |> to_string() |> String.downcase()
+    
+    results =
+      Enum.filter(graph.nodes, fn n ->
+        s = String.downcase(to_string(n["label"] || n[:label] || n["id"] || n[:id] || ""))
+        String.contains?(s, q)
+      end)
+
+    wrap_result(id, {:ok, %{results: results}})
+  end
+
+  defp graph_visualize(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+    graph = Lang.InMemory.Store.get(:graphs, project_id, %{nodes: [], edges: []})
+    wrap_result(id, {:ok, Map.merge(graph, %{layout: "force-directed", format: "d3"})})
+  end
+
+  defp bfs(%{nodes: nodes, edges: edges}, start, depth) do
+    node_ids = MapSet.new(Enum.map(nodes, fn n -> n["id"] || n[:id] end))
+    start_id = start
+
+    if not MapSet.member?(node_ids, start_id) do
+      {[], []}
+    else
+      adj =
+        Enum.reduce(edges, %{}, fn e, acc ->
+          from = e["from"] || e[:from]
+          to = e["to"] || e[:to]
+          Map.update(acc, from, [to], fn lst -> [to | lst] end)
+        end)
+
+      {visited, traversed_edges} = bfs_visit([start_id], adj, MapSet.new(), [], depth)
+      found_nodes = Enum.filter(nodes, fn n -> MapSet.member?(visited, n["id"] || n[:id]) end)
+      {found_nodes, traversed_edges}
+    end
+  end
+
+  defp bfs_visit(_queue, _adj, visited, edge_acc, 0), do: {visited, edge_acc}
+  defp bfs_visit([], _adj, visited, edge_acc, _d), do: {visited, edge_acc}
+
+  defp bfs_visit(queue, adj, visited, edge_acc, depth) do
+    {current, rest} = List.pop_at(queue, 0)
+    nexts = Map.get(adj, current, []) |> Enum.reject(&MapSet.member?(visited, &1))
+    new_edges = Enum.map(nexts, fn n -> %{from: current, to: n} end)
+    new_visited = MapSet.put(visited, current)
+    bfs_visit(rest ++ nexts, adj, new_visited, edge_acc ++ new_edges, depth - 1)
   end
 
   # ----------------------------------------------------------------------------
   # Security operations stubs
   # ----------------------------------------------------------------------------
-  defp security_validate(%{"id" => id, "params" => %{"input" => input, "rules" => rules}}) do
-    # Validate input against security rules
+  defp security_validate(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    input = Lang.JSONLD.get(params, "input")
+    rules = Lang.JSONLD.get(params, "rules", [])
+
     result =
       case Lang.Security.Validator.validate(input, rules) do
         :ok -> {:ok, %{valid: true}}
@@ -432,12 +680,19 @@ defmodule Lang.LSP.Dispatch do
     wrap_result(id, result)
   end
 
-  defp security_sanitize(%{"id" => id, "params" => %{"input" => input, "type" => type}}) do
-    sanitized = Lang.Security.Sanitizer.sanitize(input, String.to_atom(type))
+  defp security_sanitize(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    input = Lang.JSONLD.get(params, "input")
+    type = Lang.JSONLD.get(params, "type") |> normalize_sanitize_type()
+    sanitized = Lang.Security.Sanitizer.sanitize(input, type)
     wrap_result(id, {:ok, %{sanitized: sanitized}})
   end
 
-  defp security_rate_limit(%{"id" => id, "params" => %{"user_id" => user_id, "action" => action}}) do
+  defp security_rate_limit(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    user_id = Lang.JSONLD.get(params, "user_id") || Lang.JSONLD.get(params, "user")
+    action = Lang.JSONLD.get(params, "action")
+
     case Lang.Security.RateLimiter.check(user_id, action) do
       :ok ->
         wrap_result(id, {:ok, %{allowed: true}})
@@ -450,7 +705,9 @@ defmodule Lang.LSP.Dispatch do
   # ----------------------------------------------------------------------------
   # Metrics operations stubs
   # ----------------------------------------------------------------------------
-  defp metrics_performance(%{"id" => id, "params" => %{"period" => period}}) do
+  defp metrics_performance(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    period = Lang.JSONLD.get(params, "period", "24h")
     # Get performance metrics for the specified period
     metrics = %{
       avg_response_time: 125,
@@ -464,8 +721,10 @@ defmodule Lang.LSP.Dispatch do
     wrap_result(id, {:ok, metrics})
   end
 
-  defp metrics_usage(%{"id" => id, "params" => %{"user_id" => user_id} = params}) do
-    period = Map.get(params, "period", "24h")
+  defp metrics_usage(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    user_id = Lang.JSONLD.get(params, "user_id") || Lang.JSONLD.get(params, "user")
+    period = Lang.JSONLD.get(params, "period", "24h")
 
     usage = %{
       api_calls: 1523,
@@ -494,7 +753,9 @@ defmodule Lang.LSP.Dispatch do
   # ----------------------------------------------------------------------------
   # Orchestration operations stubs
   # ----------------------------------------------------------------------------
-  defp orchestration_start(%{"id" => id, "params" => %{"workflow" => workflow} = params}) do
+  defp orchestration_start(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    workflow = Lang.JSONLD.get(params, "workflow", %{})
     # Start orchestration workflow
     case Lang.Orchestration.Master.start_workflow(workflow, params) do
       {:ok, workflow_id} ->
@@ -505,7 +766,10 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp orchestration_status(%{"id" => id, "params" => %{"workflow_id" => workflow_id}}) do
+  defp orchestration_status(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    workflow_id = Lang.JSONLD.get(params, "workflow_id") || Lang.JSONLD.get(params, "id")
+
     case Lang.Orchestration.Master.get_status(workflow_id) do
       {:ok, status} ->
         wrap_result(id, {:ok, status})
@@ -515,7 +779,10 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp orchestration_cancel(%{"id" => id, "params" => %{"workflow_id" => workflow_id}}) do
+  defp orchestration_cancel(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    workflow_id = Lang.JSONLD.get(params, "workflow_id") || Lang.JSONLD.get(params, "id")
+
     case Lang.Orchestration.Master.cancel_workflow(workflow_id) do
       :ok ->
         wrap_result(id, {:ok, %{cancelled: true}})
@@ -528,26 +795,32 @@ defmodule Lang.LSP.Dispatch do
   # ----------------------------------------------------------------------------
   # Workspace operations stubs
   # ----------------------------------------------------------------------------
-  defp workspace_create(%{"id" => id, "params" => %{"name" => name} = params}) do
+  defp workspace_create(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    name = Lang.JSONLD.get(params, "name") || Lang.JSONLD.get(params, "title")
     workspace_id = "workspace_#{:erlang.unique_integer([:positive])}"
 
     # Store workspace metadata
     workspace = %{
       id: workspace_id,
       name: name,
-      root_path: Map.get(params, "root_path"),
+      root_path: Lang.JSONLD.get(params, "root_path") || Lang.JSONLD.get(params, "root"),
       created_at: DateTime.utc_now()
     }
 
     wrap_result(id, {:ok, workspace})
   end
 
-  defp workspace_save(%{"id" => id, "params" => %{"workspace_id" => workspace_id} = params}) do
+  defp workspace_save(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    workspace_id = Lang.JSONLD.get(params, "workspace_id") || Lang.JSONLD.get(params, "workspace")
     # Save workspace state
     wrap_result(id, {:ok, %{saved: true, workspace_id: workspace_id}})
   end
 
-  defp workspace_load(%{"id" => id, "params" => %{"workspace_id" => workspace_id}}) do
+  defp workspace_load(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    workspace_id = Lang.JSONLD.get(params, "workspace_id") || Lang.JSONLD.get(params, "workspace")
     # Load workspace state
     workspace = %{
       id: workspace_id,
@@ -560,7 +833,9 @@ defmodule Lang.LSP.Dispatch do
     wrap_result(id, {:ok, workspace})
   end
 
-  defp workspace_context(%{"id" => id, "params" => %{"workspace_id" => workspace_id}}) do
+  defp workspace_context(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    workspace_id = Lang.JSONLD.get(params, "workspace_id") || Lang.JSONLD.get(params, "workspace")
     # Get current workspace context
     context = %{
       workspace_id: workspace_id,
@@ -576,8 +851,10 @@ defmodule Lang.LSP.Dispatch do
   # ----------------------------------------------------------------------------
   # MCP operations stubs
   # ----------------------------------------------------------------------------
-  defp mcp_connection_create(%{"id" => id, "params" => %{"url" => url} = params}) do
-    auth = Map.get(params, "auth", %{})
+  defp mcp_connection_create(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    url = Lang.JSONLD.get(params, "url") || Lang.JSONLD.get(params, "endpoint")
+    auth = Lang.JSONLD.get(params, "auth", %{})
 
     case Lang.MCP.ConnectionManager.create_connection(url, auth) do
       {:ok, conn_id} ->
@@ -588,7 +865,9 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp mcp_connection_destroy(%{"id" => id, "params" => %{"connection_id" => conn_id}}) do
+  defp mcp_connection_destroy(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    conn_id = Lang.JSONLD.get(params, "connection_id") || Lang.JSONLD.get(params, "id")
     case Lang.MCP.ConnectionManager.destroy_connection(conn_id) do
       :ok ->
         wrap_result(id, {:ok, %{destroyed: true}})
@@ -598,7 +877,9 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp mcp_connection_status(%{"id" => id, "params" => %{"connection_id" => conn_id}}) do
+  defp mcp_connection_status(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    conn_id = Lang.JSONLD.get(params, "connection_id") || Lang.JSONLD.get(params, "id")
     case Lang.MCP.ConnectionManager.get_status(conn_id) do
       {:ok, status} ->
         wrap_result(id, {:ok, status})
@@ -611,7 +892,7 @@ defmodule Lang.LSP.Dispatch do
   # ----------------------------------------------------------------------------
   # RPC operations stubs
   # ----------------------------------------------------------------------------
-  defp rpc_initialize(%{"id" => id, "params" => params}) do
+  defp rpc_initialize(%{"id" => id, "params" => _params}) do
     # Initialize RPC connection
     capabilities = %{
       methods: Lang.LSP.Registry.lookup_all() |> Map.keys(),
@@ -632,9 +913,29 @@ defmodule Lang.LSP.Dispatch do
     wrap_result(id, {:ok, %{shutdown: true}})
   end
 
-  defp rpc_ping(%{"id" => id, "params" => params}) do
-    timestamp = Map.get(params, "timestamp", DateTime.utc_now())
+  defp rpc_ping(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    timestamp = Lang.JSONLD.get(params, "timestamp", DateTime.utc_now())
     wrap_result(id, {:ok, %{status: "pong", timestamp: timestamp, latency_ms: 1}})
+  end
+
+  # ----------------------------------------------------------------------------
+  # JSON-LD operations (local, no remote @context fetching)
+  # ----------------------------------------------------------------------------
+  defp jsonld_compact(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    doc = Lang.JSONLD.get(params, "doc") |> maybe_json_map()
+    ctx = Lang.JSONLD.get(params, "@context") || Lang.JSONLD.get(params, "context") || %{}
+    {compacted, used_ctx} = Lang.JSONLD.compact(doc, ctx)
+    wrap_result(id, {:ok, %{"@context" => used_ctx, "document" => compacted}})
+  end
+
+  defp jsonld_expand(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    doc = Lang.JSONLD.get(params, "doc") |> maybe_json_map()
+    ctx = Lang.JSONLD.get(params, "@context") || Lang.JSONLD.get(params, "context") || %{}
+    {expanded, used_ctx} = Lang.JSONLD.expand(doc, ctx)
+    wrap_result(id, {:ok, %{"@context" => used_ctx, "document" => expanded}})
   end
 
   defp think(kind, %{"id" => id, "params" => params, "method" => method}) do
@@ -824,21 +1125,23 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp query(kind, %{"id" => id, "params" => params}) do
+  defp query(kind, %{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+
     req_attrs = %{
       kind: kind,
-      query: Map.get(params, "query", ""),
-      context: Map.get(params, "context", %{}),
-      scope: Map.get(params, "scope"),
-      target_element: Map.get(params, "target_element"),
-      change_description: Map.get(params, "change_description"),
-      analysis_depth: parse_atom(Map.get(params, "analysis_depth")),
-      use_graph_reasoning: Map.get(params, "use_graph_reasoning", true),
-      provider_preference: Map.get(params, "provider_preference"),
-      user_id: Map.get(params, "user_id"),
-      project_id: Map.get(params, "project_id"),
-      run_id: Map.get(params, "run_id"),
-      metadata: Map.get(params, "metadata", %{})
+      query: Lang.JSONLD.get(params, "query", ""),
+      context: Lang.JSONLD.get(params, "context", %{}),
+      scope: Lang.JSONLD.get(params, "scope"),
+      target_element: Lang.JSONLD.get(params, "target_element") || Lang.JSONLD.get(params, "targetElement"),
+      change_description: Lang.JSONLD.get(params, "change_description") || Lang.JSONLD.get(params, "changeDescription"),
+      analysis_depth: parse_atom(Lang.JSONLD.get(params, "analysis_depth") || Lang.JSONLD.get(params, "analysisDepth")),
+      use_graph_reasoning: Lang.JSONLD.get(params, "use_graph_reasoning", true),
+      provider_preference: Lang.JSONLD.get(params, "provider_preference") || Lang.JSONLD.get(params, "provider"),
+      user_id: Lang.JSONLD.get(params, "user_id") || Lang.JSONLD.get(params, "user"),
+      project_id: Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project"),
+      run_id: Lang.JSONLD.get(params, "run_id"),
+      metadata: Lang.JSONLD.get(params, "metadata", %{})
     }
 
     case Lang.Query.Request.create_enqueued(req_attrs) do
@@ -870,7 +1173,6 @@ defmodule Lang.LSP.Dispatch do
           "lang.think.review_code",
           "lang.think.estimate_complexity",
           "lang.generate.complete_partial",
-          "lang.generate.from_spec",
           "lang.generate.from_tests",
           "lang.generate.variations",
           "lang.generate.optimize",
@@ -959,10 +1261,106 @@ defmodule Lang.LSP.Dispatch do
 
   defp not_implemented(_), do: nil
 
+  # ----------------------------------------------------------------------------
+  # JSON helpers for tolerant parsing of stringified params
+  # ----------------------------------------------------------------------------
+  defp maybe_json_map(val) when is_binary(val) do
+    case Jason.decode(val) do
+      {:ok, %{} = map} -> map
+      _ -> val
+    end
+  end
+
+  defp maybe_json_map(%{} = v), do: v
+  defp maybe_json_map(other), do: other
+
+  defp maybe_json_list(val) when is_binary(val) do
+    case Jason.decode(val) do
+      {:ok, list} when is_list(list) -> list
+      _ -> [val]
+    end
+  end
+
+  defp maybe_json_list(list) when is_list(list), do: list
+  defp maybe_json_list(nil), do: []
+  defp maybe_json_list(other), do: [other]
+
+  defp normalize_capabilities(val) when is_list(val) do
+    Enum.flat_map(val, &normalize_capability/1)
+  end
+
+  defp normalize_capabilities(val) when is_binary(val) do
+    val |> maybe_json_list() |> normalize_capabilities()
+  end
+
+  defp normalize_capabilities(_), do: []
+
+  defp normalize_capability(v) when is_atom(v), do: [v]
+
+  defp normalize_capability(v) when is_binary(v) do
+    name = v |> String.trim() |> String.downcase()
+
+    allowed = [
+      :read_only,
+      :analysis,
+      :explain,
+      :single_file_edit,
+      :local_generation,
+      :multi_file_coordination,
+      :refactoring,
+      :architecture_changes,
+      :system_wide
+    ]
+
+    case Enum.find(allowed, fn a -> Atom.to_string(a) == name end) do
+      nil -> []
+      atom -> [atom]
+    end
+  end
+
+  defp normalize_capability(_), do: []
+
+  # Only atomize known keys to avoid creating atoms from user input (memory-safety)
+  defp safe_atomize_keys(map) when is_map(map) do
+    Map.new(map, fn {k, v} ->
+      nk =
+        case k do
+          :type -> :type
+          :required_capabilities -> :required_capabilities
+          :content -> :content
+          :analysis_type -> :analysis_type
+          :goal -> :goal
+          :strategy -> :strategy
+          :reduce_fun -> :reduce_fun
+          "type" -> :type
+          "required_capabilities" -> :required_capabilities
+          "content" -> :content
+          "analysis_type" -> :analysis_type
+          "goal" -> :goal
+          "strategy" -> :strategy
+          "reduce_fun" -> :reduce_fun
+          other -> other
+        end
+
+      nv = if is_map(v), do: safe_atomize_keys(v), else: v
+      {nk, nv}
+    end)
+  end
+
+  defp safe_atomize_keys(other), do: other
+
   # === Agent namespace ===
   defp agent_spawn(%{"id" => id, "params" => params}) do
-    caps = params["capabilities"] || []
-    constraints = params["constraints"] || %{}
+    caps =
+      params
+      |> maybe_json_map()
+      |> Lang.JSONLD.get_list("capabilities")
+      |> normalize_capabilities()
+
+    constraints =
+      params
+      |> maybe_json_map()
+      |> Lang.JSONLD.get("constraints", %{})
 
     ctx = %{
       session_id: Map.get(params, "session_id"),
@@ -985,7 +1383,8 @@ defmodule Lang.LSP.Dispatch do
 
   defp agent_delegate(%{"id" => id, "params" => params}) do
     agent_id = Map.get(params, "agent_id")
-    task = Map.get(params, "task", %{}) |> atomize_keys()
+    task_ld = Map.get(params, "task", %{}) |> maybe_json_map()
+    task = Lang.JSONLD.to_runtime_task(task_ld)
 
     case Lang.Agent.Lifecycle.delegate(agent_id, task) do
       {:ok, result} ->
@@ -997,8 +1396,9 @@ defmodule Lang.LSP.Dispatch do
   end
 
   defp agent_coordinate(%{"id" => id, "params" => params}) do
-    agent_ids = Map.get(params, "agent_ids", [])
-    task = Map.get(params, "task", %{}) |> atomize_keys()
+    agent_ids = Map.get(params, "agent_ids", []) |> maybe_json_list()
+    task_ld = Map.get(params, "task", %{}) |> maybe_json_map()
+    task = Lang.JSONLD.to_runtime_task(task_ld)
 
     case Lang.Agent.Lifecycle.coordinate(agent_ids, task) do
       {:ok, result} ->
@@ -1010,7 +1410,7 @@ defmodule Lang.LSP.Dispatch do
   end
 
   defp agent_merge_results(%{"id" => id, "params" => params}) do
-    results = Map.get(params, "results", [])
+    results = Map.get(params, "results", []) |> maybe_json_list()
 
     case Lang.Agent.Lifecycle.merge_results(results) do
       {:ok, merged} ->
@@ -1192,16 +1592,18 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
-  defp tokens(kind, %{"id" => id, "params" => params}) do
+  defp tokens(kind, %{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+
     req_attrs = %{
       kind: kind,
-      input: Map.get(params, "input", %{}),
-      model_type: Map.get(params, "model_type"),
-      target_ratio: parse_decimal(Map.get(params, "target_ratio")),
-      user_id: Map.get(params, "user_id"),
-      project_id: Map.get(params, "project_id"),
-      run_id: Map.get(params, "run_id"),
-      metadata: Map.get(params, "metadata", %{})
+      input: Lang.JSONLD.get(params, "input", %{}),
+      model_type: Lang.JSONLD.get(params, "model_type") || Lang.JSONLD.get(params, "model"),
+      target_ratio: parse_decimal(Lang.JSONLD.get(params, "target_ratio") || Lang.JSONLD.get(params, "targetRatio")),
+      user_id: Lang.JSONLD.get(params, "user_id") || Lang.JSONLD.get(params, "user"),
+      project_id: Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project"),
+      run_id: Lang.JSONLD.get(params, "run_id"),
+      metadata: Lang.JSONLD.get(params, "metadata", %{})
     }
 
     case Lang.Tokens.Request.create_enqueued(req_attrs) do
@@ -1226,13 +1628,26 @@ defmodule Lang.LSP.Dispatch do
   defp parse_decimal(%Decimal{} = d), do: d
   defp parse_decimal(_), do: nil
 
-  defp timeline(operation, %{"id" => id, "params" => params}) do
+  defp normalize_sanitize_type(v) when is_atom(v), do: v
+  defp normalize_sanitize_type(v) when is_binary(v) do
+    case String.downcase(v) do
+      "html" -> :html
+      "url" -> :url
+      "sql" -> :sql
+      "json" -> :json
+      _ -> :generic
+    end
+  end
+  defp normalize_sanitize_type(_), do: :generic
+
+  defp timeline(operation, %{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
     with :ok <- realtime_request?(params) do
       case operation do
         :create ->
-          content_id = Map.get(params, "content_id") || "default_#{:rand.uniform(10000)}"
-          initial_state = Map.get(params, "initial_state", %{})
-          metadata = Map.get(params, "metadata", %{})
+          content_id = Lang.JSONLD.get(params, "content_id") || Lang.JSONLD.get(params, "content") || "default_#{:rand.uniform(10000)}"
+          initial_state = Lang.JSONLD.get(params, "initial_state", %{})
+          metadata = Lang.JSONLD.get(params, "metadata", %{})
 
           case Lang.Timeline.Core.create_timeline(content_id, initial_state, metadata) do
             {:ok, timeline_id} ->
@@ -1243,9 +1658,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :add_state ->
-          timeline_id = Map.get(params, "timeline_id")
-          state_data = Map.get(params, "state_data", %{})
-          metadata = Map.get(params, "metadata", %{})
+          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          state_data = Lang.JSONLD.get(params, "state_data", %{})
+          metadata = Lang.JSONLD.get(params, "metadata", %{})
 
           if timeline_id do
             case Lang.Timeline.Core.add_state(timeline_id, state_data, metadata) do
@@ -1260,8 +1675,8 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :navigate ->
-          timeline_id = Map.get(params, "timeline_id")
-          state_id = Map.get(params, "state_id")
+          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          state_id = Lang.JSONLD.get(params, "state_id")
 
           if timeline_id && state_id do
             case Lang.Timeline.Core.navigate_to_state(timeline_id, state_id) do
@@ -1276,9 +1691,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :branch ->
-          timeline_id = Map.get(params, "timeline_id")
-          from_state_id = Map.get(params, "from_state_id")
-          branch_name = Map.get(params, "branch_name")
+          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          from_state_id = Lang.JSONLD.get(params, "from_state_id")
+          branch_name = Lang.JSONLD.get(params, "branch_name") || Lang.JSONLD.get(params, "name")
 
           if timeline_id && from_state_id && branch_name do
             case Lang.Timeline.Core.create_branch(timeline_id, from_state_id, branch_name) do
@@ -1293,9 +1708,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :diff ->
-          timeline_id = Map.get(params, "timeline_id")
-          from_state_id = Map.get(params, "from_state_id")
-          to_state_id = Map.get(params, "to_state_id")
+          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          from_state_id = Lang.JSONLD.get(params, "from_state_id")
+          to_state_id = Lang.JSONLD.get(params, "to_state_id")
 
           if timeline_id && from_state_id && to_state_id do
             case Lang.Timeline.Core.diff_states(timeline_id, from_state_id, to_state_id) do
@@ -1310,10 +1725,10 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :replay ->
-          timeline_id = Map.get(params, "timeline_id")
-          from_state_id = Map.get(params, "from_state_id")
-          to_state_id = Map.get(params, "to_state_id")
-          options = Map.get(params, "options", %{})
+          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          from_state_id = Lang.JSONLD.get(params, "from_state_id")
+          to_state_id = Lang.JSONLD.get(params, "to_state_id")
+          options = Lang.JSONLD.get(params, "options", %{})
 
           if timeline_id && from_state_id && to_state_id do
             case Lang.Timeline.Core.replay_timeline(
@@ -1333,7 +1748,7 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :analyze ->
-          timeline_id = Map.get(params, "timeline_id")
+          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
 
           if timeline_id do
             case Lang.Timeline.Core.analyze_timeline(timeline_id) do

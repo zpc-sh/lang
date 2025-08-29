@@ -170,6 +170,10 @@ defmodule LangWeb.NavbarComponent do
         Dashboard
       </.nav_link>
 
+      <.nav_link href="/fs/watch" current_page={@current_page} page_key={:fs_watch}>
+        FS Watch
+      </.nav_link>
+
       <.nav_link href="/api-portal" current_page={@current_page} page_key={:api_portal}>
         API
       </.nav_link>

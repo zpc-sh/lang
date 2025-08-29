@@ -19,6 +19,7 @@ defmodule LangWeb.Api.V2.MCPBillingController do
           |> Ash.read!()
 
         usage_summary = %{
+          "@context" => "https://lang.nulity.com/context/billing",
           total_connections: length(connections),
           total_cost_cents: length(connections) * 25,
           by_server_type: group_by_server_type(connections),

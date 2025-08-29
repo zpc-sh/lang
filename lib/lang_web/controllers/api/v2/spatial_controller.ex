@@ -12,6 +12,8 @@ defmodule LangWeb.Api.V2.SpatialController do
 
   action_fallback LangWeb.Api.FallbackController
 
+  @spatial_context "https://lang.nulity.com/context/spatial"
+
   @default_page 1
   @default_page_size 200
   @max_page_size 1000
@@ -154,17 +156,20 @@ defmodule LangWeb.Api.V2.SpatialController do
         }
       }
 
-      json(conn, body)
+      json(conn, maybe_with_context(conn, body))
     else
       {:error, :invalid_pagination} ->
-        conn |> put_status(:bad_request) |> json(%{error: "invalid page or page_size"})
+        LangWeb.ApiError.json(conn, :bad_request, "invalid page or page_size")
 
       {:ok, nil} ->
-        conn |> put_status(:not_found) |> json(%{error: "no map available"})
+        LangWeb.ApiError.json(conn, :not_found, "no map available")
 
       {:error, reason} ->
         Logger.error("map_summary failed", reason: inspect(reason))
-        conn |> put_status(:internal_server_error) |> json(%{error: "internal_error"})
+
+        LangWeb.ApiError.json(conn, :internal_server_error, "internal_error", %{
+          reason: inspect(reason)
+        })
     end
   end
 
@@ -187,13 +192,15 @@ defmodule LangWeb.Api.V2.SpatialController do
 
     case Lang.Spatial.Mapper.trace_path(project_id, spec, opts) do
       {:ok, result} ->
-        json(conn, result)
+        json(conn, maybe_with_context(conn, result))
 
       {:error, :invalid_spec} ->
-        conn |> put_status(:bad_request) |> json(%{error: "from and to are required"})
+        LangWeb.ApiError.json(conn, :bad_request, "from and to are required")
 
       {:error, reason} ->
-        conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
+        LangWeb.ApiError.json(conn, :internal_server_error, "Internal error", %{
+          reason: inspect(reason)
+        })
     end
   end
 
@@ -223,13 +230,15 @@ defmodule LangWeb.Api.V2.SpatialController do
 
     case Lang.Spatial.Mapper.find_related(project_id, criteria, opts) do
       {:ok, result} ->
-        json(conn, result)
+        json(conn, maybe_with_context(conn, result))
 
       {:error, :invalid_criteria} ->
-        conn |> put_status(:bad_request) |> json(%{error: "file is required"})
+        LangWeb.ApiError.json(conn, :bad_request, "file is required")
 
       {:error, reason} ->
-        conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
+        LangWeb.ApiError.json(conn, :internal_server_error, "Internal error", %{
+          reason: inspect(reason)
+        })
     end
   end
 
@@ -269,13 +278,15 @@ defmodule LangWeb.Api.V2.SpatialController do
 
     case Lang.Spatial.Mapper.traverse(project_id, opts) do
       {:ok, result} ->
-        json(conn, result)
+        json(conn, maybe_with_context(conn, result))
 
       {:error, :missing_start_file} ->
-        conn |> put_status(:bad_request) |> json(%{error: "file is required"})
+        LangWeb.ApiError.json(conn, :bad_request, "file is required")
 
       {:error, reason} ->
-        conn |> put_status(:internal_server_error) |> json(%{error: inspect(reason)})
+        LangWeb.ApiError.json(conn, :internal_server_error, "Internal error", %{
+          reason: inspect(reason)
+        })
     end
   end
 
@@ -476,4 +487,14 @@ defmodule LangWeb.Api.V2.SpatialController do
 
   defp truthy?(v) when is_boolean(v), do: v
   defp truthy?(_), do: false
+
+  defp maybe_with_context(conn, %{} = map) do
+    if Phoenix.Controller.get_format(conn) == "jsonld" do
+      Map.put_new(map, "@context", @spatial_context)
+    else
+      map
+    end
+  end
+
+  defp maybe_with_context(_conn, other), do: other
 end

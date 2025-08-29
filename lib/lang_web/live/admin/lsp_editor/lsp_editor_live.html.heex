@@ -44,7 +44,7 @@
             </div>
             <!-- Editor engine status badge -->
             <div class="ml-1">
-              <% 
+              <%
                 engine =
                   Map.get(@editor_hosts_status || %{}, "sticky-recurse-editor") ||
                     Map.get(@editor_hosts_status || %{}, "file-recurse-editor") ||
@@ -243,36 +243,128 @@
           </div>
         </div>
 
-        <!-- Semantic Information Panel -->
-        <%= if assigns[:semantic_entities] && length(@semantic_entities) > 0 do %>
-          <div class="bx--row">
-            <div class="bx--col-lg-16">
-              <div class="bx--tile bx--tile--light">
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">Semantic Analysis</h4>
-                  <div class="bx--tag bx--tag--blue bx--tag--sm">{length(@semantic_entities)} entities</div>
-                  <div class="bx--row">
-                    <div class="bx--col-lg-4">
-                      <div class="bx--tag bx--tag--purple bx--tag--sm">
-                        LSP Methods: {Enum.count(@semantic_entities, &(&1["type"] == "lsp_method"))}
-                      </div>
+        <!-- Enhanced JSON-LD Semantic Information Panel -->
+        <div class="bx--row">
+          <div class="bx--col-lg-16">
+            <div class="bx--tile bx--tile--light">
+              <div class="bx--tile__content">
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="bx--tile__title">JSON-LD Semantic Analysis</h4>
+                  <%= if @jsonld_processing do %>
+                    <div class="bx--loading bx--loading--small">
+                      <svg class="bx--loading__svg" viewBox="-75 -75 150 150">
+                        <circle class="bx--loading__background" cx="0" cy="0" r="26.8125"/>
+                        <circle class="bx--loading__stroke" cx="0" cy="0" r="26.8125"/>
+                      </svg>
                     </div>
-                    <div class="bx--col-lg-4">
-                      <div class="bx--tag bx--tag--green bx--tag--sm">
-                        Status Indicators: {Enum.count(@semantic_entities, &(&1["type"] == "status"))}
-                      </div>
+                  <% else %>
+                    <div class="bx--tag bx--tag--green bx--tag--sm">Processing Complete</div>
+                  <% end %>
+                </div>
+
+                <!-- Enhanced Statistics -->
+                <div class="bx--row mb-4">
+                  <div class="bx--col-lg-3">
+                    <div class="bx--tag bx--tag--blue bx--tag--sm">
+                      Entities: {if assigns[:semantic_entities], do: length(@semantic_entities), else: 0}
                     </div>
-                    <div class="bx--col-lg-4">
-                      <div class="bx--tag bx--tag--cyan bx--tag--sm">
-                        Confidence: <%= if assigns[:semantic_summary], do: Map.get(@semantic_summary, "confidence", "N/A"), else: "Computing..." %>
-                      </div>
+                  </div>
+                  <div class="bx--col-lg-3">
+                    <div class="bx--tag bx--tag--purple bx--tag--sm">
+                      LSP Methods: {if assigns[:semantic_summary], do: Map.get(@semantic_summary, "lsp_methods", 0), else: 0}
+                    </div>
+                  </div>
+                  <div class="bx--col-lg-3">
+                    <div class="bx--tag bx--tag--green bx--tag--sm">
+                      Relationships: {if assigns[:semantic_summary], do: Map.get(@semantic_summary, "total_relationships", 0), else: 0}
+                    </div>
+                  </div>
+                  <div class="bx--col-lg-3">
+                    <div class="bx--tag bx--tag--cyan bx--tag--sm">
+                      RDF Triples: {if assigns[:semantic_summary], do: Map.get(@semantic_summary, "total_triples", 0), else: 0}
                     </div>
                   </div>
                 </div>
+
+                <!-- JSON-LD Context Information -->
+                <%= if assigns[:markdown_ld_data] && assigns[:markdown_ld_data].context != %{} do %>
+                  <div class="bx--row mb-4">
+                    <div class="bx--col-lg-16">
+                      <div class="bx--tile bx--tile--selectable bx--tile--light">
+                        <div class="bx--tile__content">
+                          <h5 class="text-sm font-semibold mb-2">JSON-LD Context</h5>
+                          <div class="flex flex-wrap gap-2">
+                            <%= for vocab <- (if assigns[:semantic_summary], do: Map.get(@semantic_summary, "context_vocabularies", []), else: []) do %>
+                              <div class="bx--tag bx--tag--outline bx--tag--sm">
+                                {String.replace(vocab, ~r/https?:\/\//, "")}
+                              </div>
+                            <% end %>
+                          </div>
+                          <div class="mt-2 text-xs text-gray-600">
+                            Confidence Score: <span class="font-mono">{if assigns[:semantic_summary], do: Map.get(@semantic_summary, "confidence", "0.00"), else: "0.00"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+
+                <!-- Enhanced Entity Details -->
+                <%= if assigns[:semantic_entities] && length(@semantic_entities) > 0 do %>
+                  <div class="bx--row">
+                    <div class="bx--col-lg-16">
+                      <div class="bx--accordion" data-accordion>
+                        <div class="bx--accordion__item">
+                          <button class="bx--accordion__heading" aria-expanded="false" aria-controls="semantic-details">
+                            <svg class="bx--accordion__arrow" width="16" height="16" viewBox="0 0 16 16">
+                              <path d="M11 8L6 13 5.3 12.3 9.6 8 5.3 3.7 6 3z"></path>
+                            </svg>
+                            <div class="bx--accordion__title">Semantic Entity Details ({length(@semantic_entities)} items)</div>
+                          </button>
+                          <div class="bx--accordion__content" id="semantic-details">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <%= for entity <- Enum.take(@semantic_entities, 12) do %>
+                                <div class="bx--tile bx--tile--selectable">
+                                  <div class="bx--tile__content">
+                                    <h6 class="text-sm font-semibold mb-1">
+                                      {Map.get(entity, "name", "Unnamed Entity")}
+                                    </h6>
+                                    <div class="bx--tag bx--tag--outline bx--tag--sm mb-2">
+                                      {Map.get(entity, "jsonld_type", Map.get(entity, "type", "Unknown")) |> String.replace("https://lang.ai/schema/", "") |> String.replace("https://schema.org/", "")}
+                                    </div>
+                                    <%= if Map.has_key?(entity, "confidence_boost") do %>
+                                      <div class="text-xs text-gray-600">
+                                        Enhanced Confidence: <span class="font-mono">{Float.round(Map.get(entity, "confidence_boost", 0.0) * 100, 1)}%</span>
+                                      </div>
+                                    <% end %>
+                                    <%= if Map.has_key?(entity, "uri") do %>
+                                      <div class="text-xs text-blue-600 truncate mt-1">
+                                        URI: {Map.get(entity, "uri")}
+                                      </div>
+                                    <% end %>
+                                  </div>
+                                </div>
+                              <% end %>
+                              <%= if length(@semantic_entities) > 12 do %>
+                                <div class="bx--tile bx--tile--light">
+                                  <div class="bx--tile__content text-center">
+                                    <div class="text-sm text-gray-600">
+                                      +{length(@semantic_entities) - 12} more entities
+                                    </div>
+                                  </div>
+                                </div>
+                              <% end %>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
               </div>
             </div>
           </div>
-        <% end %>
+        </div>
 
         <!-- Main Content Area -->
         <%= if @edit_mode == :raw do %>
@@ -330,6 +422,7 @@
                         <th class="bx--table-header-label">Method</th>
                         <th class="bx--table-header-label">Status</th>
                         <th class="bx--table-header-label">Priority</th>
+                        <th class="bx--table-header-label">Semantic Info</th>
                         <th class="bx--table-header-label">Description</th>
                         <th class="bx--table-header-label">Actions</th>
                       </tr>
@@ -347,6 +440,11 @@
                           ]}>
                             {if File.exists?(method.file_path), do: "File exists", else: "No file"}
                           </div>
+                          <%= if Map.has_key?(method, :enhanced_semantic_confidence) do %>
+                            <div class="bx--tag bx--tag--outline bx--tag--sm mt-1">
+                              JSON-LD Enhanced
+                            </div>
+                          <% end %>
                         </td>
 
                         <!-- Status Column -->
@@ -389,6 +487,35 @@
                           >
                             {method.priority}
                           </div>
+                        </td>
+
+                        <!-- Semantic Info Column -->
+                        <td class="bx--table-cell">
+                          <%= if Map.has_key?(method, :related_entities) && length(method.related_entities) > 0 do %>
+                            <div class="mb-2">
+                              <div class="bx--tag bx--tag--blue bx--tag--sm">
+                                {length(method.related_entities)} entities
+                              </div>
+                            </div>
+                          <% end %>
+
+                          <%= if Map.has_key?(method, :semantic_confidence) do %>
+                            <div class="text-xs text-gray-600">
+                              Confidence: <span class="font-mono">{Float.round(method.semantic_confidence * 100, 1)}%</span>
+                            </div>
+                          <% end %>
+
+                          <%= if Map.has_key?(method, :jsonld_context) && map_size(method.jsonld_context) > 0 do %>
+                            <div class="bx--tag bx--tag--outline bx--tag--sm mt-1">
+                              JSON-LD Context
+                            </div>
+                          <% end %>
+
+                          <%= if Map.has_key?(method, :enhanced_semantic_confidence) do %>
+                            <div class="text-xs text-green-600 mt-1">
+                              Enhanced: <span class="font-mono">+{Float.round(method.enhanced_semantic_confidence * 100, 1)}%</span>
+                            </div>
+                          <% end %>
                         </td>
 
                         <!-- Description Column -->
@@ -442,7 +569,7 @@
 
                       <!-- Empty State -->
                       <tr :if={@filtered_methods == [] && !@loading}>
-                        <td colspan="5" class="bx--table-cell bx--table-cell--empty">
+                        <td colspan="6" class="bx--table-cell bx--table-cell--empty">
                           <div class="bx--empty-state">
                             <div class="bx--empty-state__illustration">
                               <svg width="80" height="80" viewBox="0 0 32 32">
@@ -538,6 +665,8 @@
               data-file-path={@editing_file || ""}
               data-language={(String.ends_with?(@editing_file || "", ".ex") && "elixir") || "plaintext"}
               data-semantic-enabled="true"
+              data-jsonld-enabled="true"
+              data-jsonld-context={if assigns[:markdown_ld_data], do: Jason.encode!(@markdown_ld_data.context), else: "{}"}
               class="w-full h-full"
               style="font-family: 'IBM Plex Mono', monospace;"
             >

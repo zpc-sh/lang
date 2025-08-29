@@ -67,6 +67,19 @@ defmodule Lang do
     }
   end
 
+  @doc """
+  Query LSP server capabilities via JSON-RPC on localhost:4001.
+
+  Uses a short-lived TCP connection and returns `{:ok, map}` or `{:error, reason}`.
+  """
+  def lsp_capabilities(opts \\ []) do
+    case Lang.LSP.Client.initialize(opts) do
+      {:ok, %{"capabilities" => caps}} -> {:ok, caps}
+      {:ok, other} -> {:ok, other}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp service_health(module) do
     case Process.whereis(module) do
       nil -> :not_running

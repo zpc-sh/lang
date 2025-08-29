@@ -84,6 +84,20 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# JSON-LD MIME and encoders
+config :mime, :types, %{
+  "application/ld+json" => ["jsonld"],
+  "application/markdown-ld+json" => ["mdld", "markdownld", "markdown-ld"]
+}
+
+config :mime, :extensions, %{
+  "json" => "application/json",
+  "jsonld" => "application/ld+json",
+  "mdld" => "application/markdown-ld+json"
+}
+
+config :phoenix, :format_encoders, jsonld: Jason, mdld: Jason
+
 # Swoosh API client is needed for adapters other than SMTP.
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 

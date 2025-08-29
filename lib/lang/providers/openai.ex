@@ -24,6 +24,11 @@ defmodule Lang.Providers.OpenAI do
   def capabilities do
     %{
       methods: [
+        "completion",
+        "hover",
+        "explain",
+        "refactor",
+        "generate_tests",
         "lang.think.explain_intent",
         "lang.think.explain_why",
         "lang.think.explain_how",
@@ -59,6 +64,21 @@ defmodule Lang.Providers.OpenAI do
   @impl Lang.Providers.Provider
   def handle_request(method, params, opts \\ []) do
     case method do
+      "completion" ->
+        handle_completion(params, opts)
+
+      "hover" ->
+        handle_hover(params, opts)
+
+      "explain" ->
+        handle_explain(params, opts)
+
+      "refactor" ->
+        handle_refactor(params, opts)
+
+      "generate_tests" ->
+        handle_generate_tests(params, opts)
+
       <<"lang.think.explain", _::binary>> ->
         handle_explanation(method, params, opts)
 
@@ -119,7 +139,222 @@ defmodule Lang.Providers.OpenAI do
   end
 
   # =============================================================================
-  # Method Handlers
+  # LSP Method Handlers
+  # =============================================================================
+
+  defp handle_completion(params, opts) do
+    prefix = Map.get(params, :prefix, "")
+    language = Map.get(params, :language, "text")
+    context = Map.get(params, :context, "")
+
+    prompt = """
+    Complete this #{language} code. Provide only the completion, no explanations.
+
+    Code to complete:
+    ```#{language}
+    #{prefix}
+    ```
+
+    #{if String.length(context) > 0, do: "Context: #{context}", else: ""}
+
+    Complete the code naturally and idiomatically.
+    """
+
+    case completion_request(prompt, Keyword.put(opts, :max_tokens, 200)) do
+      {:ok, response} ->
+        {:ok,
+         %{
+           completion: String.trim(response.content),
+           confidence: 0.85,
+           provider: "openai",
+           model: response.model,
+           metadata: %{
+             language: language,
+             completion_length: String.length(response.content),
+             context_used: String.length(context) > 0
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Completion failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_hover(params, opts) do
+    symbol = Map.get(params, :symbol, "unknown")
+    language = Map.get(params, :language, "text")
+    context = Map.get(params, :context, "")
+
+    prompt = """
+    Provide hover information for this #{language} symbol: `#{symbol}`
+
+    #{if String.length(context) > 0, do: "Context:\n```#{language}\n#{context}\n```", else: ""}
+
+    Provide:
+    - Type information
+    - Brief description
+    - Usage example if helpful
+
+    Format as markdown for display.
+    """
+
+    case completion_request(prompt, Keyword.put(opts, :max_tokens, 250)) do
+      {:ok, response} ->
+        {:ok,
+         %{
+           hover_content: response.content,
+           confidence: 0.82,
+           provider: "openai",
+           model: response.model,
+           metadata: %{
+             symbol: symbol,
+             language: language,
+             info_length: String.length(response.content)
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Hover failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_explain(params, opts) do
+    code = Map.get(params, :code, "")
+    language = Map.get(params, :language, "text")
+    question = Map.get(params, :question, "What does this code do?")
+
+    prompt = """
+    #{question}
+
+    #{language} code:
+    ```#{language}
+    #{code}
+    ```
+
+    Provide a clear, educational explanation covering:
+    1. What this code does
+    2. How it works
+    3. Key concepts used
+    4. Any notable patterns or techniques
+    """
+
+    case completion_request(prompt, Keyword.put(opts, :max_tokens, 800)) do
+      {:ok, response} ->
+        {:ok,
+         %{
+           explanation: response.content,
+           confidence: 0.88,
+           provider: "openai",
+           model: response.model,
+           metadata: %{
+             language: language,
+             code_length: String.length(code),
+             question: question
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Explanation failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_refactor(params, opts) do
+    code = Map.get(params, :code, "")
+    language = Map.get(params, :language, "text")
+    goal = Map.get(params, :goal, "improve code quality")
+
+    prompt = """
+    Refactor this #{language} code to #{goal}.
+
+    Original code:
+    ```#{language}
+    #{code}
+    ```
+
+    Provide:
+    1. The refactored code
+    2. Summary of changes made
+    3. Benefits of the refactoring
+
+    Focus on clean, maintainable, and efficient code.
+    """
+
+    case completion_request(prompt, Keyword.put(opts, :max_tokens, 1000)) do
+      {:ok, response} ->
+        # Extract code and summary from response
+        refactored_code = extract_code_from_response(response.content)
+        changes_summary = extract_changes_summary(response.content)
+
+        {:ok,
+         %{
+           refactored_code: refactored_code,
+           changes_summary: changes_summary,
+           confidence: 0.86,
+           provider: "openai",
+           model: response.model,
+           metadata: %{
+             language: language,
+             original_length: String.length(code),
+             refactored_length: String.length(refactored_code),
+             goal: goal
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Refactoring failed: #{inspect(error)}"}
+    end
+  end
+
+  defp handle_generate_tests(params, opts) do
+    code = Map.get(params, :code, "")
+    language = Map.get(params, :language, "text")
+    framework = Map.get(params, :framework, "auto")
+
+    prompt = """
+    Generate comprehensive tests for this #{language} code.
+
+    Code to test:
+    ```#{language}
+    #{code}
+    ```
+
+    #{if framework != "auto", do: "Use #{framework} testing framework.", else: "Use the standard testing framework for #{language}."}
+
+    Generate:
+    1. Unit tests for main functionality
+    2. Edge case tests
+    3. Error handling tests
+    4. Clear test descriptions
+
+    Provide complete, runnable test code.
+    """
+
+    case completion_request(prompt, Keyword.put(opts, :max_tokens, 1200)) do
+      {:ok, response} ->
+        test_code = extract_code_from_response(response.content)
+        test_count = count_test_functions(test_code)
+
+        {:ok,
+         %{
+           test_code: test_code,
+           test_count: test_count,
+           confidence: 0.84,
+           provider: "openai",
+           model: response.model,
+           metadata: %{
+             language: language,
+             framework: framework,
+             original_code_length: String.length(code)
+           }
+         }}
+
+      {:error, error} ->
+        {:error, "Test generation failed: #{inspect(error)}"}
+    end
+  end
+
+  # =============================================================================
+  # Analysis Method Handlers
   # =============================================================================
 
   defp handle_explanation("lang.think.explain_intent", params, opts) do
@@ -544,5 +779,51 @@ defmodule Lang.Providers.OpenAI do
         end)
       end)
     end)
+  end
+
+  # =============================================================================
+  # Helper Functions
+  # =============================================================================
+
+  defp extract_code_from_response(content) do
+    case Regex.run(~r/```[a-zA-Z]*\n(.*?)\n```/s, content) do
+      [_, code] -> String.trim(code)
+      nil -> content
+    end
+  end
+
+  defp extract_changes_summary(content) do
+    lines = String.split(content, "\n")
+
+    summary_lines =
+      lines
+      |> Enum.filter(fn line ->
+        String.contains?(String.downcase(line), ["change", "improvement", "refactor", "benefit"])
+      end)
+      |> Enum.take(3)
+
+    case summary_lines do
+      [] -> "Code refactored with improvements"
+      lines -> Enum.join(lines, " ")
+    end
+  end
+
+  defp count_test_functions(test_code) do
+    test_patterns = [
+      ~r/test\s+["\w]/,
+      ~r/it\s*\(/,
+      ~r/describe\s*\(/,
+      ~r/def test_/,
+      ~r/func Test/,
+      ~r/@Test/
+    ]
+
+    count =
+      Enum.reduce(test_patterns, 0, fn pattern, acc ->
+        matches = Regex.scan(pattern, test_code)
+        acc + length(matches)
+      end)
+
+    max(1, count)
   end
 end

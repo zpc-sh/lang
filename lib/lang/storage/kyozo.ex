@@ -8,7 +8,15 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.ValidateAuth do
 
   @impl true
   def handle(params, ctx) when is_map(params) and is_map(ctx) do
-    # TODO: implement
-    {:error, :not_implemented}
+    if dirup_enabled?() do
+      Lang.Storage.Dirup.validate_auth()
+    else
+      {:error, :dirup_disabled}
+    end
+  end
+
+  defp dirup_enabled? do
+    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    String.downcase(val) in ["1", "true", "yes", "on"]
   end
 end

@@ -157,5 +157,15 @@ defmodule Lang.LSP.Registry do
   }
 
   @doc "Lookup method → {module, function, arity}"
-  def lookup(method), do: Map.get(@registry, method)
+  def lookup(method) when is_binary(method) do
+    normalized =
+      case method do
+        <<"lang.lang.", rest::binary>> -> "lang." <> rest
+        _ -> method
+      end
+
+    Map.get(@registry, normalized) || Map.get(@registry, method)
+  end
+
+  def lookup(other), do: Map.get(@registry, other)
 end

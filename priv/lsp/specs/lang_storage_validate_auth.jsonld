@@ -10,7 +10,7 @@
   "implementation": {
     "file": "lib/lang/storage/kyozo.ex",
     "priority": "Critical",
-    "status": "in_progress"
+    "status": "implemented"
   },
   "name": "lang.storage.validate_auth"
 }

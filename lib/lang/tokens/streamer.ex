@@ -1,7 +1,7 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Tokens.Stream do
+defmodule Lang.LSP.Handlers.Tokens.Stream do
   @moduledoc "Stream only deltas"
   @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.tokens.stream"
+  @lsp_method "lang.tokens.stream"
 
   @impl true
   def method, do: @lsp_method

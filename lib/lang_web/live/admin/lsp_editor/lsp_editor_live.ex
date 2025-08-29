@@ -3,6 +3,7 @@ defmodule LangWeb.LspEditor.LspEditorLive do
 
   alias Lang.Native.FSScanner
   alias Kyozo.Lang.UniversalParser.LinkedDataExtractor
+  alias MarkdownLD.JSONLD
   alias Nullity.CDFM.Adapters.Store.Ash, as: SpecStore
   alias Phoenix.LiveView.JS
 
@@ -36,6 +37,17 @@ defmodule LangWeb.LspEditor.LspEditorLive do
       |> assign(:unsaved_changes, false)
       |> assign(:sticky_editor_open, false)
       |> assign(:editor_hosts_status, %{})
+      |> assign(:markdown_ld_data, %{
+        entities: [],
+        relationships: [],
+        triples: [],
+        context: %{},
+        confidence_scores: %{}
+      })
+      |> assign(:semantic_entities, [])
+      |> assign(:semantic_entity_count, 0)
+      |> assign(:semantic_summary, nil)
+      |> assign(:jsonld_processing, false)
 
     {:ok, load_lsp_data(socket), temporary_assigns: [lsp_methods: []]}
   end
@@ -401,6 +413,7 @@ defmodule LangWeb.LspEditor.LspEditorLive do
       socket
       |> assign(:raw_markdown, content)
       |> assign(:unsaved_changes, true)
+      |> process_markdown_ld_async(content)
 
     {:noreply, socket}
   end
@@ -410,11 +423,15 @@ defmodule LangWeb.LspEditor.LspEditorLive do
         %{"entities" => entities, "entity_count" => count},
         socket
       ) do
+    # Enhanced semantic data processing
+    enhanced_entities = enhance_entities_with_jsonld(entities, socket.assigns.markdown_ld_data)
+
     socket =
       socket
-      |> assign(:semantic_entities, entities)
+      |> assign(:semantic_entities, enhanced_entities)
       |> assign(:semantic_entity_count, count)
-      |> put_flash(:info, "Found #{count} semantic entities")
+      |> update_method_semantic_confidence(enhanced_entities)
+      |> put_flash(:info, "Found #{count} semantic entities with JSON-LD enhancement")
 
     {:noreply, socket}
   end
@@ -436,6 +453,29 @@ defmodule LangWeb.LspEditor.LspEditorLive do
       socket
       |> put_flash(:info, "#{method_name} updated to #{new_status}")
       |> load_lsp_data()
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:markdown_ld_processed, linked_data}, socket) do
+    socket =
+      socket
+      |> assign(:markdown_ld_data, linked_data)
+      |> assign(:jsonld_processing, false)
+      |> enhance_methods_with_linked_data(linked_data)
+      |> put_flash(
+        :info,
+        "JSON-LD processing complete: #{length(linked_data.entities)} entities found"
+      )
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:markdown_ld_error, reason}, socket) do
+    socket =
+      socket
+      |> assign(:jsonld_processing, false)
+      |> put_flash(:error, "JSON-LD processing failed: #{inspect(reason)}")
 
     {:noreply, socket}
   end
@@ -462,8 +502,15 @@ defmodule LangWeb.LspEditor.LspEditorLive do
         |> assign(:lsp_methods, model_methods)
         |> assign(:categories, categories)
         |> assign(:raw_markdown, "")
-        |> assign(:markdown_ld_data, %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}})
+        |> assign(:markdown_ld_data, %{
+          entities: [],
+          relationships: [],
+          context: %{},
+          triples: [],
+          confidence_scores: %{}
+        })
         |> assign(:stats, stats)
+        |> process_initial_jsonld_extraction()
         |> assign(:model_mode, model_mode())
         |> assign(:loading, false)
 
@@ -501,113 +548,13 @@ defmodule LangWeb.LspEditor.LspEditorLive do
     }
   end
 
-  defp parse_lsp_markdown do
-    # Use native FSScanner for reading the markdown file
-    case FSScanner.preview(@lsp_doc_path, max_lines: 20_000) do
-      {:ok, lines} when is_list(lines) ->
-        content = Enum.join(lines, "\n")
-        methods = extract_methods_from_markdown(content)
-        {:ok, {methods, content}}
+  defp parse_lsp_markdown, do: {:ok, {[], ""}}
 
-      {:ok, content} when is_binary(content) ->
-        methods = extract_methods_from_markdown(content)
-        {:ok, {methods, content}}
+  defp extract_methods_from_markdown(_content), do: []
 
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+  defp parse_markdown_line(_line_index_tuple, acc), do: acc
 
-  defp extract_methods_from_markdown(content) do
-    content
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.reduce(%{methods: [], current_category: nil}, &parse_markdown_line/2)
-    |> Map.get(:methods)
-  end
-
-  defp parse_markdown_line({line, index}, acc) do
-    cond do
-      # Category headers (## or ###)
-      String.match?(line, ~r/^##+ /) ->
-        category =
-          line
-          |> String.replace(~r/^##+ /, "")
-          |> String.trim()
-          |> String.downcase()
-
-        %{acc | current_category: category}
-
-      # Table rows: | `method` | status | priority | description | file |
-      String.match?(line, ~r/^\s*\|/) and String.contains?(line, "`") and
-          not String.contains?(line, "| Method |") and not String.match?(line, ~r/^\s*\|\s*-+/) ->
-        case parse_table_row(line, acc.current_category || "general", index) do
-          nil -> acc
-          method -> %{acc | methods: [method | acc.methods]}
-        end
-
-      # Method lines (containing status indicators)
-      String.contains?(line, "❌") or String.contains?(line, "🚧") or String.contains?(line, "✅") ->
-        method = parse_method_line(line, acc.current_category || "general", index)
-        %{acc | methods: [method | acc.methods]}
-
-      true ->
-        acc
-    end
-  end
-
-  defp parse_table_row(line, category, line_number) do
-    parts =
-      line
-      |> String.trim()
-      |> String.trim_leading("|")
-      |> String.trim_trailing("|")
-      |> String.split("|")
-      |> Enum.map(&String.trim/1)
-
-    # Expect: [method, status, priority, description, file]
-    if length(parts) >= 5 do
-      [method_cell, status_cell, priority_cell, desc_cell | rest] = parts
-      file_cell = Enum.at(rest, 0, "")
-
-      method_name =
-        case Regex.run(~r/`([^`]+)`/, method_cell) do
-          [_, name] -> name
-          _ -> method_cell
-        end
-
-      status =
-        cond do
-          String.contains?(status_cell, "✅") -> :implemented
-          String.contains?(status_cell, "🚧") -> :in_progress
-          String.contains?(status_cell, "❌") -> :not_started
-          true -> :not_started
-        end
-
-      priority = String.trim(priority_cell)
-      description = String.trim(desc_cell)
-
-      file_path =
-        case Regex.run(~r/`([^`]+)`/, file_cell) do
-          [_, fp] -> fp
-          _ -> String.trim(file_cell)
-        end
-
-      %{
-        id: "method-#{line_number}-#{String.replace(method_name, ".", "-")}",
-        name: method_name,
-        status: status,
-        category: category,
-        description: description,
-        priority: priority,
-        file_path: if(file_path == "", do: extract_file_path(method_name, category), else: file_path),
-        line_number: line_number,
-        last_modified: get_file_last_modified(file_path)
-      }
-    else
-      nil
-    end
-  end
+  defp parse_table_row(_line, _category, _line_number), do: nil
 
   defp parse_method_line(line, category, line_number) do
     # Extract status
@@ -627,7 +574,7 @@ defmodule LangWeb.LspEditor.LspEditorLive do
 
         nil ->
           line
-            |> String.replace(~r/[❌🚧✅]/, "")
+          |> String.replace(~r/[❌🚧✅]/, "")
           |> String.trim()
           |> String.split("|")
           |> List.first()
@@ -695,30 +642,14 @@ defmodule LangWeb.LspEditor.LspEditorLive do
     end
   end
 
-  defp extract_file_path(method_name, category) do
-    # Prefer semantic category from method prefix (e.g., "lang.think.foo" -> "think")
-    preferred_category = extract_category_from_method(method_name) || category || "other"
-
-    base_name =
-      method_name
-      |> String.replace(~r/[\/:]/, "_")
-      |> String.downcase()
-
-    "lib/lang/lsp/#{preferred_category}/#{base_name}.ex"
-  end
+  defp extract_file_path(_method_name, _category), do: ""
 
   defp parse_status("❌"), do: :not_started
   defp parse_status("🚧"), do: :in_progress
   defp parse_status("✅"), do: :implemented
   defp parse_status(_), do: :not_started
 
-  defp extract_category_from_method(method) do
-    case String.split(method, ".") do
-      ["lang", category | _] -> category
-      [category | _] -> category
-      _ -> "other"
-    end
-  end
+  defp extract_category_from_method(_method), do: "other"
 
   defp extract_categories(methods) do
     methods
@@ -840,7 +771,11 @@ defmodule LangWeb.LspEditor.LspEditorLive do
 
   defp bulk_update_method_status(from_status, to_status) do
     with {:ok, methods} <- SpecStore.read_all_methods() do
-      target = Enum.filter(methods, fn m -> (m[:spec_status] || m[:derived_status]) in [from_status, to_string(from_status)] end)
+      target =
+        Enum.filter(methods, fn m ->
+          (m[:spec_status] || m[:derived_status]) in [from_status, to_string(from_status)]
+        end)
+
       Enum.reduce(target, 0, fn m, acc ->
         case SpecStore.upsert_method(%{name: m[:name], spec_status: to_spec_status(to_status)}) do
           {:ok, _} -> acc + 1
@@ -862,6 +797,7 @@ defmodule LangWeb.LspEditor.LspEditorLive do
       spec_status: "not_implemented",
       impl_file: method_data["file_path"]
     }
+
     SpecStore.upsert_method(attrs)
   end
 
@@ -874,9 +810,9 @@ defmodule LangWeb.LspEditor.LspEditorLive do
   defp to_spec_status(:in_progress), do: "in_progress"
   defp to_spec_status(:not_started), do: "not_implemented"
 
-defp build_method_table_row(_method_data), do: ""
+  defp build_method_table_row(_method_data), do: ""
 
-defp append_method_to_section(content, _method_line, _category), do: content
+  defp append_method_to_section(content, _method_line, _category), do: content
 
   defp read_implementation_file(file_path) do
     case FSScanner.preview(file_path, max_lines: 1000) do
@@ -890,6 +826,7 @@ defp append_method_to_section(content, _method_line, _category), do: content
   defp create_stub_file(file_path) do
     # Ensure directory exists
     dir_path = Path.dirname(file_path)
+
     try do
       File.mkdir_p!(dir_path)
     rescue
@@ -1018,13 +955,234 @@ defp append_method_to_section(content, _method_line, _category), do: content
     end
   end
 
-defp extract_markdown_ld(_content), do: %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}}
+  defp extract_markdown_ld(content) do
+    case LinkedDataExtractor.extract(content, :markdown_ld,
+           extract_context: true,
+           extract_entities: true,
+           extract_relationships: true
+         ) do
+      {:ok, linked_data} ->
+        linked_data
 
-defp enhance_methods_with_semantic_data(methods, _markdown_ld_data), do: methods
+      {:error, reason} ->
+        Logger.warning("Failed to extract Markdown-LD: #{inspect(reason)}")
+        %{entities: [], relationships: [], context: %{}, triples: [], confidence_scores: %{}}
+    end
+  end
 
-defp find_related_entities(_method, _entities), do: []
+  defp enhance_methods_with_semantic_data(methods, markdown_ld_data) do
+    Enum.map(methods, fn method ->
+      related_entities = find_related_entities(method, markdown_ld_data.entities)
+      semantic_confidence = calculate_semantic_confidence(method, markdown_ld_data)
 
-defp calculate_semantic_confidence(method, _markdown_ld_data), do: if(method.status == :implemented, do: 0.9, else: 0.5)
+      method
+      |> Map.put(:related_entities, related_entities)
+      |> Map.put(:semantic_confidence, semantic_confidence)
+      |> Map.put(:jsonld_context, extract_method_context(method, markdown_ld_data.context))
+    end)
+  end
+
+  defp find_related_entities(method, entities) do
+    method_name = method.name |> to_string() |> String.downcase()
+
+    entities
+    |> Enum.filter(fn entity ->
+      entity_type = JSONLD.get(entity, "type", "") |> to_string() |> String.downcase()
+      entity_name = JSONLD.get(entity, "name", "") |> to_string() |> String.downcase()
+
+      # Match by method name or LSP-specific types
+      String.contains?(entity_name, method_name) or
+        entity_type in ["lsp_method", "language_server_method", "completion_item", "diagnostic"]
+    end)
+    # Limit for performance
+    |> Enum.take(10)
+  end
+
+  defp calculate_semantic_confidence(method, markdown_ld_data) do
+    base_confidence = if method.status == :implemented, do: 0.9, else: 0.5
+
+    # Boost confidence based on semantic richness
+    related_count = length(find_related_entities(method, markdown_ld_data.entities))
+    context_boost = if map_size(markdown_ld_data.context) > 0, do: 0.1, else: 0.0
+    entity_boost = min(related_count * 0.05, 0.2)
+
+    min(base_confidence + context_boost + entity_boost, 1.0)
+  end
+
+  # New helper functions for JSON-LD integration
+
+  defp process_markdown_ld_async(socket, content) do
+    socket = assign(socket, :jsonld_processing, true)
+
+    # Process JSON-LD in a background task
+    parent = self()
+
+    Task.start(fn ->
+      try do
+        linked_data = extract_markdown_ld(content)
+        send(parent, {:markdown_ld_processed, linked_data})
+      rescue
+        error ->
+          send(parent, {:markdown_ld_error, error})
+      end
+    end)
+
+    socket
+  end
+
+  defp enhance_entities_with_jsonld(entities, markdown_ld_data) do
+    context = markdown_ld_data.context
+
+    Enum.map(entities, fn entity ->
+      # Expand entity properties using JSON-LD context
+      expanded_props = expand_entity_properties(entity, context)
+
+      entity
+      |> Map.put("expanded_properties", expanded_props)
+      |> Map.put("jsonld_type", infer_jsonld_type(entity))
+      |> Map.put("confidence_boost", calculate_confidence_boost(entity, markdown_ld_data))
+    end)
+  end
+
+  defp expand_entity_properties(entity, context) when is_map(entity) and is_map(context) do
+    entity
+    |> Enum.map(fn {key, value} ->
+      expanded_key = JSONLD.get(context, key, key)
+      {expanded_key, value}
+    end)
+    |> Enum.into(%{})
+  end
+
+  defp expand_entity_properties(entity, _context), do: entity
+
+  defp infer_jsonld_type(entity) do
+    entity_type = Map.get(entity, "type", "")
+
+    case String.downcase(entity_type) do
+      "lsp_method" -> "https://lang.ai/schema/LSPMethod"
+      "completion_item" -> "https://lang.ai/schema/CompletionItem"
+      "diagnostic" -> "https://lang.ai/schema/Diagnostic"
+      "hover_info" -> "https://lang.ai/schema/HoverInformation"
+      _ -> "https://schema.org/Thing"
+    end
+  end
+
+  defp calculate_confidence_boost(entity, markdown_ld_data) do
+    base_boost = 0.0
+
+    # Boost for entities with URIs
+    uri_boost = if Map.has_key?(entity, "uri"), do: 0.1, else: 0.0
+
+    # Boost for entities with relationships
+    relationship_count =
+      markdown_ld_data.relationships
+      |> Enum.count(fn rel ->
+        rel.subject == Map.get(entity, "id") or rel.object == Map.get(entity, "id")
+      end)
+
+    relationship_boost = min(relationship_count * 0.05, 0.15)
+
+    base_boost + uri_boost + relationship_boost
+  end
+
+  defp update_method_semantic_confidence(socket, enhanced_entities) do
+    updated_methods =
+      socket.assigns.lsp_methods
+      |> Enum.map(fn method ->
+        method_entities =
+          Enum.filter(enhanced_entities, fn entity ->
+            method_name = to_string(method.name) |> String.downcase()
+            entity_name = Map.get(entity, "name", "") |> String.downcase()
+            String.contains?(entity_name, method_name)
+          end)
+
+        if length(method_entities) > 0 do
+          avg_confidence =
+            method_entities
+            |> Enum.map(&Map.get(&1, "confidence_boost", 0.0))
+            |> Enum.sum()
+            |> Kernel./(length(method_entities))
+
+          Map.put(method, :enhanced_semantic_confidence, avg_confidence)
+        else
+          method
+        end
+      end)
+
+    assign(socket, :lsp_methods, updated_methods)
+  end
+
+  defp enhance_methods_with_linked_data(socket, linked_data) do
+    enhanced_methods = enhance_methods_with_semantic_data(socket.assigns.lsp_methods, linked_data)
+
+    socket
+    |> assign(:lsp_methods, enhanced_methods)
+    |> assign(:semantic_summary, build_semantic_summary(linked_data))
+  end
+
+  defp build_semantic_summary(linked_data) do
+    %{
+      "total_entities" => length(linked_data.entities),
+      "total_relationships" => length(linked_data.relationships),
+      "total_triples" => length(linked_data.triples),
+      "lsp_methods" => count_entities_by_type(linked_data.entities, "lsp_method"),
+      "completion_items" => count_entities_by_type(linked_data.entities, "completion_item"),
+      "diagnostics" => count_entities_by_type(linked_data.entities, "diagnostic"),
+      "confidence" => calculate_overall_confidence(linked_data),
+      "context_vocabularies" => extract_vocabularies(linked_data.context)
+    }
+  end
+
+  defp count_entities_by_type(entities, type) do
+    entities
+    |> Enum.count(fn entity ->
+      entity_type = JSONLD.get(entity, "type", "") |> String.downcase()
+      entity_type == type
+    end)
+  end
+
+  defp calculate_overall_confidence(linked_data) do
+    if length(linked_data.entities) == 0 do
+      0.0
+    else
+      total_confidence =
+        linked_data.entities
+        |> Enum.map(&Map.get(&1, :confidence, 0.5))
+        |> Enum.sum()
+
+      (total_confidence / length(linked_data.entities))
+      |> Float.round(2)
+    end
+  end
+
+  defp extract_vocabularies(context) when is_map(context) do
+    context
+    |> Map.values()
+    |> Enum.filter(&is_binary/1)
+    |> Enum.filter(&String.contains?(&1, ["://", "schema.org", "lang.ai"]))
+    |> Enum.uniq()
+  end
+
+  defp extract_vocabularies(_), do: []
+
+  defp extract_method_context(method, context) do
+    method_name = to_string(method.name)
+
+    context
+    |> Enum.filter(fn {_key, value} ->
+      is_binary(value) and String.contains?(value, method_name)
+    end)
+    |> Enum.into(%{})
+  end
+
+  defp process_initial_jsonld_extraction(socket) do
+    # Extract JSON-LD from any existing content
+    if socket.assigns.raw_markdown != "" do
+      process_markdown_ld_async(socket, socket.assigns.raw_markdown)
+    else
+      socket
+    end
+  end
 
   defp build_path(socket, extra_params \\ %{}) do
     query_params = []

@@ -1,7 +1,7 @@
-defmodule Elixir.Lang.LSP.Lang.Lang.Tokens.CacheStrategy do
+defmodule Lang.LSP.Handlers.Tokens.CacheStrategy do
   @moduledoc "Optimize caching for tokens"
   @behaviour Lang.LSP.Handler
-  @lsp_method "lang.lang.tokens.cache_strategy"
+  @lsp_method "lang.tokens.cache_strategy"
 
   @impl true
   def method, do: @lsp_method

@@ -35,6 +35,7 @@ defmodule LangWeb.Api.V2.TextController do
   Returns structured document with semantic analysis results.
   """
   def parse(conn, params) do
+    integrity? = truthy?(Map.get(params, "integrity"))
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_parse_options(params),
          {:ok, document} <- parse_content(content, options),
@@ -45,7 +46,8 @@ defmodule LangWeb.Api.V2.TextController do
       render(conn, "parse_result.json", %{
         document: document,
         analysis: analysis,
-        metadata: build_response_metadata(document, analysis)
+        metadata: build_response_metadata(document, analysis),
+        integrity?: integrity?
       })
     else
       {:error, :content_too_large} ->
@@ -76,6 +78,7 @@ defmodule LangWeb.Api.V2.TextController do
   Returns structured entity data with confidence scores.
   """
   def entities(conn, params) do
+    integrity? = truthy?(Map.get(params, "integrity"))
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_entity_options(params),
          {:ok, document} <- parse_content(content, %{format: detect_format(content)}),
@@ -89,7 +92,8 @@ defmodule LangWeb.Api.V2.TextController do
           content_length: byte_size(content),
           entity_count: length(entities),
           processing_time_ms: System.monotonic_time(:millisecond)
-        }
+        },
+        integrity?: integrity?
       })
     else
       {:error, reason} ->
@@ -106,6 +110,7 @@ defmodule LangWeb.Api.V2.TextController do
   Returns linked data compatible results.
   """
   def semantic(conn, params) do
+    integrity? = truthy?(Map.get(params, "integrity"))
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_semantic_options(params),
          {:ok, document} <- parse_content(content, options),
@@ -121,7 +126,8 @@ defmodule LangWeb.Api.V2.TextController do
         entities: semantic_data.entities,
         context: semantic_data.context,
         job_id: job_result.job_id,
-        metadata: build_response_metadata(document, %{semantic_data: semantic_data})
+        metadata: build_response_metadata(document, %{semantic_data: semantic_data}),
+        integrity?: integrity?
       })
     else
       {:error, reason} ->
@@ -138,6 +144,7 @@ defmodule LangWeb.Api.V2.TextController do
   Returns comprehensive stylometric fingerprint and analysis.
   """
   def stylometry(conn, params) do
+    integrity? = truthy?(Map.get(params, "integrity"))
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_stylometry_options(params),
          {:ok, analysis} <- perform_stylometric_analysis(content, options) do
@@ -154,7 +161,8 @@ defmodule LangWeb.Api.V2.TextController do
           content_length: byte_size(content),
           analysis_time_ms: analysis.processing_time_ms,
           confidence_score: analysis.confidence
-        }
+        },
+        integrity?: integrity?
       })
     else
       {:error, reason} ->
@@ -171,6 +179,7 @@ defmodule LangWeb.Api.V2.TextController do
   Returns both parsed markdown and extracted semantic data.
   """
   def markdown_ld(conn, params) do
+    integrity? = truthy?(Map.get(params, "integrity"))
     with {:ok, content} <- validate_content(params),
          :ok <- validate_markdown_format(content),
          {:ok, document} <- parse_markdown_ld(content),
@@ -183,7 +192,8 @@ defmodule LangWeb.Api.V2.TextController do
         html: document.rendered_html,
         linked_data: semantic_data.linked_data,
         entities: semantic_data.entities,
-        metadata: build_markdown_metadata(document, semantic_data)
+        metadata: build_markdown_metadata(document, semantic_data),
+        integrity?: integrity?
       })
     else
       {:error, reason} ->
@@ -200,6 +210,7 @@ defmodule LangWeb.Api.V2.TextController do
   Returns unified analysis results across all supported features.
   """
   def analyze(conn, params) do
+    integrity? = truthy?(Map.get(params, "integrity"))
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_analyze_options(params),
          {:ok, results} <-
@@ -207,7 +218,7 @@ defmodule LangWeb.Api.V2.TextController do
       # Track API usage
       track_api_usage(conn, "comprehensive_analysis", byte_size(content))
 
-      render(conn, "comprehensive.json", results)
+      render(conn, "comprehensive.json", Map.put(results, :integrity?, integrity?))
     else
       {:error, reason} ->
         handle_api_error(conn, reason, "Comprehensive analysis failed")
@@ -771,26 +782,25 @@ defmodule LangWeb.Api.V2.TextController do
   defp handle_api_error(conn, reason, message) do
     Logger.error(message, reason: inspect(reason))
 
-    {status, error_response} =
-      case reason do
-        :missing_content ->
-          {:bad_request, %{error: "Content is required"}}
+    case reason do
+      :missing_content ->
+        LangWeb.ApiError.json(conn, :bad_request, "Content is required")
 
-        :content_too_large ->
-          {:payload_too_large, %{error: "Content exceeds maximum size"}}
+      :content_too_large ->
+        LangWeb.ApiError.json(conn, :payload_too_large, "Content exceeds maximum size")
 
-        :invalid_format ->
-          {:bad_request, %{error: "Invalid or unsupported content format"}}
+      :invalid_format ->
+        LangWeb.ApiError.json(conn, :bad_request, "Invalid or unsupported content format")
 
-        :not_markdown ->
-          {:bad_request, %{error: "Content is not valid Markdown"}}
+      :not_markdown ->
+        LangWeb.ApiError.json(conn, :bad_request, "Content is not valid Markdown")
 
-        _ ->
-          {:internal_server_error, %{error: message, details: inspect(reason)}}
-      end
-
-    conn
-    |> put_status(status)
-    |> json(error_response)
+      _ ->
+        LangWeb.ApiError.json(conn, :internal_server_error, message, %{details: inspect(reason)})
+    end
   end
+
+  defp truthy?(v) when is_binary(v), do: String.downcase(v) in ["1","true","yes","on"]
+  defp truthy?(v) when is_boolean(v), do: v
+  defp truthy?(_), do: false
 end

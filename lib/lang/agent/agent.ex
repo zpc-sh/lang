@@ -158,8 +158,12 @@ defmodule Lang.Agent.Agent do
         capabilities = Ash.Changeset.get_argument(changeset, :capabilities)
         track = determine_capability_track(capabilities)
 
+        metadata_arg = Ash.Changeset.get_argument(changeset, :metadata) || %{}
+        name_from_meta = metadata_arg["name"] || metadata_arg[:name]
+        final_name = if is_binary(name_from_meta) and name_from_meta != "", do: name_from_meta, else: generate_agent_name()
+
         changeset
-        |> Ash.Changeset.change_attribute(:name, generate_agent_name())
+        |> Ash.Changeset.change_attribute(:name, final_name)
         |> Ash.Changeset.change_attribute(:capabilities, capabilities)
         |> Ash.Changeset.change_attribute(:capability_track, track)
         |> Ash.Changeset.change_attribute(
@@ -180,7 +184,7 @@ defmodule Lang.Agent.Agent do
         )
         |> Ash.Changeset.change_attribute(
           :metadata,
-          Ash.Changeset.get_argument(changeset, :metadata)
+          metadata_arg
         )
         |> Ash.Changeset.change_attribute(:state, :active)
       end)

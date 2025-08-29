@@ -38,7 +38,7 @@ defmodule LangWeb do
 
   def controller do
     quote do
-      use Phoenix.Controller, formats: [:html, :json]
+      use Phoenix.Controller, formats: [:html, :json, :jsonld, :mdld]
 
       use Gettext, backend: LangWeb.Gettext
 

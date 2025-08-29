@@ -167,6 +167,26 @@ defmodule Lang.Agent.Supervisor do
   end
 
   @doc """
+  Find the runtime pid for a given `agent_id`.
+
+  Returns `{:ok, pid}` or `{:error, :not_found}`.
+  """
+  def find_agent_pid(agent_id) do
+    DynamicSupervisor.which_children(@name)
+    |> Enum.find_value(fn {id, pid, _type, _modules} ->
+      if id == agent_id and Process.alive?(pid) do
+        {:ok, pid}
+      else
+        nil
+      end
+    end)
+    |> case do
+      nil -> {:error, :not_found}
+      result -> result
+    end
+  end
+
+  @doc """
   Get count of currently running agents.
 
   ## Returns

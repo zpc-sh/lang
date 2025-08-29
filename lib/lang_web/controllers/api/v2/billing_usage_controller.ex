@@ -51,6 +51,7 @@ defmodule LangWeb.Api.V2.BillingUsageController do
         Enum.reduce(api_agg, 0, fn a, acc -> acc + (a.total_content_size_bytes || 0) end)
 
       json(conn, %{
+        "@context" => "https://lang.nulity.com/context/billing",
         organization_id: org_id,
         month_start: month_start,
         period_end: now,

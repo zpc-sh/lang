@@ -10,7 +10,7 @@
   "implementation": {
     "file": "lib/lang/storage/patterns.ex",
     "priority": "High",
-    "status": "not_implemented"
+    "status": "implemented"
   },
   "name": "lang.storage.update_confidence"
 }
