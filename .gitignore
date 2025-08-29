@@ -10,6 +10,7 @@ erl_crash.dump
 lang-*.tar
 /priv/static/assets/
 /priv/static/cache_manifest.json
+/priv/native/
 
 # Node.js/npm
 npm-debug.log
@@ -125,3 +126,6 @@ stripe_*
 *.profdeploy/secrets*.yml
 !deploy/secrets*.example
 .aider*
+native/*/Cargo.lock
+native/lang_perf/Cargo.lock
+native/tree_parser/Cargo.lock
