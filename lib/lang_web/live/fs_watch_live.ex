@@ -37,7 +37,16 @@ defmodule LangWeb.FSWatchLive do
     case Lang.LSP.Dispatch.process(req) do
       %{"result" => %{"stream_id" => sid, "topic" => topic}} ->
         Phoenix.PubSub.subscribe(Lang.PubSub, topic)
-        {:noreply, assign(socket, stream_id: sid, topic: topic, watching?: true, path: path, interval_ms: interval_ms, duration_ms: duration_ms)}
+
+        {:noreply,
+         assign(socket,
+           stream_id: sid,
+           topic: topic,
+           watching?: true,
+           path: path,
+           interval_ms: interval_ms,
+           duration_ms: duration_ms
+         )}
 
       %{"error" => err} ->
         {:noreply, put_flash(socket, :error, "Failed to start watch: #{inspect(err)}")}
@@ -54,7 +63,12 @@ defmodule LangWeb.FSWatchLive do
        socket
        |> assign(:snapshots_count, socket.assigns.snapshots_count + 1)
        |> assign(:last_seq, seq)
-       |> stream_insert(:snapshots, %{id: "#{sid}-#{seq}", seq: seq, stats: result[:stats] || result["stats"], at: DateTime.utc_now()})}
+       |> stream_insert(:snapshots, %{
+         id: "#{sid}-#{seq}",
+         seq: seq,
+         stats: result[:stats] || result["stats"],
+         at: DateTime.utc_now()
+       })}
     else
       {:noreply, socket}
     end
@@ -62,7 +76,8 @@ defmodule LangWeb.FSWatchLive do
 
   def handle_info({:fs_error, sid, payload}, socket) do
     if sid == socket.assigns.stream_id do
-      {:noreply, put_flash(socket, :error, "Watch error: #{inspect(payload[:reason] || payload["reason"])}")}
+      {:noreply,
+       put_flash(socket, :error, "Watch error: #{inspect(payload[:reason] || payload["reason"])}")}
     else
       {:noreply, socket}
     end
@@ -80,11 +95,13 @@ defmodule LangWeb.FSWatchLive do
   end
 
   defp parse_int(nil, default), do: default
+
   defp parse_int(val, default) when is_binary(val) do
     case Integer.parse(val) do
       {i, _} -> i
       :error -> default
     end
   end
+
   defp parse_int(val, _default) when is_integer(val), do: val
 end

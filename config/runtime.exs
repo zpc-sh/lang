@@ -95,19 +95,17 @@ finalize_delay = System.get_env("ANALYSIS_FINALIZE_DELAY_SECONDS")
 resched_delay = System.get_env("ANALYSIS_RUN_FINALIZE_RESCHEDULE_SECONDS")
 
 analysis_cfg =
-  (
-    case Application.get_env(:lang, :analysis) do
-      nil -> []
-      kw when is_list(kw) -> kw
-    end
+  case Application.get_env(:lang, :analysis) do
+    nil -> []
+    kw when is_list(kw) -> kw
+  end
+  |> Keyword.merge(
+    if finalize_delay, do: [finalize_delay_seconds: String.to_integer(finalize_delay)], else: []
   )
   |> Keyword.merge(
-    (if finalize_delay, do: [finalize_delay_seconds: String.to_integer(finalize_delay)], else: [])
-  )
-  |> Keyword.merge(
-    (if resched_delay,
-       do: [run_finalize_reschedule_seconds: String.to_integer(resched_delay)],
-       else: [])
+    if resched_delay,
+      do: [run_finalize_reschedule_seconds: String.to_integer(resched_delay)],
+      else: []
   )
 
 if analysis_cfg != [] do

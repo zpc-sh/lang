@@ -9,4 +9,3 @@ defmodule Nullity.CDFM.Adapters.FileAdapter do
   @callback exists?(path :: String.t()) :: boolean()
   @callback mtime(path :: String.t()) :: {:ok, DateTime.t()} | {:error, term()}
 end
-

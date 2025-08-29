@@ -7,14 +7,22 @@ defmodule Nullity.CDFM.Generator do
 
   alias CDFM.Formats.BaseGenerator, as: Base
 
-  @type generated_file :: %{path: String.t(), content: iodata(), type: atom(), mode: atom(), description: String.t()}
+  @type generated_file :: %{
+          path: String.t(),
+          content: iodata(),
+          type: atom(),
+          mode: atom(),
+          description: String.t()
+        }
 
   @doc """
   Generate code for a single blueprint using a given format module
   (which `use`s CDFM.Formats.BaseGenerator) and options.
   """
-  @spec generate(module(), map(), keyword()) :: {:ok, %{files: [generated_file()], metadata: map()}} | {:error, String.t()}
-  def generate(format_module, blueprint, opts \\ []) when is_atom(format_module) and is_map(blueprint) do
+  @spec generate(module(), map(), keyword()) ::
+          {:ok, %{files: [generated_file()], metadata: map()}} | {:error, String.t()}
+  def generate(format_module, blueprint, opts \\ [])
+      when is_atom(format_module) and is_map(blueprint) do
     with :ok <- ensure_implements?(format_module),
          :ok <- call_validators(format_module, blueprint) do
       format_module.generate(blueprint, opts)
@@ -23,7 +31,10 @@ defmodule Nullity.CDFM.Generator do
 
   defp ensure_implements?(mod) do
     behaviours = mod.module_info(:attributes)[:behaviour] || []
-    if CDFM.Formats.BaseGenerator in behaviours, do: :ok, else: {:error, "format module does not implement BaseGenerator"}
+
+    if CDFM.Formats.BaseGenerator in behaviours,
+      do: :ok,
+      else: {:error, "format module does not implement BaseGenerator"}
   end
 
   defp call_validators(mod, blueprint) do
@@ -33,4 +44,3 @@ defmodule Nullity.CDFM.Generator do
     end
   end
 end
-

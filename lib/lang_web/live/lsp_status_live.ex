@@ -6,10 +6,19 @@ defmodule LangWeb.LspStatusLive do
   @impl true
   def mount(_params, _session, socket) do
     form = to_form(%{"path" => ".", "max_depth" => "8"}, as: :scan)
-    search_form = to_form(%{"path" => ".", "query" => "TODO|FIXME", "max_results" => "100"}, as: :search)
+
+    search_form =
+      to_form(%{"path" => ".", "query" => "TODO|FIXME", "max_results" => "100"}, as: :search)
+
     code_form =
       to_form(
-        %{"path" => ".", "language" => "elixir", "pattern" => "(call target: (identifier) @fn)", "max_results" => "100", "max_depth" => "15"},
+        %{
+          "path" => ".",
+          "language" => "elixir",
+          "pattern" => "(call target: (identifier) @fn)",
+          "max_results" => "100",
+          "max_depth" => "15"
+        },
         as: :code
       )
 
@@ -74,8 +83,12 @@ defmodule LangWeb.LspStatusLive do
 
     params =
       case Map.get(params, "preset") do
-        nil -> params
-        "" -> params
+        nil ->
+          params
+
+        "" ->
+          params
+
         preset_key ->
           case Enum.find(presets, fn {k, _label, _pattern} -> k == preset_key end) do
             {^preset_key, _label, pattern} -> Map.put(params, "pattern", pattern)
@@ -119,11 +132,17 @@ defmodule LangWeb.LspStatusLive do
              results: socket.assigns.code_items
            }}
 
-        _ -> {"lsp_export.json", %{}}
+        _ ->
+          {"lsp_export.json", %{}}
       end
 
     json = Jason.encode!(payload, pretty: true)
-    {:noreply, Phoenix.LiveView.send_download(socket, {:binary, json}, filename: filename, content_type: "application/json")}
+
+    {:noreply,
+     Phoenix.LiveView.send_download(socket, {:binary, json},
+       filename: filename,
+       content_type: "application/json"
+     )}
   end
 
   @impl true
@@ -176,7 +195,11 @@ defmodule LangWeb.LspStatusLive do
       send(self(), {:search_finished, path, query, res})
     end)
 
-    {:noreply, socket |> assign(:search_loading?, true) |> assign(:search_error, nil) |> stream(:search_results, [], reset: true)}
+    {:noreply,
+     socket
+     |> assign(:search_loading?, true)
+     |> assign(:search_error, nil)
+     |> stream(:search_results, [], reset: true)}
   end
 
   @impl true
@@ -201,7 +224,8 @@ defmodule LangWeb.LspStatusLive do
 
   @impl true
   def handle_info({:search_finished, _path, _query, {:error, reason}}, socket) do
-    {:noreply, socket |> assign(:search_loading?, false) |> assign(:search_error, inspect(reason))}
+    {:noreply,
+     socket |> assign(:search_loading?, false) |> assign(:search_error, inspect(reason))}
   end
 
   # -- code search --
@@ -216,7 +240,13 @@ defmodule LangWeb.LspStatusLive do
 
     Task.Supervisor.start_child(Lang.LSP.TaskSupervisor, fn ->
       send(self(), {:code_started, path, lang})
-      res = API.fs_search_code(path, lang, pat, %{"max_results" => max_results, "max_depth" => max_depth})
+
+      res =
+        API.fs_search_code(path, lang, pat, %{
+          "max_results" => max_results,
+          "max_depth" => max_depth
+        })
+
       send(self(), {:code_finished, path, lang, pat, res})
     end)
 
@@ -261,27 +291,37 @@ defmodule LangWeb.LspStatusLive do
           <h1 class="text-2xl font-semibold">LSP Connectivity</h1>
           <.button id="ping-btn" phx-click="ping" disabled={@loading?}>
             <.icon name="hero-arrow-path" class={["size-4 mr-2", @loading? && "animate-spin"]} />
-            {@loading? && "Pinging..." || "Ping LSP"}
+            {(@loading? && "Pinging...") || "Ping LSP"}
           </.button>
         </div>
 
         <div class="card bg-base-100 shadow p-4">
           <div class="text-sm opacity-70">Last ping:</div>
           <div id="last-ping" class="mb-3">
-            {if @last_ping_at, do: Calendar.strftime(@last_ping_at, "%Y-%m-%d %H:%M:%S UTC"), else: "never"}
+            {if @last_ping_at,
+              do: Calendar.strftime(@last_ping_at, "%Y-%m-%d %H:%M:%S UTC"),
+              else: "never"}
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div class="font-medium mb-2">Result</div>
-              <pre id="ping-result" class="p-3 rounded bg-base-200 overflow-auto min-h-24" phx-no-curly-interpolation>
+              <pre
+                id="ping-result"
+                class="p-3 rounded bg-base-200 overflow-auto min-h-24"
+                phx-no-curly-interpolation
+              >
                 <%= @ping_result && (Jason.encode!(@ping_result, pretty: true)) || "(no result)" %>
               </pre>
             </div>
 
             <div>
               <div class="font-medium mb-2">Error</div>
-              <pre id="ping-error" class="p-3 rounded bg-base-200 overflow-auto min-h-24 text-red-500" phx-no-curly-interpolation>
+              <pre
+                id="ping-error"
+                class="p-3 rounded bg-base-200 overflow-auto min-h-24 text-red-500"
+                phx-no-curly-interpolation
+              >
                 <%= @ping_error && @ping_error || "(no error)" %>
               </pre>
             </div>
@@ -290,63 +330,117 @@ defmodule LangWeb.LspStatusLive do
 
         <div class="mt-8">
           <div class="tabs tabs-boxed mb-3">
-            <button class={["tab", @active_tab == "scan" && "tab-active"]} phx-click="switch_tab" phx-value-tab="scan">Scan</button>
-            <button class={["tab", @active_tab == "search" && "tab-active"]} phx-click="switch_tab" phx-value-tab="search">Search</button>
-            <button class={["tab", @active_tab == "code" && "tab-active"]} phx-click="switch_tab" phx-value-tab="code">Code Search</button>
+            <button
+              class={["tab", @active_tab == "scan" && "tab-active"]}
+              phx-click="switch_tab"
+              phx-value-tab="scan"
+            >
+              Scan
+            </button>
+            <button
+              class={["tab", @active_tab == "search" && "tab-active"]}
+              phx-click="switch_tab"
+              phx-value-tab="search"
+            >
+              Search
+            </button>
+            <button
+              class={["tab", @active_tab == "code" && "tab-active"]}
+              phx-click="switch_tab"
+              phx-value-tab="code"
+            >
+              Code Search
+            </button>
           </div>
 
           <%= if @active_tab == "scan" do %>
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold">Filesystem Scan (via LSP)</h2>
-                <.link href={~p"/fs/watch"} class="text-sm text-blue-600 hover:text-blue-500">Open Watch Demo</.link>
+                <.link href={~p"/fs/watch"} class="text-sm text-blue-600 hover:text-blue-500">
+                  Open Watch Demo
+                </.link>
               </div>
-              <.button id="scan-download" phx-click="download" phx-value-type="scan" class="btn btn-sm">Download JSON</.button>
-            </div>
-
-          <.form for={@form} id="scan-form" phx-submit="scan" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-            <.input field={@form[:path]} type="text" label="Path" />
-            <.input field={@form[:max_depth]} type="number" label="Max depth" />
-            <div class="flex items-end">
-              <.button id="scan-submit" type="submit" disabled={@scan_loading?}>
-                <.icon name="hero-magnifying-glass" class={["size-4 mr-2", @scan_loading? && "animate-spin"]} />
-                {@scan_loading? && "Scanning..." || "Scan"}
+              <.button
+                id="scan-download"
+                phx-click="download"
+                phx-value-type="scan"
+                class="btn btn-sm"
+              >
+                Download JSON
               </.button>
             </div>
-          </.form>
 
-          <div class="mb-3 text-sm opacity-70" id="scan-meta">
-            {if @scan_stats do
-              ~H"<span>Path: {@scan_stats.path}</span> · <span>Files: {@scan_stats.total_files || @scan_stats[:total_files]}</span> · <span>Dirs: {@scan_stats.total_dirs || @scan_stats[:total_dirs]}</span>"
-            else
-              ~H"<span>Run a scan to see results.</span>"
-            end}
-            <span :if={@scan_error} class="text-red-500">Error: {@scan_error}</span>
-          </div>
-
-          <div id="files" phx-update="stream" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            <div class="hidden only:block text-sm opacity-70">No files yet</div>
-            <div :for={{id, file} <- @streams.files} id={id} class="card bg-base-100 p-3 shadow">
-              <div class="font-mono text-xs break-all">
-                {file.path}
+            <.form
+              for={@form}
+              id="scan-form"
+              phx-submit="scan"
+              class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4"
+            >
+              <.input field={@form[:path]} type="text" label="Path" />
+              <.input field={@form[:max_depth]} type="number" label="Max depth" />
+              <div class="flex items-end">
+                <.button id="scan-submit" type="submit" disabled={@scan_loading?}>
+                  <.icon
+                    name="hero-magnifying-glass"
+                    class={["size-4 mr-2", @scan_loading? && "animate-spin"]}
+                  />
+                  {(@scan_loading? && "Scanning...") || "Scan"}
+                </.button>
               </div>
-              <div class="text-xs opacity-70">{file.type} · {file.size} bytes</div>
+            </.form>
+
+            <div class="mb-3 text-sm opacity-70" id="scan-meta">
+              {if @scan_stats do
+                ~H"<span>Path: {@scan_stats.path}</span> · <span>Files: {@scan_stats.total_files || @scan_stats[:total_files]}</span> · <span>Dirs: {@scan_stats.total_dirs || @scan_stats[:total_dirs]}</span>"
+              else
+                ~H"<span>Run a scan to see results.</span>"
+              end}
+              <span :if={@scan_error} class="text-red-500">Error: {@scan_error}</span>
             </div>
-          </div>
+
+            <div
+              id="files"
+              phx-update="stream"
+              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"
+            >
+              <div class="hidden only:block text-sm opacity-70">No files yet</div>
+              <div :for={{id, file} <- @streams.files} id={id} class="card bg-base-100 p-3 shadow">
+                <div class="font-mono text-xs break-all">
+                  {file.path}
+                </div>
+                <div class="text-xs opacity-70">{file.type} · {file.size} bytes</div>
+              </div>
+            </div>
           <% else %>
             <div class="flex items-center justify-between mb-3">
               <h2 class="text-xl font-semibold">Filesystem Search (via LSP)</h2>
-              <.button id="search-download" phx-click="download" phx-value-type="search" class="btn btn-sm">Download JSON</.button>
+              <.button
+                id="search-download"
+                phx-click="download"
+                phx-value-type="search"
+                class="btn btn-sm"
+              >
+                Download JSON
+              </.button>
             </div>
 
-            <.form for={@search_form} id="search-form" phx-submit="search" class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
+            <.form
+              for={@search_form}
+              id="search-form"
+              phx-submit="search"
+              class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4"
+            >
               <.input field={@search_form[:path]} type="text" label="Path" />
               <.input field={@search_form[:query]} type="text" label="Regex Query" />
               <.input field={@search_form[:max_results]} type="number" label="Max results" />
               <div class="md:col-span-2 flex items-end">
                 <.button id="search-submit" type="submit" disabled={@search_loading?}>
-                  <.icon name="hero-magnifying-glass" class={["size-4 mr-2", @search_loading? && "animate-spin"]} />
-                  {@search_loading? && "Searching..." || "Search"}
+                  <.icon
+                    name="hero-magnifying-glass"
+                    class={["size-4 mr-2", @search_loading? && "animate-spin"]}
+                  />
+                  {(@search_loading? && "Searching...") || "Search"}
                 </.button>
               </div>
             </.form>
@@ -362,7 +456,11 @@ defmodule LangWeb.LspStatusLive do
 
             <div id="search-results" phx-update="stream" class="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div class="hidden only:block text-sm opacity-70">No matches yet</div>
-              <div :for={{id, item} <- @streams.search_results} id={id} class="card bg-base-100 p-3 shadow">
+              <div
+                :for={{id, item} <- @streams.search_results}
+                id={id}
+                class="card bg-base-100 p-3 shadow"
+              >
                 <div class="font-mono text-xs break-all">{item.path}:{item.line}</div>
                 <pre class="text-xs whitespace-pre-wrap" phx-no-curly-interpolation><%= item.preview %></pre>
               </div>
@@ -372,20 +470,42 @@ defmodule LangWeb.LspStatusLive do
           <%= if @active_tab == "code" do %>
             <div class="flex items-center justify-between mb-3">
               <h2 class="text-xl font-semibold">Tree-sitter Code Search (via LSP)</h2>
-              <.button id="code-download" phx-click="download" phx-value-type="code" class="btn btn-sm">Download JSON</.button>
+              <.button
+                id="code-download"
+                phx-click="download"
+                phx-value-type="code"
+                class="btn btn-sm"
+              >
+                Download JSON
+              </.button>
             </div>
 
-            <.form for={@code_form} id="code-form" phx-submit="search_code" phx-change="code_change" class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
+            <.form
+              for={@code_form}
+              id="code-form"
+              phx-submit="search_code"
+              phx-change="code_change"
+              class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4"
+            >
               <.input field={@code_form[:path]} type="text" label="Path" />
               <.input field={@code_form[:language]} type="text" label="Language" />
               <.input field={@code_form[:pattern]} type="text" label="Tree-sitter Pattern" />
-              <.input field={@code_form[:preset]} type="select" label="Preset Pattern" prompt="Choose preset" options={for {k, label, _pat} <- @code_presets, do: {label, k}} />
+              <.input
+                field={@code_form[:preset]}
+                type="select"
+                label="Preset Pattern"
+                prompt="Choose preset"
+                options={for {k, label, _pat} <- @code_presets, do: {label, k}}
+              />
               <.input field={@code_form[:max_results]} type="number" label="Max results" />
               <.input field={@code_form[:max_depth]} type="number" label="Max depth" />
               <div class="md:col-span-1 flex items-end">
                 <.button id="code-submit" type="submit" disabled={@code_loading?}>
-                  <.icon name="hero-magnifying-glass" class={["size-4 mr-2", @code_loading? && "animate-spin"]} />
-                  {@code_loading? && "Searching..." || "Search"}
+                  <.icon
+                    name="hero-magnifying-glass"
+                    class={["size-4 mr-2", @code_loading? && "animate-spin"]}
+                  />
+                  {(@code_loading? && "Searching...") || "Search"}
                 </.button>
               </div>
             </.form>
@@ -401,7 +521,11 @@ defmodule LangWeb.LspStatusLive do
 
             <div id="code-results" phx-update="stream" class="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div class="hidden only:block text-sm opacity-70">No matches yet</div>
-              <div :for={{id, item} <- @streams.code_results} id={id} class="card bg-base-100 p-3 shadow">
+              <div
+                :for={{id, item} <- @streams.code_results}
+                id={id}
+                class="card bg-base-100 p-3 shadow"
+              >
                 <div class="font-mono text-xs break-all">{item.path}:{item.line}</div>
                 <div class="text-xs opacity-70">{item.language}</div>
                 <pre class="text-xs whitespace-pre-wrap" phx-no-curly-interpolation><%= item.preview %></pre>
@@ -459,6 +583,7 @@ defmodule LangWeb.LspStatusLive do
       {key, v}
     end
   end
+
   defp symbolize_keys(other), do: other
 
   defp normalize_search_results(results) when is_list(results) do
@@ -510,7 +635,8 @@ defmodule LangWeb.LspStatusLive do
       "elixir" ->
         [
           {"calls", "Function calls", "(call target: (identifier) @fn)"},
-          {"defmodule", "Module definitions", "(call target: (identifier) @name (#match? @name \"defmodule\"))"},
+          {"defmodule", "Module definitions",
+           "(call target: (identifier) @name (#match? @name \"defmodule\"))"},
           {"attribute", "Module attributes", "(attribute) @attr"}
         ]
 
@@ -530,14 +656,16 @@ defmodule LangWeb.LspStatusLive do
 
       "javascript" ->
         [
-          {"func_decl", "Function declarations", "(function_declaration name: (identifier) @name)"},
+          {"func_decl", "Function declarations",
+           "(function_declaration name: (identifier) @name)"},
           {"call", "Call expressions", "(call_expression function: (identifier) @fn)"},
           {"class", "Class declarations", "(class_declaration name: (identifier) @name)"}
         ]
 
       "typescript" ->
         [
-          {"func_decl", "Function declarations", "(function_declaration name: (identifier) @name)"},
+          {"func_decl", "Function declarations",
+           "(function_declaration name: (identifier) @name)"},
           {"method", "Method signatures", "(method_signature name: (property_identifier) @name)"},
           {"call", "Call expressions", "(call_expression function: (identifier) @fn)"}
         ]

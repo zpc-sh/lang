@@ -1,14 +1,16 @@
 defmodule LangWeb.DocsController do
   use LangWeb, :controller
+  alias Lang.Native.FSScanner
 
   def show(conn, %{"path" => path}) do
     doc_path = Path.join(["docs"] ++ path)
 
     cond do
-      # Check if it's a markdown file
-      String.ends_with?(doc_path, ".md") && File.exists?(doc_path) ->
-        case File.read(doc_path) do
-          {:ok, content} ->
+      # Markdown file: use native preview to read content
+      String.ends_with?(doc_path, ".md") ->
+        case FSScanner.preview(doc_path, max_lines: 10_000) do
+          {:ok, lines} ->
+            content = Enum.join(lines, "\n")
             html = render_markdown(content)
 
             conn
@@ -20,21 +22,24 @@ defmodule LangWeb.DocsController do
             |> render(:not_found)
         end
 
-      # Check if it's a directory with README.md
-      File.dir?(doc_path) ->
-        readme_path = Path.join(doc_path, "README.md")
-
-        if File.exists?(readme_path) do
-          show(conn, %{"path" => path ++ ["README.md"]})
-        else
-          # List directory contents
-          list_directory(conn, doc_path, path)
-        end
-
+      # Directory: scan shallow and either redirect to README or list
       true ->
-        conn
-        |> put_status(404)
-        |> render(:not_found)
+        case FSScanner.scan(doc_path, max_depth: 1, include_hidden: false) do
+          {:ok, %{tree: %{children: children}}} when is_list(children) ->
+            case Enum.find(children, fn c -> (c.name == "README.md") end) do
+              %{name: _} -> show(conn, %{"path" => path ++ ["README.md"]})
+              _ -> list_directory(conn, doc_path, path, children)
+            end
+
+          {:ok, %{tree: %{children: nil}}} ->
+            # Empty directory
+            list_directory(conn, doc_path, path, [])
+
+          {:error, _} ->
+            conn
+            |> put_status(404)
+            |> render(:not_found)
+        end
     end
   end
 
@@ -142,31 +147,21 @@ defmodule LangWeb.DocsController do
     end
   end
 
-  defp list_directory(conn, path, url_path) do
-    case File.ls(path) do
-      {:ok, entries} ->
-        items =
-          entries
-          |> Enum.sort()
-          |> Enum.map(fn entry ->
-            full_path = Path.join(path, entry)
+  defp list_directory(conn, _path, url_path, children) when is_list(children) do
+    items =
+      children
+      |> Enum.sort_by(& &1.name)
+      |> Enum.map(fn node ->
+        %{
+          name: node.name,
+          path: Path.join(url_path ++ [node.name]),
+          is_dir: match?(:directory, node.node_type) || node.children != nil,
+          is_markdown: String.ends_with?(node.name, ".md")
+        }
+      end)
+      |> Enum.filter(fn item -> item.is_dir || item.is_markdown end)
 
-            %{
-              name: entry,
-              path: Path.join(url_path ++ [entry]),
-              is_dir: File.dir?(full_path),
-              is_markdown: String.ends_with?(entry, ".md")
-            }
-          end)
-          |> Enum.filter(fn item -> item.is_dir || item.is_markdown end)
-
-        conn
-        |> render(:index, items: items, current_path: url_path)
-
-      {:error, _} ->
-        conn
-        |> put_status(404)
-        |> render(:not_found)
-    end
+    conn
+    |> render(:index, items: items, current_path: url_path)
   end
 end

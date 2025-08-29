@@ -56,8 +56,17 @@ defmodule Lang.Think.Result do
 
   actions do
     defaults([:read])
+
     create :create do
-      accept([:request_id, :summary, :details, :artifacts, :confidence_score, :metrics, :completed_at])
+      accept([
+        :request_id,
+        :summary,
+        :details,
+        :artifacts,
+        :confidence_score,
+        :metrics,
+        :completed_at
+      ])
     end
   end
 
@@ -67,4 +76,3 @@ defmodule Lang.Think.Result do
     define(:create, action: :create)
   end
 end
-

@@ -25,7 +25,8 @@ defmodule Lang.Agent.PreferenceTest do
       delegate_fun: fn id, _t -> {:ok, %{id: id}} end
     }
 
-    {:ok, %{results: results, merged: merged}} = Coordinator.coordinate([claude.id, codex.id], task, :fanout)
+    {:ok, %{results: results, merged: merged}} =
+      Coordinator.coordinate([claude.id, codex.id], task, :fanout)
 
     # In fanout we can't assert ordering from results, but preference should affect first_success
     assert merged[:total] == 2
@@ -49,4 +50,3 @@ defmodule Lang.Agent.PreferenceTest do
     assert winner == claude.id
   end
 end
-

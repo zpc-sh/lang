@@ -128,7 +128,7 @@ defmodule Lang.Agent.Agent do
     # Ash v3 explicit read actions with baked-in filters
     read :read_by_id do
       description("Read a single agent by id")
-      get? true
+      get?(true)
       argument(:id, :uuid, allow_nil?: false)
       prepare(build(filter: expr(id == ^arg(:id))))
     end
@@ -160,7 +160,11 @@ defmodule Lang.Agent.Agent do
 
         metadata_arg = Ash.Changeset.get_argument(changeset, :metadata) || %{}
         name_from_meta = metadata_arg["name"] || metadata_arg[:name]
-        final_name = if is_binary(name_from_meta) and name_from_meta != "", do: name_from_meta, else: generate_agent_name()
+
+        final_name =
+          if is_binary(name_from_meta) and name_from_meta != "",
+            do: name_from_meta,
+            else: generate_agent_name()
 
         changeset
         |> Ash.Changeset.change_attribute(:name, final_name)
@@ -194,13 +198,13 @@ defmodule Lang.Agent.Agent do
 
     update :activate do
       description("Activate a spawned agent")
-      require_atomic? false
+      require_atomic?(false)
       change(set_attribute(:state, :active))
     end
 
     update :quarantine do
       description("Quarantine a potentially rogue agent")
-      require_atomic? false
+      require_atomic?(false)
 
       argument(:reason, :string, allow_nil?: false)
       argument(:severity, :atom, default: :medium)
@@ -228,7 +232,7 @@ defmodule Lang.Agent.Agent do
 
     update :update_trust_score do
       description("Update agent trust score based on behavior")
-      require_atomic? false
+      require_atomic?(false)
 
       argument(:new_score, :decimal, allow_nil?: false)
       argument(:reason, :string)
@@ -261,7 +265,7 @@ defmodule Lang.Agent.Agent do
 
     update :update_cognitive_load do
       description("Update current cognitive load")
-      require_atomic? false
+      require_atomic?(false)
 
       argument(:load, :decimal, allow_nil?: false)
 
@@ -279,7 +283,7 @@ defmodule Lang.Agent.Agent do
 
     update :track_resource_usage do
       description("Track resource usage for this agent")
-      require_atomic? false
+      require_atomic?(false)
 
       argument(:resource_type, :atom, allow_nil?: false)
       argument(:amount, :integer, allow_nil?: false)
@@ -297,7 +301,7 @@ defmodule Lang.Agent.Agent do
 
     update :terminate do
       description("Terminate agent and clean up resources")
-      require_atomic? false
+      require_atomic?(false)
 
       argument(:reason, :string, default: "normal")
 
@@ -529,5 +533,4 @@ defmodule Lang.Agent.Agent do
 
     {:ok, agent}
   end
-
 end

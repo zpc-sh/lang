@@ -222,295 +222,305 @@ defmodule LangWeb.DemoLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
-    <!-- Progress Bar -->
-    <div class="fixed top-0 left-0 w-full z-50 bg-base-300 h-1">
-      <div
-        class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out"
-        style={"width: #{@progress}%"}
-      >
-      </div>
-    </div>
-
-    <!-- Demo Introduction Banner -->
-    <div class={[
-      "alert shadow-lg mb-0 rounded-none border-0",
-      if(@demo_started, do: "hidden", else: "bg-gradient-to-r from-primary/10 to-secondary/10")
-    ]}>
-      <div class="flex items-center gap-3">
-        <div class="text-2xl">🧠</div>
-        <div>
-          <h3 class="font-bold">Experience LANG's Architecture Intelligence</h3>
-          <div class="text-sm opacity-70">
-            Watch real-time code analysis and architectural guidance in action
-          </div>
+    <Layouts.app
+      flash={@flash}
+      current_user={assigns[:current_user]}
+      current_scope={assigns[:current_scope]}
+    >
+      <!-- Progress Bar -->
+      <div class="fixed top-0 left-0 w-full z-50 bg-base-300 h-1">
+        <div
+          class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out"
+          style={"width: #{@progress}%"}
+        >
         </div>
       </div>
-      <div class="flex-none">
-        <button class="btn btn-primary btn-sm" phx-click="start_demo">
-          <.icon name="hero-play" class="w-4 h-4" /> Start Interactive Demo
-        </button>
-      </div>
-    </div>
-
-    <!-- Main Demo Layout -->
-    <div class="grid grid-cols-1 xl:grid-cols-4 min-h-screen bg-base-200">
       
-    <!-- Code Editor Panel -->
-      <div class="xl:col-span-3 bg-base-100 flex flex-col">
-        
-    <!-- Editor Header -->
-        <div class="navbar bg-base-300 min-h-12 border-b border-base-content/10">
-          <div class="navbar-start">
-            <span class="text-sm font-mono flex items-center gap-2">
-              <.icon name="hero-document-text" class="w-4 h-4" /> UserProfile.tsx
-              <%= if @typing_active do %>
-                <span class="loading loading-dots loading-xs text-primary"></span>
-              <% end %>
-            </span>
+    <!-- Demo Introduction Banner -->
+      <div class={[
+        "alert shadow-lg mb-0 rounded-none border-0",
+        if(@demo_started, do: "hidden", else: "bg-gradient-to-r from-primary/10 to-secondary/10")
+      ]}>
+        <div class="flex items-center gap-3">
+          <div class="text-2xl">🧠</div>
+          <div>
+            <h3 class="font-bold">Experience LANG's Architecture Intelligence</h3>
+            <div class="text-sm opacity-70">
+              Watch real-time code analysis and architectural guidance in action
+            </div>
           </div>
-          <div class="navbar-end">
-            <div class="stats stats-horizontal text-xs">
-              <div class="stat py-2 px-3">
-                <div class="stat-title text-xs">Quality Score</div>
-                <div class={["stat-value text-sm", quality_score_color(@code_quality_score)]}>
-                  {@code_quality_score}%
+        </div>
+        <div class="flex-none">
+          <button class="btn btn-primary btn-sm" phx-click="start_demo">
+            <.icon name="hero-play" class="w-4 h-4" /> Start Interactive Demo
+          </button>
+        </div>
+      </div>
+      
+    <!-- Main Demo Layout -->
+      <div class="grid grid-cols-1 xl:grid-cols-4 min-h-screen bg-base-200">
+        
+    <!-- Code Editor Panel -->
+        <div class="xl:col-span-3 bg-base-100 flex flex-col">
+          
+    <!-- Editor Header -->
+          <div class="navbar bg-base-300 min-h-12 border-b border-base-content/10">
+            <div class="navbar-start">
+              <span class="text-sm font-mono flex items-center gap-2">
+                <.icon name="hero-document-text" class="w-4 h-4" /> UserProfile.tsx
+                <%= if @typing_active do %>
+                  <span class="loading loading-dots loading-xs text-primary"></span>
+                <% end %>
+              </span>
+            </div>
+            <div class="navbar-end">
+              <div class="stats stats-horizontal text-xs">
+                <div class="stat py-2 px-3">
+                  <div class="stat-title text-xs">Quality Score</div>
+                  <div class={["stat-value text-sm", quality_score_color(@code_quality_score)]}>
+                    {@code_quality_score}%
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
+          
     <!-- File Explorer -->
-        <div class="bg-base-200 p-4 border-b border-base-content/10">
-          <div class="text-sm font-mono">
-            <div class="flex items-center gap-2 mb-2">
-              <.icon name="hero-folder" class="w-4 h-4" />
-              <span class="font-semibold">Project Structure</span>
-            </div>
-
-            <div class="space-y-1 ml-4">
-              <div class="flex items-center gap-2">
-                <.icon name="hero-folder-open" class="w-3 h-3" />
-                <span>src/</span>
+          <div class="bg-base-200 p-4 border-b border-base-content/10">
+            <div class="text-sm font-mono">
+              <div class="flex items-center gap-2 mb-2">
+                <.icon name="hero-folder" class="w-4 h-4" />
+                <span class="font-semibold">Project Structure</span>
               </div>
 
-              <div class="ml-4 space-y-1">
+              <div class="space-y-1 ml-4">
                 <div class="flex items-center gap-2">
                   <.icon name="hero-folder-open" class="w-3 h-3" />
-                  <span>components/</span>
+                  <span>src/</span>
                 </div>
-                <div class="ml-4 flex items-center gap-2">
-                  <.icon name="hero-document" class="w-3 h-3" />
-                  <span class="text-info">UserProfile.tsx</span>
-                  <span class="badge badge-info badge-xs">active</span>
-                </div>
-                
+
+                <div class="ml-4 space-y-1">
+                  <div class="flex items-center gap-2">
+                    <.icon name="hero-folder-open" class="w-3 h-3" />
+                    <span>components/</span>
+                  </div>
+                  <div class="ml-4 flex items-center gap-2">
+                    <.icon name="hero-document" class="w-3 h-3" />
+                    <span class="text-info">UserProfile.tsx</span>
+                    <span class="badge badge-info badge-xs">active</span>
+                  </div>
+                  
     <!-- Database folder -->
-                <div class="flex items-center gap-2">
-                  <.icon name="hero-folder" class="w-3 h-3" />
-                  <span class={["transition-colors", violation_class(@file_violations["user_model"])]}>
-                    database/
-                  </span>
-                  <%= if @file_violations["user_model"] do %>
-                    <span class="badge badge-error badge-xs animate-pulse">violation</span>
-                  <% end %>
-                </div>
-                <div class="ml-4 flex items-center gap-2">
-                  <.icon name="hero-document" class="w-3 h-3" />
-                  <span class={["transition-colors", violation_class(@file_violations["user_model"])]}>
-                    UserModel.ts
-                  </span>
-                </div>
-                
+                  <div class="flex items-center gap-2">
+                    <.icon name="hero-folder" class="w-3 h-3" />
+                    <span class={[
+                      "transition-colors",
+                      violation_class(@file_violations["user_model"])
+                    ]}>
+                      database/
+                    </span>
+                    <%= if @file_violations["user_model"] do %>
+                      <span class="badge badge-error badge-xs animate-pulse">violation</span>
+                    <% end %>
+                  </div>
+                  <div class="ml-4 flex items-center gap-2">
+                    <.icon name="hero-document" class="w-3 h-3" />
+                    <span class={[
+                      "transition-colors",
+                      violation_class(@file_violations["user_model"])
+                    ]}>
+                      UserModel.ts
+                    </span>
+                  </div>
+                  
     <!-- Services folder -->
-                <div class="flex items-center gap-2">
-                  <.icon name="hero-folder" class="w-3 h-3" />
-                  <span class={[
-                    "transition-colors",
-                    suggestion_class(@file_violations["user_service"])
-                  ]}>
-                    services/
-                  </span>
-                  <%= if @file_violations["user_service"] == true do %>
-                    <span class="badge badge-success badge-xs">suggested</span>
-                  <% end %>
-                  <%= if @file_violations["user_service"] == :success do %>
-                    <span class="badge badge-accent badge-xs">✨ optimized</span>
-                  <% end %>
-                </div>
-                <div class="ml-4 flex items-center gap-2">
-                  <.icon name="hero-document" class="w-3 h-3" />
-                  <span class={[
-                    "transition-colors",
-                    suggestion_class(@file_violations["user_service"])
-                  ]}>
-                    UserService.ts
-                  </span>
+                  <div class="flex items-center gap-2">
+                    <.icon name="hero-folder" class="w-3 h-3" />
+                    <span class={[
+                      "transition-colors",
+                      suggestion_class(@file_violations["user_service"])
+                    ]}>
+                      services/
+                    </span>
+                    <%= if @file_violations["user_service"] == true do %>
+                      <span class="badge badge-success badge-xs">suggested</span>
+                    <% end %>
+                    <%= if @file_violations["user_service"] == :success do %>
+                      <span class="badge badge-accent badge-xs">✨ optimized</span>
+                    <% end %>
+                  </div>
+                  <div class="ml-4 flex items-center gap-2">
+                    <.icon name="hero-document" class="w-3 h-3" />
+                    <span class={[
+                      "transition-colors",
+                      suggestion_class(@file_violations["user_service"])
+                    ]}>
+                      UserService.ts
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
+          
     <!-- Code editor -->
-        <div class="flex-1 p-6 bg-neutral text-neutral-content font-mono">
-          <div
-            class="mockup-code bg-base-300 text-base-content h-full text-sm"
-            phx-no-curly-interpolation
-          >
-            <pre data-prefix="1"><code>import React from 'react';</code></pre>
-            <pre data-prefix="2"><code></code></pre>
-            <pre data-prefix="3"><code><%= @current_text %><%= if @typing_active, do: "|", else: "" %></code></pre>
-            <pre data-prefix="4"><code></code></pre>
-            <pre data-prefix="5"><code>export function UserProfile() {</code></pre>
-            <pre data-prefix="6"><code>  return React.createElement('div', null, 'Profile');</code></pre>
-            <pre data-prefix="7"><code>}</code></pre>
-          </div>
-        </div>
-      </div>
-      
-    <!-- Intelligence Panel -->
-      <div class="bg-base-300 flex flex-col border-l border-base-content/10">
-        
-    <!-- Panel Header -->
-        <div class="navbar bg-base-300 min-h-12 border-b border-base-content/10">
-          <div class="navbar-start">
-            <span class="text-sm font-semibold flex items-center gap-2">
-              <.icon name="hero-cpu-chip" class="w-4 h-4 text-primary" /> LANG Intelligence
-            </span>
-          </div>
-        </div>
-        
-    <!-- Metrics Dashboard -->
-        <div class="p-4 bg-base-200 border-b border-base-content/10">
-          <div class="stats stats-vertical w-full text-xs">
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Violations</div>
-              <div class="stat-value text-lg text-error">{@violations_count}</div>
-            </div>
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Suggestions</div>
-              <div class="stat-value text-lg text-success">{@suggestions_count}</div>
-            </div>
-          </div>
-        </div>
-        
-    <!-- Intelligence Feed -->
-        <div class="flex-1 p-4 overflow-y-auto space-y-3">
-          
-    <!-- Initial Demo Step -->
-          <%= if not @demo_started do %>
-            <div class="card bg-gradient-to-r from-primary/20 to-secondary/20 border-primary/30">
-              <div class="card-body p-4">
-                <h3 class="card-title text-sm flex items-center gap-2">
-                  <.icon name="hero-rocket-launch" class="w-4 h-4" /> Demo Ready
-                </h3>
-                <p class="text-xs opacity-80">
-                  Watch LANG provide real-time architectural guidance as you code
-                </p>
-              </div>
-            </div>
-          <% end %>
-          
-    <!-- Intelligence Items -->
-          <%= for {item, index} <- Enum.with_index(@intelligence_items) do %>
+          <div class="flex-1 p-6 bg-neutral text-neutral-content font-mono">
             <div
-              class={[
-                "alert shadow-lg animate-fade-in text-sm",
-                intelligence_alert_class(item.type)
-              ]}
-              style={"animation-delay: #{index * 0.1}s"}
+              class="mockup-code bg-base-300 text-base-content h-full text-sm"
+              phx-no-curly-interpolation
             >
-              <div class="w-full">
-                <div class="flex items-start gap-2 mb-2">
-                  <div class="flex-shrink-0 mt-0.5">
-                    {intelligence_icon(item.type)}
-                  </div>
-                  <div class="flex-1">
-                    <h3 class="font-bold text-sm">{item.title}</h3>
-                    <p class="text-xs opacity-80 mt-1">{item.description}</p>
-                  </div>
-                </div>
-                <div class="mt-3 p-2 bg-base-100/50 rounded text-xs border-l-2 border-current">
-                  {item.action}
-                </div>
-              </div>
+              <pre data-prefix="1"><code>import React from 'react';</code></pre>
+              <pre data-prefix="2"><code></code></pre>
+              <pre data-prefix="3"><code><%= @current_text %><%= if @typing_active, do: "|", else: "" %></code></pre>
+              <pre data-prefix="4"><code></code></pre>
+              <pre data-prefix="5"><code>export function UserProfile() {</code></pre>
+              <pre data-prefix="6"><code>  return React.createElement('div', null, 'Profile');</code></pre>
+              <pre data-prefix="7"><code>}</code></pre>
             </div>
-          <% end %>
-          
-    <!-- Demo Complete Actions -->
-          <%= if @progress >= 100 do %>
-            <div class="card bg-gradient-to-r from-accent/20 to-primary/20 border-accent/30 mt-6">
-              <div class="card-body p-4">
-                <h2 class="card-title text-sm flex items-center gap-2">
-                  <.icon name="hero-check-badge" class="w-4 h-4" /> Ready to get started?
-                </h2>
-                <p class="text-xs opacity-80 mb-3">
-                  Transform your development workflow with AI-powered architecture intelligence
-                </p>
-                <div class="card-actions justify-between">
-                  <button class="btn btn-ghost btn-xs" phx-click="restart_demo">
-                    <.icon name="hero-arrow-path" class="w-3 h-3" /> Replay Demo
-                  </button>
-                  <.link navigate="/auth" class="btn btn-primary btn-xs">
-                    <.icon name="hero-sparkles" class="w-3 h-3" /> Start Free Trial
-                  </.link>
-                </div>
-              </div>
-            </div>
-          <% end %>
+          </div>
         </div>
         
-    <!-- Architecture Health -->
-        <div class="p-4 bg-base-200 border-t border-base-content/10">
-          <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
-            <.icon name="hero-chart-bar" class="w-4 h-4" /> Architecture Health
-          </h4>
-          <div class="flex flex-wrap gap-2">
-            <div class="badge badge-primary badge-outline text-xs">Components</div>
-            <div class="badge badge-secondary badge-outline text-xs">Services</div>
-            <div class={[
-              "badge badge-outline text-xs transition-all",
-              if(@architecture_violations, do: "badge-error animate-pulse", else: "badge-neutral")
-            ]}>
-              Database
+    <!-- Intelligence Panel -->
+        <div class="bg-base-300 flex flex-col border-l border-base-content/10">
+          
+    <!-- Panel Header -->
+          <div class="navbar bg-base-300 min-h-12 border-b border-base-content/10">
+            <div class="navbar-start">
+              <span class="text-sm font-semibold flex items-center gap-2">
+                <.icon name="hero-cpu-chip" class="w-4 h-4 text-primary" /> LANG Intelligence
+              </span>
             </div>
           </div>
           
-    <!-- Health Score -->
-          <div class="mt-3">
-            <div class="flex justify-between text-xs mb-1">
-              <span>Health Score</span>
-              <span class={quality_score_color(@code_quality_score)}>{@code_quality_score}%</span>
+    <!-- Metrics Dashboard -->
+          <div class="p-4 bg-base-200 border-b border-base-content/10">
+            <div class="stats stats-vertical w-full text-xs">
+              <div class="stat py-2">
+                <div class="stat-title text-xs">Violations</div>
+                <div class="stat-value text-lg text-error">{@violations_count}</div>
+              </div>
+              <div class="stat py-2">
+                <div class="stat-title text-xs">Suggestions</div>
+                <div class="stat-value text-lg text-success">{@suggestions_count}</div>
+              </div>
             </div>
-            <progress
-              class={["progress w-full h-2", quality_progress_class(@code_quality_score)]}
-              value={@code_quality_score}
-              max="100"
-            >
-            </progress>
+          </div>
+          
+    <!-- Intelligence Feed -->
+          <div class="flex-1 p-4 overflow-y-auto space-y-3">
+            
+    <!-- Initial Demo Step -->
+            <%= if not @demo_started do %>
+              <div class="card bg-gradient-to-r from-primary/20 to-secondary/20 border-primary/30">
+                <div class="card-body p-4">
+                  <h3 class="card-title text-sm flex items-center gap-2">
+                    <.icon name="hero-rocket-launch" class="w-4 h-4" /> Demo Ready
+                  </h3>
+                  <p class="text-xs opacity-80">
+                    Watch LANG provide real-time architectural guidance as you code
+                  </p>
+                </div>
+              </div>
+            <% end %>
+            
+    <!-- Intelligence Items -->
+            <%= for {item, index} <- Enum.with_index(@intelligence_items) do %>
+              <div
+                class={[
+                  "alert shadow-lg animate-fade-in text-sm",
+                  intelligence_alert_class(item.type)
+                ]}
+                style={"animation-delay: #{index * 0.1}s"}
+              >
+                <div class="w-full">
+                  <div class="flex items-start gap-2 mb-2">
+                    <div class="flex-shrink-0 mt-0.5">
+                      {intelligence_icon(item.type)}
+                    </div>
+                    <div class="flex-1">
+                      <h3 class="font-bold text-sm">{item.title}</h3>
+                      <p class="text-xs opacity-80 mt-1">{item.description}</p>
+                    </div>
+                  </div>
+                  <div class="mt-3 p-2 bg-base-100/50 rounded text-xs border-l-2 border-current">
+                    {item.action}
+                  </div>
+                </div>
+              </div>
+            <% end %>
+            
+    <!-- Demo Complete Actions -->
+            <%= if @progress >= 100 do %>
+              <div class="card bg-gradient-to-r from-accent/20 to-primary/20 border-accent/30 mt-6">
+                <div class="card-body p-4">
+                  <h2 class="card-title text-sm flex items-center gap-2">
+                    <.icon name="hero-check-badge" class="w-4 h-4" /> Ready to get started?
+                  </h2>
+                  <p class="text-xs opacity-80 mb-3">
+                    Transform your development workflow with AI-powered architecture intelligence
+                  </p>
+                  <div class="card-actions justify-between">
+                    <button class="btn btn-ghost btn-xs" phx-click="restart_demo">
+                      <.icon name="hero-arrow-path" class="w-3 h-3" /> Replay Demo
+                    </button>
+                    <.link navigate="/auth" class="btn btn-primary btn-xs">
+                      <.icon name="hero-sparkles" class="w-3 h-3" /> Start Free Trial
+                    </.link>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+          
+    <!-- Architecture Health -->
+          <div class="p-4 bg-base-200 border-t border-base-content/10">
+            <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+              <.icon name="hero-chart-bar" class="w-4 h-4" /> Architecture Health
+            </h4>
+            <div class="flex flex-wrap gap-2">
+              <div class="badge badge-primary badge-outline text-xs">Components</div>
+              <div class="badge badge-secondary badge-outline text-xs">Services</div>
+              <div class={[
+                "badge badge-outline text-xs transition-all",
+                if(@architecture_violations, do: "badge-error animate-pulse", else: "badge-neutral")
+              ]}>
+                Database
+              </div>
+            </div>
+            
+    <!-- Health Score -->
+            <div class="mt-3">
+              <div class="flex justify-between text-xs mb-1">
+                <span>Health Score</span>
+                <span class={quality_score_color(@code_quality_score)}>{@code_quality_score}%</span>
+              </div>
+              <progress
+                class={["progress w-full h-2", quality_progress_class(@code_quality_score)]}
+                value={@code_quality_score}
+                max="100"
+              >
+              </progress>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <style>
-      @keyframes fade-in {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
+      <style>
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
 
-      .animate-fade-in {
-        animation: fade-in 0.5s ease-out forwards;
-      }
-    </style>
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out forwards;
+        }
+      </style>
     </Layouts.app>
     """
   end

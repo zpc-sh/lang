@@ -7,7 +7,12 @@ defmodule MarkdownLD.Hash do
   a deterministic JSON hashing by sorting keys recursively before encoding.
   """
 
-  @type integrity :: %{algorithm: String.t(), form: String.t(), hash: String.t(), quad_count: non_neg_integer()}
+  @type integrity :: %{
+          algorithm: String.t(),
+          form: String.t(),
+          hash: String.t(),
+          quad_count: non_neg_integer()
+        }
 
   @doc """
   Compute a deterministic hash for a JSON/JSON-LD term.
@@ -30,7 +35,8 @@ defmodule MarkdownLD.Hash do
     |> Jason.encode_to_iodata!()
   end
 
-  defp encode_stable(list) when is_list(list), do: Jason.encode_to_iodata!(Enum.map(list, &encode_stable/1))
+  defp encode_stable(list) when is_list(list),
+    do: Jason.encode_to_iodata!(Enum.map(list, &encode_stable/1))
+
   defp encode_stable(other), do: Jason.encode_to_iodata!(other)
 end
-

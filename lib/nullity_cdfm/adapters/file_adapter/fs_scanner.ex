@@ -29,6 +29,7 @@ defmodule Nullity.CDFM.Adapters.FileAdapter.FSScanner do
           # Ensure the directory exists then write with Elixir fallback
           dir = Path.dirname(path)
           File.mkdir_p!(dir)
+
           case File.write(path, content) do
             :ok -> :ok
             {:error, reason} -> {:error, reason}

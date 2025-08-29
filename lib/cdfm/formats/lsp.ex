@@ -68,6 +68,7 @@ defmodule CDFM.Formats.LSP do
   end
 
   defp derive_category(nil), do: "other"
+
   defp derive_category(name) do
     case String.split(name, ".") do
       ["lang", cat | _] -> cat
@@ -76,4 +77,3 @@ defmodule CDFM.Formats.LSP do
     end
   end
 end
-

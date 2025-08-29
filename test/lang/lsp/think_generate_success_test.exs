@@ -14,7 +14,11 @@ defmodule Lang.LSP.ThinkGenerateSuccessTest do
       "jsonrpc" => "2.0",
       "id" => 200,
       "method" => "lang.think.explain_intent",
-      "params" => %{"input" => %{"code" => "def foo, do: :ok"}, "user_id" => user_id, "project_id" => project_id}
+      "params" => %{
+        "input" => %{"code" => "def foo, do: :ok"},
+        "user_id" => user_id,
+        "project_id" => project_id
+      }
     }
 
     resp = Lang.LSP.Dispatch.process(msg)
@@ -38,4 +42,3 @@ defmodule Lang.LSP.ThinkGenerateSuccessTest do
     assert %{"result" => %{"request_id" => _id, "status" => "queued"}} = resp
   end
 end
-

@@ -33,6 +33,7 @@ defmodule Mix.Tasks.Lsp.Coverage do
 
     if extra != [] do
       Mix.shell().info("\nHandlers without spec: #{length(extra)}")
+
       Enum.take(Enum.sort(extra), 50)
       |> Enum.each(&Mix.shell().info("  ~ #{&1}"))
     end
@@ -48,7 +49,8 @@ defmodule Mix.Tasks.Lsp.Coverage do
             path when is_binary(path) -> path
           end)
 
-        _ -> []
+        _ ->
+          []
       end
 
     files
@@ -58,7 +60,8 @@ defmodule Mix.Tasks.Lsp.Coverage do
           content = Enum.join(List.wrap(lines), "\n")
           extract_names_from_spec(content)
 
-        _ -> []
+        _ ->
+          []
       end
     end)
     |> Enum.uniq()
@@ -85,7 +88,8 @@ defmodule Mix.Tasks.Lsp.Coverage do
         Enum.join(List.wrap(lines), "\n")
         |> extract_methods_from_dispatch()
 
-      _ -> []
+      _ ->
+        []
     end
   end
 

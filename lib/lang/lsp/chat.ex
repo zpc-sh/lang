@@ -52,6 +52,7 @@ defmodule Lang.LSP.Chat do
     session_id = Map.get(params, "session_id") || get_session_id(ctx)
     agent_type = Map.get(params, "agent", "general")
     context = Map.get(params, "context", %{})
+    speaker = Map.get(params, "speaker", "user")
 
     case message do
       nil ->
@@ -63,7 +64,8 @@ defmodule Lang.LSP.Chat do
           user_message: message,
           agent_type: agent_type,
           context: enhance_context(context, ctx),
-          timestamp: DateTime.utc_now()
+          timestamp: DateTime.utc_now(),
+          speaker: speaker
         }
 
         case process_chat_message(session_id, response_data) do
@@ -95,6 +97,7 @@ defmodule Lang.LSP.Chat do
     agent_type = Map.get(params, "agent", "general")
     workspace_path = Map.get(params, "workspace_path")
     session_config = Map.get(params, "config", %{})
+    participants_param = Map.get(params, "participants")
 
     session_data = %{
       agent_type: agent_type,
@@ -105,8 +108,15 @@ defmodule Lang.LSP.Chat do
       started_at: DateTime.utc_now()
     }
 
-    case RehearsalEngine.start_session(:chat_session, [agent_type, "user"]) do
-      {:ok, session_id} ->
+    # Allow multi-participant sessions
+    participants =
+      case participants_param do
+        parts when is_list(parts) -> Enum.uniq(Enum.map(parts, &to_string/1))
+        _ -> [agent_type, "user"]
+      end
+
+    case RehearsalEngine.start_session(:chat_session, participants) do
+      {:ok, %{id: session_id} = _session} ->
         # Initialize workspace context if provided
         workspace_context =
           if workspace_path do

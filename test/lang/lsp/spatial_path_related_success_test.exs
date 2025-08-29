@@ -30,7 +30,12 @@ defmodule Lang.LSP.SpatialPathRelatedSuccessTest do
       "jsonrpc" => "2.0",
       "id" => 123,
       "method" => "lang.spatial.trace_path",
-      "params" => %{"project_id" => project_id, "from" => "a.ex", "to" => "c.ex", "language" => "elixir"}
+      "params" => %{
+        "project_id" => project_id,
+        "from" => "a.ex",
+        "to" => "c.ex",
+        "language" => "elixir"
+      }
     }
 
     resp = Lang.LSP.Dispatch.process(msg)
@@ -58,7 +63,13 @@ defmodule Lang.LSP.SpatialPathRelatedSuccessTest do
       "jsonrpc" => "2.0",
       "id" => 125,
       "method" => "lang.spatial.trace_path",
-      "params" => %{"project_id" => project_id, "from" => "a.ex", "to" => "c.ex", "language" => "elixir", "types" => "use"}
+      "params" => %{
+        "project_id" => project_id,
+        "from" => "a.ex",
+        "to" => "c.ex",
+        "language" => "elixir",
+        "types" => "use"
+      }
     }
 
     resp = Lang.LSP.Dispatch.process(msg)
@@ -72,7 +83,12 @@ defmodule Lang.LSP.SpatialPathRelatedSuccessTest do
       "jsonrpc" => "2.0",
       "id" => 126,
       "method" => "lang.spatial.find_related",
-      "params" => %{"project_id" => project_id, "file" => "a.ex", "language" => "elixir", "types" => "use"}
+      "params" => %{
+        "project_id" => project_id,
+        "file" => "a.ex",
+        "language" => "elixir",
+        "types" => "use"
+      }
     }
 
     resp = Lang.LSP.Dispatch.process(msg)

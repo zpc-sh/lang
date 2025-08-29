@@ -8,7 +8,10 @@ defmodule Lang.StorageHandlersFallbackTest do
     # Ensure Dirup is disabled for fallback tests
     prev = System.get_env("DIRUP_ENABLED")
     System.put_env("DIRUP_ENABLED", "0")
-    on_exit(fn -> if prev, do: System.put_env("DIRUP_ENABLED", prev), else: System.delete_env("DIRUP_ENABLED") end)
+
+    on_exit(fn ->
+      if prev, do: System.put_env("DIRUP_ENABLED", prev), else: System.delete_env("DIRUP_ENABLED")
+    end)
 
     :ok
   end
@@ -45,4 +48,3 @@ defmodule Lang.StorageHandlersFallbackTest do
              GetUserContext.handle(%{"user_id" => user_id}, %{})
   end
 end
-

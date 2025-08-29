@@ -26,9 +26,11 @@ defmodule Lang.Broker.Session do
   @impl true
   def init({protocol, client_info}) do
     Process.flag(:trap_exit, true)
+
     case protocol.init(client_info) do
       {:ok, st, capabilities} ->
-        {:ok, %__MODULE__{protocol: protocol, state: st, client: client_info}, {:continue, {:reply_init, capabilities}}}
+        {:ok, %__MODULE__{protocol: protocol, state: st, client: client_info},
+         {:continue, {:reply_init, capabilities}}}
 
       {:error, reason} ->
         {:stop, {:init_failed, reason}}
@@ -50,7 +52,11 @@ defmodule Lang.Broker.Session do
           {%{"jsonrpc" => "2.0", "id" => id, "result" => result}, %{s | state: st}}
 
         {:error, code, message, data, st} ->
-          {%{"jsonrpc" => "2.0", "id" => id, "error" => %{code: code, message: message, data: data}}, %{s | state: st}}
+          {%{
+             "jsonrpc" => "2.0",
+             "id" => id,
+             "error" => %{code: code, message: message, data: data}
+           }, %{s | state: st}}
       end
 
     send(self(), {:broker_send, reply})
@@ -67,4 +73,3 @@ defmodule Lang.Broker.Session do
 
   # In a real transport, the parent would consume {:broker_send, map} and write bytes downstream.
 end
-

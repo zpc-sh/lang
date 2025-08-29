@@ -62,6 +62,7 @@ defmodule LangWeb.HealthController do
   defp check_lsp do
     try do
       t0 = System.monotonic_time(:millisecond)
+
       case Lang.LSP.Client.ping(timeout: 1_000) do
         {:ok, %{"status" => "pong"}} = _ok ->
           latency = System.monotonic_time(:millisecond) - t0

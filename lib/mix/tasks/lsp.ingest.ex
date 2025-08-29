@@ -15,6 +15,7 @@ defmodule Mix.Tasks.Lsp.Ingest do
     Mix.Task.run("loadpaths")
 
     {opts, rest, _} = OptionParser.parse(args, switches: [dry_run: :boolean])
+
     case rest do
       [path] ->
         with {:ok, bin} <- read_file(path), specs <- Spec.parse_spec!(bin) do
@@ -47,7 +48,9 @@ defmodule Mix.Tasks.Lsp.Ingest do
         else
           {:error, reason} -> Mix.raise("failed to read #{path}: #{inspect(reason)}")
         end
-      _ -> Mix.raise("usage: mix lsp.ingest [--dry-run] path/to/spec.jsonld")
+
+      _ ->
+        Mix.raise("usage: mix lsp.ingest [--dry-run] path/to/spec.jsonld")
     end
   end
 

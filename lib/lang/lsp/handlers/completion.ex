@@ -108,7 +108,9 @@ defmodule Lang.LSP.Handlers.Completion do
 
   # Local, fast fallback completions based on parsed identifiers and context
   defp local_completions(%{language: lang, last_token: last, completion_type: ctype} = ctx) do
-    content = Enum.join(ctx.previous_lines, "\n") <> "\n" <> ctx.line <> "\n" <> Enum.join(ctx.next_lines, "\n")
+    content =
+      Enum.join(ctx.previous_lines, "\n") <>
+        "\n" <> ctx.line <> "\n" <> Enum.join(ctx.next_lines, "\n")
 
     ids =
       case ParserRegistry.parse(content, lang) do
@@ -119,9 +121,15 @@ defmodule Lang.LSP.Handlers.Completion do
             n when is_binary(n) -> n
             _ -> nil
           end)
-        {:ok, %{:functions => funs}} when is_list(funs) -> Enum.map(funs, &to_string/1)
-        {:ok, parsed} when is_map(parsed) -> Map.values(parsed) |> List.flatten() |> Enum.map(&to_string/1)
-        _ -> []
+
+        {:ok, %{:functions => funs}} when is_list(funs) ->
+          Enum.map(funs, &to_string/1)
+
+        {:ok, parsed} when is_map(parsed) ->
+          Map.values(parsed) |> List.flatten() |> Enum.map(&to_string/1)
+
+        _ ->
+          []
       end
       |> Enum.filter(&is_binary/1)
       |> Enum.uniq()
@@ -136,6 +144,7 @@ defmodule Lang.LSP.Handlers.Completion do
 
     # Filter by current token prefix if present
     prefix = last || ""
+
     filtered =
       if prefix == "" do
         base

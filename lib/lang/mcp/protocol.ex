@@ -65,4 +65,3 @@ defmodule Lang.MCP.Protocol do
     ToolRegistry.grouped()
   end
 end
-

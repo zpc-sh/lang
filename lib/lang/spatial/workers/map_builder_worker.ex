@@ -39,21 +39,38 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
             :ok
 
           {:error, :timeout} ->
-            _ = Map.create(%{project_id: project_id, graph_summary: %{}, stats: %{generated_at: DateTime.utc_now(), error: :timeout}})
+            _ =
+              Map.create(%{
+                project_id: project_id,
+                graph_summary: %{},
+                stats: %{generated_at: DateTime.utc_now(), error: :timeout}
+              })
+
             :ok
 
           _ ->
-            _ = Map.create(%{project_id: project_id, graph_summary: %{}, stats: %{generated_at: DateTime.utc_now()}})
+            _ =
+              Map.create(%{
+                project_id: project_id,
+                graph_summary: %{},
+                stats: %{generated_at: DateTime.utc_now()}
+              })
+
             :ok
         end
 
       _ ->
         # No path provided, create an empty snapshot
-        _ = Map.create(%{project_id: project_id, graph_summary: %{}, stats: %{generated_at: DateTime.utc_now()}})
+        _ =
+          Map.create(%{
+            project_id: project_id,
+            graph_summary: %{},
+            stats: %{generated_at: DateTime.utc_now()}
+          })
+
         :ok
     end
   end
-  
 
   # Build a compact symbol table and trivial relations using native FSScanner searches
   defp build_symbols_and_relations(root_path) do
@@ -61,7 +78,8 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
     relations = []
 
     {symbols, relations} =
-      Enum.reduce(symbol_search_specs(), {symbols, relations}, fn {label, pattern}, {sym_acc, rel_acc} ->
+      Enum.reduce(symbol_search_specs(), {symbols, relations}, fn {label, pattern},
+                                                                  {sym_acc, rel_acc} ->
         case FSScanner.search(root_path, pattern, max_results: 10_000, context_lines: 0) do
           {:ok, results} when is_list(results) ->
             Enum.reduce(results, {sym_acc, rel_acc}, fn res, {sacc, racc} ->
@@ -70,14 +88,17 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
               text = extract_line_text(res)
 
               case extract_symbol(text, label) do
-                nil -> {sacc, racc}
+                nil ->
+                  {sacc, racc}
+
                 {kind, name} ->
                   entry = %{kind: kind, name: name, line: line}
                   {Map.update(sacc, file, [entry], fn list -> [entry | list] end), racc}
               end
             end)
 
-          _ -> {sym_acc, rel_acc}
+          _ ->
+            {sym_acc, rel_acc}
         end
       end)
 
@@ -91,25 +112,42 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
               text = extract_line_text(res)
 
               case extract_relation_target(text, rel_type) do
-                nil -> racc
+                nil ->
+                  racc
+
                 target ->
                   lang = infer_language_from_path(file)
                   target_kind = classify_relation_target(lang, rel_type, target)
-                  [%{type: rel_type, from: file, to: target, line: line, language: lang, target_kind: target_kind} | racc]
+
+                  [
+                    %{
+                      type: rel_type,
+                      from: file,
+                      to: target,
+                      line: line,
+                      language: lang,
+                      target_kind: target_kind
+                    }
+                    | racc
+                  ]
               end
             end)
 
-          _ -> acc
+          _ ->
+            acc
         end
       end)
 
-    symbols = for {k, v} <- symbols, into: %{}, do: {k, Enum.uniq_by(v, &{&1.kind, &1.name, &1.line})}
+    symbols =
+      for {k, v} <- symbols, into: %{}, do: {k, Enum.uniq_by(v, &{&1.kind, &1.name, &1.line})}
+
     relations = Enum.uniq_by(relations, &{&1.type, &1.from, &1.to, &1.line})
     {symbols, relations}
   end
 
   # Use tree-sitter queries (via native FSScanner) to enrich symbol table
-  defp augment_symbols_with_treesitter(root_path, symbols) when is_binary(root_path) and is_map(symbols) do
+  defp augment_symbols_with_treesitter(root_path, symbols)
+       when is_binary(root_path) and is_map(symbols) do
     ts_queries = Lang.Native.FSScanner.tree_sitter_queries()
 
     Enum.reduce(ts_queries, symbols, fn {language, groups}, sym_acc ->
@@ -127,11 +165,14 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
               Map.update(acc, file, [entry], fn list -> [entry | list] end)
             end)
 
-          _ -> acc2
+          _ ->
+            acc2
         end
       end)
     end)
-    |> then(fn sym -> for {k, v} <- sym, into: %{}, do: {k, Enum.uniq_by(v, &{&1.kind, &1.name, &1.line})} end)
+    |> then(fn sym ->
+      for {k, v} <- sym, into: %{}, do: {k, Enum.uniq_by(v, &{&1.kind, &1.name, &1.line})}
+    end)
   rescue
     _ -> symbols
   end
@@ -139,7 +180,8 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
   defp augment_symbols_with_treesitter(_root_path, symbols), do: symbols
 
   # Use tree-sitter queries to add imports/exports/uses relations where supported
-  defp augment_relations_with_treesitter(root_path, relations) when is_binary(root_path) and is_list(relations) do
+  defp augment_relations_with_treesitter(root_path, relations)
+       when is_binary(root_path) and is_list(relations) do
     ts_queries = Lang.Native.FSScanner.tree_sitter_queries()
 
     rels =
@@ -148,63 +190,126 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
 
         acc =
           case Map.get(groups, :imports) do
-            nil -> acc
+            nil ->
+              acc
+
             pattern ->
-              case Lang.Native.FSScanner.search_code(root_path, lang, pattern, max_results: 10_000) do
+              case Lang.Native.FSScanner.search_code(root_path, lang, pattern,
+                     max_results: 10_000
+                   ) do
                 {:ok, results} when is_list(results) ->
                   Enum.reduce(results, acc, fn res, racc ->
                     file = extract_file_path(res)
                     line = extract_line_number(res)
-                    target = extract_ts_captured_name(res) || infer_name_from_text(extract_line_text(res))
+
+                    target =
+                      extract_ts_captured_name(res) ||
+                        infer_name_from_text(extract_line_text(res))
+
                     if is_nil(target) do
                       racc
                     else
                       target_kind = classify_relation_target(lang, :import, target)
-                      [%{type: :import, from: file, to: target, line: line, language: lang, ts: true, target_kind: target_kind} | racc]
+
+                      [
+                        %{
+                          type: :import,
+                          from: file,
+                          to: target,
+                          line: line,
+                          language: lang,
+                          ts: true,
+                          target_kind: target_kind
+                        }
+                        | racc
+                      ]
                     end
                   end)
 
-                _ -> acc
+                _ ->
+                  acc
               end
           end
 
         acc =
           case Map.get(groups, :exports) do
-            nil -> acc
+            nil ->
+              acc
+
             pattern ->
-              case Lang.Native.FSScanner.search_code(root_path, lang, pattern, max_results: 10_000) do
+              case Lang.Native.FSScanner.search_code(root_path, lang, pattern,
+                     max_results: 10_000
+                   ) do
                 {:ok, results} when is_list(results) ->
                   Enum.reduce(results, acc, fn res, racc ->
                     file = extract_file_path(res)
                     line = extract_line_number(res)
-                    name = extract_ts_captured_name(res) || infer_name_from_text(extract_line_text(res)) || "default"
+
+                    name =
+                      extract_ts_captured_name(res) ||
+                        infer_name_from_text(extract_line_text(res)) || "default"
+
                     target_kind = classify_relation_target(lang, :export, name)
-                    [%{type: :export, from: file, to: name, line: line, language: lang, ts: true, target_kind: target_kind} | racc]
+
+                    [
+                      %{
+                        type: :export,
+                        from: file,
+                        to: name,
+                        line: line,
+                        language: lang,
+                        ts: true,
+                        target_kind: target_kind
+                      }
+                      | racc
+                    ]
                   end)
 
-                _ -> acc
+                _ ->
+                  acc
               end
           end
 
         acc =
           case Map.get(groups, :use_statements) do
-            nil -> acc
+            nil ->
+              acc
+
             pattern ->
-              case Lang.Native.FSScanner.search_code(root_path, lang, pattern, max_results: 10_000) do
+              case Lang.Native.FSScanner.search_code(root_path, lang, pattern,
+                     max_results: 10_000
+                   ) do
                 {:ok, results} when is_list(results) ->
                   Enum.reduce(results, acc, fn res, racc ->
                     file = extract_file_path(res)
                     line = extract_line_number(res)
-                    target = extract_ts_captured_name(res) || infer_name_from_text(extract_line_text(res))
+
+                    target =
+                      extract_ts_captured_name(res) ||
+                        infer_name_from_text(extract_line_text(res))
+
                     if is_nil(target) do
                       racc
                     else
                       target_kind = classify_relation_target(lang, :use, target)
-                      [%{type: :use, from: file, to: target, line: line, language: lang, ts: true, target_kind: target_kind} | racc]
+
+                      [
+                        %{
+                          type: :use,
+                          from: file,
+                          to: target,
+                          line: line,
+                          language: lang,
+                          ts: true,
+                          target_kind: target_kind
+                        }
+                        | racc
+                      ]
                     end
                   end)
 
-                _ -> acc
+                _ ->
+                  acc
               end
           end
 
@@ -296,7 +401,11 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
   defp extract_relation_target(line_text, rel_type) when is_binary(line_text) do
     case rel_type do
       :imports ->
-        case Regex.run(~r/(?:from\s+['\"]([^'\"]+)['\"]|require\(\s*['\"]([^'\"]+)['\"]\s*\))/, line_text, capture: :all_but_first) do
+        case Regex.run(
+               ~r/(?:from\s+['\"]([^'\"]+)['\"]|require\(\s*['\"]([^'\"]+)['\"]\s*\))/,
+               line_text,
+               capture: :all_but_first
+             ) do
           [a, nil] when is_binary(a) -> a
           [nil, b] when is_binary(b) -> b
           [a, b] -> a || b
@@ -304,7 +413,9 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
         end
 
       :py_imports ->
-        case Regex.run(~r/(?:from\s+([\w\.]+)\s+import|import\s+([\w\.]+))/, line_text, capture: :all_but_first) do
+        case Regex.run(~r/(?:from\s+([\w\.]+)\s+import|import\s+([\w\.]+))/, line_text,
+               capture: :all_but_first
+             ) do
           [a, nil] when is_binary(a) -> a
           [nil, b] when is_binary(b) -> b
           [a, b] -> a || b
@@ -329,25 +440,29 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
           _ -> nil
         end
 
-      _ -> nil
+      _ ->
+        nil
     end
   end
 
   defp extract_relation_target(_, _), do: nil
 
   defp extract_file_path(res) do
-    Map.get(res, :file) || Map.get(res, :path) || Map.get(res, "file") || Map.get(res, "path") || "?"
+    Map.get(res, :file) || Map.get(res, :path) || Map.get(res, "file") || Map.get(res, "path") ||
+      "?"
   end
 
   defp extract_line_number(res) do
-    case Map.get(res, :line_number) || Map.get(res, "line_number") || Map.get(res, :line) || Map.get(res, "line") do
+    case Map.get(res, :line_number) || Map.get(res, "line_number") || Map.get(res, :line) ||
+           Map.get(res, "line") do
       n when is_integer(n) -> n
       _ -> nil
     end
   end
 
   defp extract_line_text(res) do
-    Map.get(res, :line_content) || Map.get(res, "line_content") || Map.get(res, :match) || Map.get(res, "match") || ""
+    Map.get(res, :line_content) || Map.get(res, "line_content") || Map.get(res, :match) ||
+      Map.get(res, "match") || ""
   end
 
   defp extract_ts_captured_name(res) do
@@ -356,7 +471,8 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
       list when is_list(list) ->
         list
         |> Enum.find_value(fn cap ->
-          Map.get(cap, :text) || Map.get(cap, "text") || Map.get(cap, :value) || Map.get(cap, "value")
+          Map.get(cap, :text) || Map.get(cap, "text") || Map.get(cap, :value) ||
+            Map.get(cap, "value")
         end)
 
       _ ->
@@ -412,7 +528,8 @@ defmodule Lang.Spatial.Workers.MapBuilderWorker do
   defp classify_relation_target(lang, rel_type, target) do
     case {lang, rel_type} do
       {lang, :import} when lang in ["javascript", "typescript"] ->
-        if String.starts_with?(target, ["./", "../", "/"]) or String.ends_with?(target, [".js", ".mjs", ".ts", ".tsx", ".jsx"]) do
+        if String.starts_with?(target, ["./", "../", "/"]) or
+             String.ends_with?(target, [".js", ".mjs", ".ts", ".tsx", ".jsx"]) do
           :path
         else
           :module

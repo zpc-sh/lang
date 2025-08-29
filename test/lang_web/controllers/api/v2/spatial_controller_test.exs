@@ -25,4 +25,3 @@ defmodule LangWeb.Api.V2.SpatialControllerTest do
     end
   end
 end
-

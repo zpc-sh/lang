@@ -12,6 +12,7 @@ defmodule LangWeb.FSWatchLiveTest do
     assert has_element?(view, "#fs-watch-form")
 
     path = File.cwd!()
+
     view
     |> form("#fs-watch-form", %{path: path, interval_ms: 10, duration_ms: 50})
     |> render_submit()

@@ -28,4 +28,3 @@ defmodule LangWeb.ApiErrorJSONLDTest do
     assert body["error"] == "missing"
   end
 end
-

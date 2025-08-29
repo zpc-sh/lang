@@ -10,7 +10,11 @@ defmodule LangWeb.DesignSystemLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
+    <Layouts.app
+      flash={@flash}
+      current_user={assigns[:current_user]}
+      current_scope={assigns[:current_scope]}
+    >
       <div class="design-system pt-0">
         
     <!-- Hero Section -->

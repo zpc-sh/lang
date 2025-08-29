@@ -28,6 +28,7 @@ defmodule Nullity.CDFM.Registry do
 
   defp to_existing_atom(nil), do: nil
   defp to_existing_atom(val) when is_atom(val), do: val
+
   defp to_existing_atom(val) when is_binary(val) do
     try do
       String.to_existing_atom(val)
@@ -36,4 +37,3 @@ defmodule Nullity.CDFM.Registry do
     end
   end
 end
-

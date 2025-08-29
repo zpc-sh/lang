@@ -1,51 +1,56 @@
-<Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
-<div class="bx--grid bx--grid--full-width">
-  <div class="bx--row">
-    <div class="bx--col-lg-16 bx--no-gutter">
-      <!-- Header (flex toolbar for clean horizontal layout) -->
-      <div class="w-full border-b border-gray-800 bg-gray-900/60 text-gray-100">
-        <div class="max-w-[1400px] mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div class="flex items-center gap-3">
-            <span class="text-lg font-semibold tracking-tight">LSP Master Tracker</span>
-            <div class="hidden md:flex items-center gap-2">
-              <div class="bx--tag bx--tag--green" title="Implemented">{@stats.implemented}</div>
-              <div class="bx--tag bx--tag--warm-gray" title="In Progress">{@stats.in_progress}</div>
-              <div class="bx--tag bx--tag--red" title="Not Started">{@stats.not_started}</div>
-              <div class="bx--tag bx--tag--blue" title="Total Methods">{@stats.total}</div>
+<Layouts.app
+  flash={@flash}
+  current_user={assigns[:current_user]}
+  current_scope={assigns[:current_scope]}
+>
+  <div class="bx--grid bx--grid--full-width">
+    <div class="bx--row">
+      <div class="bx--col-lg-16 bx--no-gutter">
+        <!-- Header (flex toolbar for clean horizontal layout) -->
+        <div class="w-full border-b border-gray-800 bg-gray-900/60 text-gray-100">
+          <div class="max-w-[1400px] mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div class="flex items-center gap-3">
+              <span class="text-lg font-semibold tracking-tight">LSP Master Tracker</span>
+              <div class="hidden md:flex items-center gap-2">
+                <div class="bx--tag bx--tag--green" title="Implemented">{@stats.implemented}</div>
+                <div class="bx--tag bx--tag--warm-gray" title="In Progress">
+                  {@stats.in_progress}
+                </div>
+                <div class="bx--tag bx--tag--red" title="Not Started">{@stats.not_started}</div>
+                <div class="bx--tag bx--tag--blue" title="Total Methods">{@stats.total}</div>
+              </div>
             </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="bx--content-switcher" data-content-switcher>
-              <button
-                class={[
-                  "bx--content-switcher-btn",
-                  if(@edit_mode == :view, do: "bx--content-switcher--selected", else: "")
-                ]}
-                phx-click="toggle_edit_mode"
-                phx-value-mode="view"
-                data-target=".table-view"
-              >
-                <span class="bx--content-switcher__label">Table View</span>
-              </button>
-              <button
-                class={[
-                  "bx--content-switcher-btn",
-                  if(@edit_mode == :raw, do: "bx--content-switcher--selected", else: "")
-                ]}
-                phx-click="toggle_edit_mode"
-                phx-value-mode="raw"
-                data-target=".raw-editor"
-              >
-                <span class="bx--content-switcher__label">Raw Editor</span>
-              </button>
-              <button class="bx--content-switcher-btn bx--content-switcher--selected">
-                <span class="bx--content-switcher__label">Editor (Always On)</span>
-              </button>
-            </div>
-            <!-- Editor engine status badge -->
-            <div class="ml-1">
-              <%
-                engine =
+            <div class="flex items-center gap-3">
+              <div class="bx--content-switcher" data-content-switcher>
+                <button
+                  class={[
+                    "bx--content-switcher-btn",
+                    if(@edit_mode == :view, do: "bx--content-switcher--selected", else: "")
+                  ]}
+                  phx-click="toggle_edit_mode"
+                  phx-value-mode="view"
+                  data-target=".table-view"
+                >
+                  <span class="bx--content-switcher__label">Table View</span>
+                </button>
+                <button
+                  class={[
+                    "bx--content-switcher-btn",
+                    if(@edit_mode == :raw, do: "bx--content-switcher--selected", else: "")
+                  ]}
+                  phx-click="toggle_edit_mode"
+                  phx-value-mode="raw"
+                  data-target=".raw-editor"
+                >
+                  <span class="bx--content-switcher__label">Raw Editor</span>
+                </button>
+                <button class="bx--content-switcher-btn bx--content-switcher--selected">
+                  <span class="bx--content-switcher__label">Editor (Always On)</span>
+                </button>
+              </div>
+              <!-- Editor engine status badge -->
+              <div class="ml-1">
+                <% engine =
                   Map.get(@editor_hosts_status || %{}, "sticky-recurse-editor") ||
                     Map.get(@editor_hosts_status || %{}, "file-recurse-editor") ||
                     "pending"
@@ -55,623 +60,772 @@
                     "recurse" -> {"Editor: Recurse", "bx--tag bx--tag--green"}
                     "fallback" -> {"Editor: Fallback", "bx--tag bx--tag--warm-gray"}
                     _ -> {"Editor: Pending", "bx--tag bx--tag--cool-gray"}
-                  end
-              %>
-              <div class={klass} title="Editor engine status">{label}</div>
-            </div>
-            <!-- Model mode badge -->
-            <div class="ml-1">
-              <div class={[
-                "bx--tag bx--tag--sm",
-                if(@model_mode == :db, do: "bx--tag--green", else: "bx--tag--cool-gray")
-              ]} title="Model source">
-                {if @model_mode == :db, do: "Mode: DB", else: "Mode: Specs"}
+                  end %>
+                <div class={klass} title="Editor engine status">{label}</div>
               </div>
-            </div>
-            <button class="bx--btn bx--btn--sm bx--btn--secondary" phx-click="export_csv">Export CSV</button>
-            <button
-              class={[
-                "bx--btn bx--btn--sm",
-                if(@unsaved_changes, do: "bx--btn--danger", else: "bx--btn--primary")
-              ]}
-              phx-click="save_all_changes"
-              disabled={not @unsaved_changes}
-            >Save All</button>
-            <button class="bx--btn bx--btn--sm bx--btn--ghost" phx-click="reload_lsp">Reload</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="bx--content">
-        <!-- Progress Dashboard -->
-        <div class="bx--row">
-          <div class="bx--col-lg-16">
-            <div class="bx--tile-group">
-              <div class="bx--tile bx--tile--clickable">
-                <div class="bx--tile__checkmark">
-                  <svg class="bx--tile__chevron" width="16" height="16">
-                    <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z"/>
-                  </svg>
-                </div>
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">{@stats.completion_rate}%</h4>
-                  <p class="bx--tile__subtitle">Complete</p>
-                  <div id="progress-chart" phx-hook="LspProgressChart" data-stats={Jason.encode!(@stats)}>
-                    <canvas width="48" height="48"></canvas>
-                  </div>
-                </div>
-              </div>
-
-              <div class="bx--tile">
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">{@stats.implemented}</h4>
-                  <p class="bx--tile__subtitle">Implemented</p>
-                  <div class="bx--tag bx--tag--green bx--tag--sm">Ready to use</div>
-                </div>
-              </div>
-
-              <div class="bx--tile">
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">{@stats.in_progress}</h4>
-                  <p class="bx--tile__subtitle">In Progress</p>
-                  <div class="bx--tag bx--tag--warm-gray bx--tag--sm">Under development</div>
-                </div>
-              </div>
-
-              <div class="bx--tile">
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">{@stats.not_started}</h4>
-                  <p class="bx--tile__subtitle">Not Started</p>
-                  <div class="bx--tag bx--tag--red bx--tag--sm">Awaiting implementation</div>
-                </div>
-              </div>
-
-              <div class="bx--tile">
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">Last Saved</h4>
-                  <p class="bx--tile__subtitle">
-                    {if @last_saved, do: Calendar.strftime(@last_saved, "%H:%M:%S"), else: "Never"}
-                  </p>
-                  <div class={[
+              <!-- Model mode badge -->
+              <div class="ml-1">
+                <div
+                  class={[
                     "bx--tag bx--tag--sm",
-                    if(@unsaved_changes, do: "bx--tag--red", else: "bx--tag--green")
-                  ]}>
-                    {if @unsaved_changes, do: "Unsaved changes", else: "All saved"}
+                    if(@model_mode == :db, do: "bx--tag--green", else: "bx--tag--cool-gray")
+                  ]}
+                  title="Model source"
+                >
+                  {if @model_mode == :db, do: "Mode: DB", else: "Mode: Specs"}
+                </div>
+              </div>
+              <button class="bx--btn bx--btn--sm bx--btn--secondary" phx-click="export_csv">
+                Export CSV
+              </button>
+              <button
+                class={[
+                  "bx--btn bx--btn--sm",
+                  if(@unsaved_changes, do: "bx--btn--danger", else: "bx--btn--primary")
+                ]}
+                phx-click="save_all_changes"
+                disabled={not @unsaved_changes}
+              >
+                Save All
+              </button>
+              <button class="bx--btn bx--btn--sm bx--btn--ghost" phx-click="reload_lsp">
+                Reload
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bx--content">
+          <!-- Progress Dashboard -->
+          <div class="bx--row">
+            <div class="bx--col-lg-16">
+              <div class="bx--tile-group">
+                <div class="bx--tile bx--tile--clickable">
+                  <div class="bx--tile__checkmark">
+                    <svg class="bx--tile__chevron" width="16" height="16">
+                      <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z" />
+                    </svg>
+                  </div>
+                  <div class="bx--tile__content">
+                    <h4 class="bx--tile__title">{@stats.completion_rate}%</h4>
+                    <p class="bx--tile__subtitle">Complete</p>
+                    <div
+                      id="progress-chart"
+                      phx-hook="LspProgressChart"
+                      data-stats={Jason.encode!(@stats)}
+                    >
+                      <canvas width="48" height="48"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bx--tile">
+                  <div class="bx--tile__content">
+                    <h4 class="bx--tile__title">{@stats.implemented}</h4>
+                    <p class="bx--tile__subtitle">Implemented</p>
+                    <div class="bx--tag bx--tag--green bx--tag--sm">Ready to use</div>
+                  </div>
+                </div>
+
+                <div class="bx--tile">
+                  <div class="bx--tile__content">
+                    <h4 class="bx--tile__title">{@stats.in_progress}</h4>
+                    <p class="bx--tile__subtitle">In Progress</p>
+                    <div class="bx--tag bx--tag--warm-gray bx--tag--sm">Under development</div>
+                  </div>
+                </div>
+
+                <div class="bx--tile">
+                  <div class="bx--tile__content">
+                    <h4 class="bx--tile__title">{@stats.not_started}</h4>
+                    <p class="bx--tile__subtitle">Not Started</p>
+                    <div class="bx--tag bx--tag--red bx--tag--sm">Awaiting implementation</div>
+                  </div>
+                </div>
+
+                <div class="bx--tile">
+                  <div class="bx--tile__content">
+                    <h4 class="bx--tile__title">Last Saved</h4>
+                    <p class="bx--tile__subtitle">
+                      {if @last_saved,
+                        do: Calendar.strftime(@last_saved, "%H:%M:%S"),
+                        else: "Never"}
+                    </p>
+                    <div class={[
+                      "bx--tag bx--tag--sm",
+                      if(@unsaved_changes, do: "bx--tag--red", else: "bx--tag--green")
+                    ]}>
+                      {if @unsaved_changes, do: "Unsaved changes", else: "All saved"}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- Filters & Search -->
-        <div class="bx--row">
-          <div class="bx--col-lg-16">
-            <div class="bx--toolbar">
-              <div class="bx--toolbar-content">
-                <div class="bx--form-item">
-                  <div class="bx--select">
-                    <label for="category-select" class="bx--label">Category:</label>
-                    <div class="bx--select-input__wrapper">
-                      <select
-                        id="category-select"
-                        class="bx--select-input"
-                        phx-change="filter_category"
-                        name="category"
-                      >
-                        <option value="all" selected={@selected_category == "all"}>All Categories</option>
-                        <option :for={category <- @categories} value={category} selected={@selected_category == category}>
-                          {String.capitalize(category)} ({Enum.count(@lsp_methods, &(&1.category == category))})
-                        </option>
-                      </select>
-                      <svg class="bx--select__arrow" width="16" height="16">
-                        <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="bx--form-item">
-                  <div class="bx--select">
-                    <label for="priority-select" class="bx--label">Priority:</label>
-                    <div class="bx--select-input__wrapper">
-                      <select
-                        id="priority-select"
-                        class="bx--select-input"
-                        phx-change="filter_priority"
-                        name="priority"
-                      >
-                        <option value="all" selected={@selected_priority == "all"}>All Priorities</option>
-                        <option value="Critical" selected={@selected_priority == "Critical"}>Critical</option>
-                        <option value="High" selected={@selected_priority == "High"}>High</option>
-                        <option value="Medium" selected={@selected_priority == "Medium"}>Medium</option>
-                      </select>
-                      <svg class="bx--select__arrow" width="16" height="16">
-                        <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="bx--form-item">
-                  <div class="bx--search bx--search--lg">
-                    <div class="bx--search-magnifier">
-                      <svg width="16" height="16">
-                        <path d="M15 14.3L10.7 10c1.9-2.3 1.6-5.8-.7-7.7S4.2.7 2.3 3s-1.6 5.8.7 7.7c2 1.6 4.8 1.6 6.8 0L14.3 15l.7-.7zM6 10C3.8 10 2 8.2 2 6s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z"/>
-                      </svg>
-                    </div>
-                    <form phx-change="search">
-                      <input
-                        class="bx--search-input"
-                        type="text"
-                        name="search[query]"
-                        placeholder="Search methods, descriptions..."
-                        value={@search_query}
-                        autocomplete="off"
-                      />
-                    </form>
-                    <button class="bx--search-close bx--search-close--hidden" type="button">
-                      <svg width="16" height="16">
-                        <path d="M12 4.7L11.3 4 8 7.3 4.7 4 4 4.7 7.3 8 4 11.3 4.7 12 8 8.7 11.3 12 12 11.3 8.7 8z"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="bx--toolbar-action">
-                  <button
-                    class="bx--btn bx--btn--sm bx--btn--primary"
-                    phx-click="bulk_update_status"
-                    phx-value-from="not_started"
-                    phx-value-to="in_progress"
-                    title="Move all Not Started to In Progress"
-                  >
-                    Start All
-                  </button>
-                  <button
-                    class="bx--btn bx--btn--sm bx--btn--primary"
-                    phx-click="bulk_update_status"
-                    phx-value-from="in_progress"
-                    phx-value-to="implemented"
-                    title="Mark all In Progress as Implemented"
-                  >
-                    Complete All
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Enhanced JSON-LD Semantic Information Panel -->
-        <div class="bx--row">
-          <div class="bx--col-lg-16">
-            <div class="bx--tile bx--tile--light">
-              <div class="bx--tile__content">
-                <div class="flex justify-between items-center mb-4">
-                  <h4 class="bx--tile__title">JSON-LD Semantic Analysis</h4>
-                  <%= if @jsonld_processing do %>
-                    <div class="bx--loading bx--loading--small">
-                      <svg class="bx--loading__svg" viewBox="-75 -75 150 150">
-                        <circle class="bx--loading__background" cx="0" cy="0" r="26.8125"/>
-                        <circle class="bx--loading__stroke" cx="0" cy="0" r="26.8125"/>
-                      </svg>
-                    </div>
-                  <% else %>
-                    <div class="bx--tag bx--tag--green bx--tag--sm">Processing Complete</div>
-                  <% end %>
-                </div>
-
-                <!-- Enhanced Statistics -->
-                <div class="bx--row mb-4">
-                  <div class="bx--col-lg-3">
-                    <div class="bx--tag bx--tag--blue bx--tag--sm">
-                      Entities: {if assigns[:semantic_entities], do: length(@semantic_entities), else: 0}
-                    </div>
-                  </div>
-                  <div class="bx--col-lg-3">
-                    <div class="bx--tag bx--tag--purple bx--tag--sm">
-                      LSP Methods: {if assigns[:semantic_summary], do: Map.get(@semantic_summary, "lsp_methods", 0), else: 0}
-                    </div>
-                  </div>
-                  <div class="bx--col-lg-3">
-                    <div class="bx--tag bx--tag--green bx--tag--sm">
-                      Relationships: {if assigns[:semantic_summary], do: Map.get(@semantic_summary, "total_relationships", 0), else: 0}
-                    </div>
-                  </div>
-                  <div class="bx--col-lg-3">
-                    <div class="bx--tag bx--tag--cyan bx--tag--sm">
-                      RDF Triples: {if assigns[:semantic_summary], do: Map.get(@semantic_summary, "total_triples", 0), else: 0}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- JSON-LD Context Information -->
-                <%= if assigns[:markdown_ld_data] && assigns[:markdown_ld_data].context != %{} do %>
-                  <div class="bx--row mb-4">
-                    <div class="bx--col-lg-16">
-                      <div class="bx--tile bx--tile--selectable bx--tile--light">
-                        <div class="bx--tile__content">
-                          <h5 class="text-sm font-semibold mb-2">JSON-LD Context</h5>
-                          <div class="flex flex-wrap gap-2">
-                            <%= for vocab <- (if assigns[:semantic_summary], do: Map.get(@semantic_summary, "context_vocabularies", []), else: []) do %>
-                              <div class="bx--tag bx--tag--outline bx--tag--sm">
-                                {String.replace(vocab, ~r/https?:\/\//, "")}
-                              </div>
-                            <% end %>
-                          </div>
-                          <div class="mt-2 text-xs text-gray-600">
-                            Confidence Score: <span class="font-mono">{if assigns[:semantic_summary], do: Map.get(@semantic_summary, "confidence", "0.00"), else: "0.00"}</span>
-                          </div>
-                        </div>
+          
+<!-- Filters & Search -->
+          <div class="bx--row">
+            <div class="bx--col-lg-16">
+              <div class="bx--toolbar">
+                <div class="bx--toolbar-content">
+                  <div class="bx--form-item">
+                    <div class="bx--select">
+                      <label for="category-select" class="bx--label">Category:</label>
+                      <div class="bx--select-input__wrapper">
+                        <select
+                          id="category-select"
+                          class="bx--select-input"
+                          phx-change="filter_category"
+                          name="category"
+                        >
+                          <option value="all" selected={@selected_category == "all"}>
+                            All Categories
+                          </option>
+                          <option
+                            :for={category <- @categories}
+                            value={category}
+                            selected={@selected_category == category}
+                          >
+                            {String.capitalize(category)} ({Enum.count(
+                              @lsp_methods,
+                              &(&1.category == category)
+                            )})
+                          </option>
+                        </select>
+                        <svg class="bx--select__arrow" width="16" height="16">
+                          <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z" />
+                        </svg>
                       </div>
                     </div>
                   </div>
-                <% end %>
 
-                <!-- Enhanced Entity Details -->
-                <%= if assigns[:semantic_entities] && length(@semantic_entities) > 0 do %>
-                  <div class="bx--row">
-                    <div class="bx--col-lg-16">
-                      <div class="bx--accordion" data-accordion>
-                        <div class="bx--accordion__item">
-                          <button class="bx--accordion__heading" aria-expanded="false" aria-controls="semantic-details">
-                            <svg class="bx--accordion__arrow" width="16" height="16" viewBox="0 0 16 16">
-                              <path d="M11 8L6 13 5.3 12.3 9.6 8 5.3 3.7 6 3z"></path>
-                            </svg>
-                            <div class="bx--accordion__title">Semantic Entity Details ({length(@semantic_entities)} items)</div>
-                          </button>
-                          <div class="bx--accordion__content" id="semantic-details">
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              <%= for entity <- Enum.take(@semantic_entities, 12) do %>
-                                <div class="bx--tile bx--tile--selectable">
-                                  <div class="bx--tile__content">
-                                    <h6 class="text-sm font-semibold mb-1">
-                                      {Map.get(entity, "name", "Unnamed Entity")}
-                                    </h6>
-                                    <div class="bx--tag bx--tag--outline bx--tag--sm mb-2">
-                                      {Map.get(entity, "jsonld_type", Map.get(entity, "type", "Unknown")) |> String.replace("https://lang.ai/schema/", "") |> String.replace("https://schema.org/", "")}
-                                    </div>
-                                    <%= if Map.has_key?(entity, "confidence_boost") do %>
-                                      <div class="text-xs text-gray-600">
-                                        Enhanced Confidence: <span class="font-mono">{Float.round(Map.get(entity, "confidence_boost", 0.0) * 100, 1)}%</span>
-                                      </div>
-                                    <% end %>
-                                    <%= if Map.has_key?(entity, "uri") do %>
-                                      <div class="text-xs text-blue-600 truncate mt-1">
-                                        URI: {Map.get(entity, "uri")}
-                                      </div>
-                                    <% end %>
-                                  </div>
+                  <div class="bx--form-item">
+                    <div class="bx--select">
+                      <label for="priority-select" class="bx--label">Priority:</label>
+                      <div class="bx--select-input__wrapper">
+                        <select
+                          id="priority-select"
+                          class="bx--select-input"
+                          phx-change="filter_priority"
+                          name="priority"
+                        >
+                          <option value="all" selected={@selected_priority == "all"}>
+                            All Priorities
+                          </option>
+                          <option value="Critical" selected={@selected_priority == "Critical"}>
+                            Critical
+                          </option>
+                          <option value="High" selected={@selected_priority == "High"}>
+                            High
+                          </option>
+                          <option value="Medium" selected={@selected_priority == "Medium"}>
+                            Medium
+                          </option>
+                        </select>
+                        <svg class="bx--select__arrow" width="16" height="16">
+                          <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="bx--form-item">
+                    <div class="bx--search bx--search--lg">
+                      <div class="bx--search-magnifier">
+                        <svg width="16" height="16">
+                          <path d="M15 14.3L10.7 10c1.9-2.3 1.6-5.8-.7-7.7S4.2.7 2.3 3s-1.6 5.8.7 7.7c2 1.6 4.8 1.6 6.8 0L14.3 15l.7-.7zM6 10C3.8 10 2 8.2 2 6s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" />
+                        </svg>
+                      </div>
+                      <form phx-change="search">
+                        <input
+                          class="bx--search-input"
+                          type="text"
+                          name="search[query]"
+                          placeholder="Search methods, descriptions..."
+                          value={@search_query}
+                          autocomplete="off"
+                        />
+                      </form>
+                      <button class="bx--search-close bx--search-close--hidden" type="button">
+                        <svg width="16" height="16">
+                          <path d="M12 4.7L11.3 4 8 7.3 4.7 4 4 4.7 7.3 8 4 11.3 4.7 12 8 8.7 11.3 12 12 11.3 8.7 8z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="bx--toolbar-action">
+                    <button
+                      class="bx--btn bx--btn--sm bx--btn--primary"
+                      phx-click="bulk_update_status"
+                      phx-value-from="not_started"
+                      phx-value-to="in_progress"
+                      title="Move all Not Started to In Progress"
+                    >
+                      Start All
+                    </button>
+                    <button
+                      class="bx--btn bx--btn--sm bx--btn--primary"
+                      phx-click="bulk_update_status"
+                      phx-value-from="in_progress"
+                      phx-value-to="implemented"
+                      title="Mark all In Progress as Implemented"
+                    >
+                      Complete All
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+<!-- Enhanced JSON-LD Semantic Information Panel -->
+          <div class="bx--row">
+            <div class="bx--col-lg-16">
+              <div class="bx--tile bx--tile--light">
+                <div class="bx--tile__content">
+                  <div class="flex justify-between items-center mb-4">
+                    <h4 class="bx--tile__title">JSON-LD Semantic Analysis</h4>
+                    <%= if @jsonld_processing do %>
+                      <div class="bx--loading bx--loading--small">
+                        <svg class="bx--loading__svg" viewBox="-75 -75 150 150">
+                          <circle class="bx--loading__background" cx="0" cy="0" r="26.8125" />
+                          <circle class="bx--loading__stroke" cx="0" cy="0" r="26.8125" />
+                        </svg>
+                      </div>
+                    <% else %>
+                      <div class="bx--tag bx--tag--green bx--tag--sm">Processing Complete</div>
+                    <% end %>
+                  </div>
+                  
+<!-- Enhanced Statistics -->
+                  <div class="bx--row mb-4">
+                    <div class="bx--col-lg-3">
+                      <div class="bx--tag bx--tag--blue bx--tag--sm">
+                        Entities: {if assigns[:semantic_entities],
+                          do: length(@semantic_entities),
+                          else: 0}
+                      </div>
+                    </div>
+                    <div class="bx--col-lg-3">
+                      <div class="bx--tag bx--tag--purple bx--tag--sm">
+                        LSP Methods: {if assigns[:semantic_summary],
+                          do: Map.get(@semantic_summary, "lsp_methods", 0),
+                          else: 0}
+                      </div>
+                    </div>
+                    <div class="bx--col-lg-3">
+                      <div class="bx--tag bx--tag--green bx--tag--sm">
+                        Relationships: {if assigns[:semantic_summary],
+                          do: Map.get(@semantic_summary, "total_relationships", 0),
+                          else: 0}
+                      </div>
+                    </div>
+                    <div class="bx--col-lg-3">
+                      <div class="bx--tag bx--tag--cyan bx--tag--sm">
+                        RDF Triples: {if assigns[:semantic_summary],
+                          do: Map.get(@semantic_summary, "total_triples", 0),
+                          else: 0}
+                      </div>
+                    </div>
+                  </div>
+                  
+<!-- JSON-LD Context Information -->
+                  <%= if assigns[:markdown_ld_data] && assigns[:markdown_ld_data].context != %{} do %>
+                    <div class="bx--row mb-4">
+                      <div class="bx--col-lg-16">
+                        <div class="bx--tile bx--tile--selectable bx--tile--light">
+                          <div class="bx--tile__content">
+                            <h5 class="text-sm font-semibold mb-2">JSON-LD Context</h5>
+                            <div class="flex flex-wrap gap-2">
+                              <%= for vocab <- (if assigns[:semantic_summary], do: Map.get(@semantic_summary, "context_vocabularies", []), else: []) do %>
+                                <div class="bx--tag bx--tag--outline bx--tag--sm">
+                                  {String.replace(vocab, ~r/https?:\/\//, "")}
                                 </div>
                               <% end %>
-                              <%= if length(@semantic_entities) > 12 do %>
-                                <div class="bx--tile bx--tile--light">
-                                  <div class="bx--tile__content text-center">
-                                    <div class="text-sm text-gray-600">
-                                      +{length(@semantic_entities) - 12} more entities
-                                    </div>
-                                  </div>
-                                </div>
-                              <% end %>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-600">
+                              Confidence Score:
+                              <span class="font-mono">
+                                {if assigns[:semantic_summary],
+                                  do: Map.get(@semantic_summary, "confidence", "0.00"),
+                                  else: "0.00"}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <%= if @edit_mode == :raw do %>
-          <!-- Raw Markdown Editor -->
-          <div class="bx--row">
-            <div class="bx--col-lg-16">
-              <div class="bx--tile">
-                <div class="bx--tile__content">
-                  <h4 class="bx--tile__title">Raw LSP.md Editor</h4>
-                  <p class="bx--tile__subtitle">docs/lsp.md</p>
-                  <button class="bx--btn bx--btn--sm bx--btn--primary" phx-click="save_all_changes">
-                    Save
-                  </button>
-                  <div class="bx--text-area-wrapper">
-                    <textarea
-                      id="raw-markdown-textarea"
-                      class="bx--text-area bx--text-area--xl"
-                      phx-change="update_raw_markdown"
-                      name="content"
-                      placeholder="Loading markdown content..."
-                      spellcheck="false"
-                      rows="30"
-                      style="font-family: 'IBM Plex Mono', monospace;"
-                    >{@raw_markdown}</textarea>
-                  </div>
+                  <% end %>
+                  
+<!-- Enhanced Entity Details -->
+                  <%= if assigns[:semantic_entities] && length(@semantic_entities) > 0 do %>
+                    <div class="bx--row">
+                      <div class="bx--col-lg-16">
+                        <div class="bx--accordion" data-accordion>
+                          <div class="bx--accordion__item">
+                            <button
+                              class="bx--accordion__heading"
+                              aria-expanded="false"
+                              aria-controls="semantic-details"
+                            >
+                              <svg
+                                class="bx--accordion__arrow"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M11 8L6 13 5.3 12.3 9.6 8 5.3 3.7 6 3z"></path>
+                              </svg>
+                              <div class="bx--accordion__title">
+                                Semantic Entity Details ({length(@semantic_entities)} items)
+                              </div>
+                            </button>
+                            <div class="bx--accordion__content" id="semantic-details">
+                              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <%= for entity <- Enum.take(@semantic_entities, 12) do %>
+                                  <div class="bx--tile bx--tile--selectable">
+                                    <div class="bx--tile__content">
+                                      <h6 class="text-sm font-semibold mb-1">
+                                        {Map.get(entity, "name", "Unnamed Entity")}
+                                      </h6>
+                                      <div class="bx--tag bx--tag--outline bx--tag--sm mb-2">
+                                        {Map.get(
+                                          entity,
+                                          "jsonld_type",
+                                          Map.get(entity, "type", "Unknown")
+                                        )
+                                        |> String.replace("https://lang.ai/schema/", "")
+                                        |> String.replace("https://schema.org/", "")}
+                                      </div>
+                                      <%= if Map.has_key?(entity, "confidence_boost") do %>
+                                        <div class="text-xs text-gray-600">
+                                          Enhanced Confidence:
+                                          <span class="font-mono">
+                                            {Float.round(
+                                              Map.get(entity, "confidence_boost", 0.0) * 100,
+                                              1
+                                            )}%
+                                          </span>
+                                        </div>
+                                      <% end %>
+                                      <%= if Map.has_key?(entity, "uri") do %>
+                                        <div class="text-xs text-blue-600 truncate mt-1">
+                                          URI: {Map.get(entity, "uri")}
+                                        </div>
+                                      <% end %>
+                                    </div>
+                                  </div>
+                                <% end %>
+                                <%= if length(@semantic_entities) > 12 do %>
+                                  <div class="bx--tile bx--tile--light">
+                                    <div class="bx--tile__content text-center">
+                                      <div class="text-sm text-gray-600">
+                                        +{length(@semantic_entities) - 12} more entities
+                                      </div>
+                                    </div>
+                                  </div>
+                                <% end %>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
                 </div>
               </div>
             </div>
           </div>
-        <% else %>
-          <!-- Master Tracker Table View -->
-          <%= if @loading do %>
+          
+<!-- Main Content Area -->
+          <%= if @edit_mode == :raw do %>
+            <!-- Raw Markdown Editor -->
             <div class="bx--row">
               <div class="bx--col-lg-16">
-                <div class="bx--loading">
-                  <svg class="bx--loading__svg">
-                    <circle class="bx--loading__background" cx="50%" cy="50%" r="42"/>
-                    <circle class="bx--loading__stroke" cx="50%" cy="50%" r="42"/>
-                  </svg>
-                  Loading LSP methods...
+                <div class="bx--tile">
+                  <div class="bx--tile__content">
+                    <h4 class="bx--tile__title">Raw LSP.md Editor</h4>
+                    <p class="bx--tile__subtitle">docs/lsp.md</p>
+                    <button
+                      class="bx--btn bx--btn--sm bx--btn--primary"
+                      phx-click="save_all_changes"
+                    >
+                      Save
+                    </button>
+                    <div class="bx--text-area-wrapper">
+                      <textarea
+                        id="raw-markdown-textarea"
+                        class="bx--text-area bx--text-area--xl"
+                        phx-change="update_raw_markdown"
+                        name="content"
+                        placeholder="Loading markdown content..."
+                        spellcheck="false"
+                        rows="30"
+                        style="font-family: 'IBM Plex Mono', monospace;"
+                      >{@raw_markdown}</textarea>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           <% else %>
-            <div class="bx--row">
-              <div class="bx--col-lg-16">
-                <div class="bx--data-table-container">
-                  <div class="bx--data-table-header">
-                    <h4 class="bx--data-table-header__title">LSP Methods</h4>
-                    <p class="bx--data-table-header__description">AI-First LSP Implementation Tracker</p>
+            <!-- Master Tracker Table View -->
+            <%= if @loading do %>
+              <div class="bx--row">
+                <div class="bx--col-lg-16">
+                  <div class="bx--loading">
+                    <svg class="bx--loading__svg">
+                      <circle class="bx--loading__background" cx="50%" cy="50%" r="42" />
+                      <circle class="bx--loading__stroke" cx="50%" cy="50%" r="42" />
+                    </svg>
+                    Loading LSP methods...
                   </div>
-                  <table class="bx--data-table bx--data-table--zebra">
-                    <thead>
-                      <tr>
-                        <th class="bx--table-header-label">Method</th>
-                        <th class="bx--table-header-label">Status</th>
-                        <th class="bx--table-header-label">Priority</th>
-                        <th class="bx--table-header-label">Semantic Info</th>
-                        <th class="bx--table-header-label">Description</th>
-                        <th class="bx--table-header-label">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr :for={method <- @filtered_methods || []} id={method.id} class="bx--parent-row">
-                        <!-- Method Column -->
-                        <td class="bx--table-cell">
-                          <code class="bx--code">{method.name}</code>
-                          <br/>
-                          <div class="bx--tag bx--tag--gray bx--tag--sm">{method.category}</div>
-                          <div class={[
-                            "bx--tag bx--tag--sm",
-                            if(File.exists?(method.file_path), do: "bx--tag--green", else: "bx--tag--red")
-                          ]}>
-                            {if File.exists?(method.file_path), do: "File exists", else: "No file"}
-                          </div>
-                          <%= if Map.has_key?(method, :enhanced_semantic_confidence) do %>
-                            <div class="bx--tag bx--tag--outline bx--tag--sm mt-1">
-                              JSON-LD Enhanced
-                            </div>
-                          <% end %>
-                        </td>
-
-                        <!-- Status Column -->
-                        <td class="bx--table-cell">
-                          <div class="bx--select">
-                            <div class="bx--select-input__wrapper">
-                              <select
-                                class="bx--select-input"
-                                phx-change="update_status"
-                                phx-value-method={method.name}
-                                name="status"
-                              >
-                                <option value="not_started" selected={method.status == :not_started}>Not Started</option>
-                                <option value="in_progress" selected={method.status == :in_progress}>In Progress</option>
-                                <option value="implemented" selected={method.status == :implemented}>Implemented</option>
-                              </select>
-                              <svg class="bx--select__arrow" width="16" height="16">
-                                <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z"/>
-                              </svg>
-                            </div>
-                          </div>
-                        </td>
-
-                        <!-- Priority Column -->
-                        <td class="bx--table-cell">
-                          <div
-                            contenteditable="true"
-                            data-field="priority"
-                            class={[
+                </div>
+              </div>
+            <% else %>
+              <div class="bx--row">
+                <div class="bx--col-lg-16">
+                  <div class="bx--data-table-container">
+                    <div class="bx--data-table-header">
+                      <h4 class="bx--data-table-header__title">LSP Methods</h4>
+                      <p class="bx--data-table-header__description">
+                        AI-First LSP Implementation Tracker
+                      </p>
+                    </div>
+                    <table class="bx--data-table bx--data-table--zebra">
+                      <thead>
+                        <tr>
+                          <th class="bx--table-header-label">Method</th>
+                          <th class="bx--table-header-label">Status</th>
+                          <th class="bx--table-header-label">Priority</th>
+                          <th class="bx--table-header-label">Semantic Info</th>
+                          <th class="bx--table-header-label">Description</th>
+                          <th class="bx--table-header-label">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          :for={method <- @filtered_methods || []}
+                          id={method.id}
+                          class="bx--parent-row"
+                        >
+                          <!-- Method Column -->
+                          <td class="bx--table-cell">
+                            <code class="bx--code">{method.name}</code>
+                            <br />
+                            <div class="bx--tag bx--tag--gray bx--tag--sm">{method.category}</div>
+                            <div class={[
                               "bx--tag bx--tag--sm",
-                              case String.downcase(method.priority) do
-                                "critical" -> "bx--tag--red"
-                                "high" -> "bx--tag--warm-gray"
-                                "medium" -> "bx--tag--cool-gray"
-                                _ -> "bx--tag--gray"
-                              end
-                            ]}
-                            phx-blur="update_priority"
-                            phx-value-method={method.name}
-                          >
-                            {method.priority}
-                          </div>
-                        </td>
-
-                        <!-- Semantic Info Column -->
-                        <td class="bx--table-cell">
-                          <%= if Map.has_key?(method, :related_entities) && length(method.related_entities) > 0 do %>
-                            <div class="mb-2">
-                              <div class="bx--tag bx--tag--blue bx--tag--sm">
-                                {length(method.related_entities)} entities
+                              if(File.exists?(method.file_path),
+                                do: "bx--tag--green",
+                                else: "bx--tag--red"
+                              )
+                            ]}>
+                              {if File.exists?(method.file_path),
+                                do: "File exists",
+                                else: "No file"}
+                            </div>
+                            <%= if Map.has_key?(method, :enhanced_semantic_confidence) do %>
+                              <div class="bx--tag bx--tag--outline bx--tag--sm mt-1">
+                                JSON-LD Enhanced
+                              </div>
+                            <% end %>
+                          </td>
+                          
+<!-- Status Column -->
+                          <td class="bx--table-cell">
+                            <div class="bx--select">
+                              <div class="bx--select-input__wrapper">
+                                <select
+                                  class="bx--select-input"
+                                  phx-change="update_status"
+                                  phx-value-method={method.name}
+                                  name="status"
+                                >
+                                  <option
+                                    value="not_started"
+                                    selected={method.status == :not_started}
+                                  >
+                                    Not Started
+                                  </option>
+                                  <option
+                                    value="in_progress"
+                                    selected={method.status == :in_progress}
+                                  >
+                                    In Progress
+                                  </option>
+                                  <option
+                                    value="implemented"
+                                    selected={method.status == :implemented}
+                                  >
+                                    Implemented
+                                  </option>
+                                </select>
+                                <svg class="bx--select__arrow" width="16" height="16">
+                                  <path d="M8 11L3 6l1.4-1.4L8 8.2l3.6-3.6L13 6z" />
+                                </svg>
                               </div>
                             </div>
-                          <% end %>
+                          </td>
+                          
+<!-- Priority Column -->
+                          <td class="bx--table-cell">
+                            <div
+                              contenteditable="true"
+                              data-field="priority"
+                              class={[
+                                "bx--tag bx--tag--sm",
+                                case String.downcase(method.priority) do
+                                  "critical" -> "bx--tag--red"
+                                  "high" -> "bx--tag--warm-gray"
+                                  "medium" -> "bx--tag--cool-gray"
+                                  _ -> "bx--tag--gray"
+                                end
+                              ]}
+                              phx-blur="update_priority"
+                              phx-value-method={method.name}
+                            >
+                            {method.priority}
+                          </div>
+                          </td>
+                          
+<!-- Semantic Info Column -->
+                          <td class="bx--table-cell">
+                            <%= if Map.has_key?(method, :related_entities) && length(method.related_entities) > 0 do %>
+                              <div class="mb-2">
+                                <div class="bx--tag bx--tag--blue bx--tag--sm">
+                                  {length(method.related_entities)} entities
+                                </div>
+                              </div>
+                            <% end %>
 
-                          <%= if Map.has_key?(method, :semantic_confidence) do %>
-                            <div class="text-xs text-gray-600">
-                              Confidence: <span class="font-mono">{Float.round(method.semantic_confidence * 100, 1)}%</span>
-                            </div>
-                          <% end %>
+                            <%= if Map.has_key?(method, :semantic_confidence) do %>
+                              <div class="text-xs text-gray-600">
+                                Confidence:
+                                <span class="font-mono">
+                                  {Float.round(method.semantic_confidence * 100, 1)}%
+                                </span>
+                              </div>
+                            <% end %>
 
-                          <%= if Map.has_key?(method, :jsonld_context) && map_size(method.jsonld_context) > 0 do %>
-                            <div class="bx--tag bx--tag--outline bx--tag--sm mt-1">
-                              JSON-LD Context
-                            </div>
-                          <% end %>
+                            <%= if Map.has_key?(method, :jsonld_context) && map_size(method.jsonld_context) > 0 do %>
+                              <div class="bx--tag bx--tag--outline bx--tag--sm mt-1">
+                                JSON-LD Context
+                              </div>
+                            <% end %>
 
-                          <%= if Map.has_key?(method, :enhanced_semantic_confidence) do %>
-                            <div class="text-xs text-green-600 mt-1">
-                              Enhanced: <span class="font-mono">+{Float.round(method.enhanced_semantic_confidence * 100, 1)}%</span>
-                            </div>
-                          <% end %>
-                        </td>
-
-                        <!-- Description Column -->
-                        <td class="bx--table-cell">
-                          <div
-                            contenteditable="true"
-                            data-field="description"
-                            class="bx--text-input"
-                            phx-blur="update_description"
-                            phx-value-method={method.name}
-                            title="Click to edit inline
+                            <%= if Map.has_key?(method, :enhanced_semantic_confidence) do %>
+                              <div class="text-xs text-green-600 mt-1">
+                                Enhanced:
+                                <span class="font-mono">
+                                  +{Float.round(method.enhanced_semantic_confidence * 100, 1)}%
+                                </span>
+                              </div>
+                            <% end %>
+                          </td>
+                          
+<!-- Description Column -->
+                          <td class="bx--table-cell">
+                            <div
+                              contenteditable="true"
+                              data-field="description"
+                              class="bx--text-input"
+                              phx-blur="update_description"
+                              phx-value-method={method.name}
+                              title="Click to edit inline
 "
-                            style="border: none; background: transparent; min-height: 2rem;"
-                          >
+                              style="border: none; background: transparent; min-height: 2rem;"
+                            >
                             {method.description}
                           </div>
-                        </td>
-
-                        <!-- Actions Column -->
-                        <td class="bx--table-cell">
-                          <div class="bx--table-cell-actions">
-                            <button
-                              class={[
-                                "bx--btn bx--btn--sm",
-                                if(File.exists?(method.file_path), do: "bx--btn--primary", else: "bx--btn--secondary")
-                              ]}
-                              phx-click="open_file"
-                              phx-value-file_path={method.file_path}
-                              title={if File.exists?(method.file_path), do: "Open in sticky editor", else: "Create file (sticky)"}
-                            >
-                              {if File.exists?(method.file_path), do: "Sticky", else: "Create"}
-                            </button>
-                            <button
-                              class="bx--btn bx--btn--sm bx--btn--tertiary"
-                              phx-click="open_file_modal"
-                              phx-value-file_path={method.file_path}
-                              title="Open in modal editor"
-                            >
-                              Modal
-                            </button>
-                            <button
-                              class="bx--btn bx--btn--sm bx--btn--danger bx--btn--ghost"
-                              phx-click={JS.push("delete_method", value: %{method: method.name}) |> JS.confirm("Delete this LSP method?")}
-                              title="Delete method"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      <!-- Empty State -->
-                      <tr :if={@filtered_methods == [] && !@loading}>
-                        <td colspan="6" class="bx--table-cell bx--table-cell--empty">
-                          <div class="bx--empty-state">
-                            <div class="bx--empty-state__illustration">
-                              <svg width="80" height="80" viewBox="0 0 32 32">
-                                <path d="M21 2H7a2 2 0 00-2 2v20a2 2 0 002 2h10v-2H7V4h14v6h6v4h2V8z"/>
-                                <path d="M29 19h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/>
-                              </svg>
+                          </td>
+                          
+<!-- Actions Column -->
+                          <td class="bx--table-cell">
+                            <div class="bx--table-cell-actions">
+                              <button
+                                class={[
+                                  "bx--btn bx--btn--sm",
+                                  if(File.exists?(method.file_path),
+                                    do: "bx--btn--primary",
+                                    else: "bx--btn--secondary"
+                                  )
+                                ]}
+                                phx-click="open_file"
+                                phx-value-file_path={method.file_path}
+                                title={
+                                  if File.exists?(method.file_path),
+                                    do: "Open in sticky editor",
+                                    else: "Create file (sticky)"
+                                }
+                              >
+                                {if File.exists?(method.file_path), do: "Sticky", else: "Create"}
+                              </button>
+                              <button
+                                class="bx--btn bx--btn--sm bx--btn--tertiary"
+                                phx-click="open_file_modal"
+                                phx-value-file_path={method.file_path}
+                                title="Open in modal editor"
+                              >
+                                Modal
+                              </button>
+                              <button
+                                class="bx--btn bx--btn--sm bx--btn--danger bx--btn--ghost"
+                                phx-click={
+                                  JS.push("delete_method", value: %{method: method.name})
+                                  |> JS.confirm("Delete this LSP method?")
+                                }
+                                title="Delete method"
+                              >
+                                Delete
+                              </button>
                             </div>
-                            <h3 class="bx--empty-state__title">No methods found</h3>
-                            <p class="bx--empty-state__subtitle">Try adjusting your filters or search query</p>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                          </td>
+                        </tr>
+                        
+<!-- Empty State -->
+                        <tr :if={@filtered_methods == [] && !@loading}>
+                          <td colspan="6" class="bx--table-cell bx--table-cell--empty">
+                            <div class="bx--empty-state">
+                              <div class="bx--empty-state__illustration">
+                                <svg width="80" height="80" viewBox="0 0 32 32">
+                                  <path d="M21 2H7a2 2 0 00-2 2v20a2 2 0 002 2h10v-2H7V4h14v6h6v4h2V8z" />
+                                  <path d="M29 19h-3v-3h-2v3h-3v2h3v3h2v-3h3v-2z" />
+                                </svg>
+                              </div>
+                              <h3 class="bx--empty-state__title">No methods found</h3>
+                              <p class="bx--empty-state__subtitle">
+                                Try adjusting your filters or search query
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+          
+<!-- File Editor Modal -->
+          <%= if @editor_open do %>
+            <div class="bx--modal bx--modal--open" tabindex="-1" role="dialog" aria-modal="true">
+              <div class="bx--modal-container">
+                <div class="bx--modal-header">
+                  <p class="bx--modal-header__label">{@editing_file}</p>
+                  <p class="bx--modal-header__heading bx--type-beta">Recurse Editor</p>
+                  <button class="bx--modal-close" type="button" phx-click="close_editor">
+                    <svg class="bx--modal-close__icon" width="20" height="20">
+                      <path d="M15.8 5.8L10 11.6 4.2 5.8 3.5 6.5 9.3 12.3 3.5 18.1 4.2 18.8 10 13 15.8 18.8 16.5 18.1 10.7 12.3 16.5 6.5z" />
+                    </svg>
+                  </button>
+                </div>
+                <div class="bx--modal-content">
+                  <div
+                    id="file-recurse-editor"
+                    phx-hook="LspRecurseEditor"
+                    phx-update="ignore"
+                    data-content={@file_content}
+                    data-file-path={@editing_file}
+                    data-language="elixir"
+                    data-lsp-enabled="true"
+                    class="bx--text-area"
+                    style="height: 600px; font-family: 'IBM Plex Mono', monospace;"
+                  >
+                    <div class="bx--loading">
+                      <svg class="bx--loading__svg">
+                        <circle class="bx--loading__background" cx="50%" cy="50%" r="42" />
+                        <circle class="bx--loading__stroke" cx="50%" cy="50%" r="42" />
+                      </svg>
+                      Loading Recurse editor...
+                    </div>
+                  </div>
+                </div>
+                <div class="bx--modal-footer">
+                  <button class="bx--btn bx--btn--secondary" phx-click="close_editor">
+                    Cancel
+                  </button>
+                  <button
+                    class="bx--btn bx--btn--primary"
+                    phx-click="save_file"
+                    phx-value-content={@file_content}
+                  >
+                    Save
+                  </button>
                 </div>
               </div>
             </div>
           <% end %>
-        <% end %>
+          
+<!-- Sticky Recurse Footer Editor (neutral wrapper, no Carbon classes) -->
+          <div
+            id="sticky-editor-drawer"
+            class="fixed bottom-0 left-0 right-0 h-[400px] z-[9000] bg-black/50 backdrop-blur-sm"
+          >
+            <!-- Optional simple header -->
+            <div class="flex items-center justify-between px-4 py-2 border-b border-gray-700 bg-black/60 text-gray-200">
+              <div class="text-sm">
+                {(@editing_file && @editing_file) || "docs/lsp.md"} • {length(@lsp_methods || [])} methods • {@stats.completion_rate}% complete
+              </div>
+              <div class="flex items-center gap-2">
+                <% host_engine =
+                  Map.get(@editor_hosts_status || %{}, "sticky-recurse-editor") || "pending" %>
+                <% {badge_label, badge_class} =
+                  case host_engine do
+                    "recurse" ->
+                      {"Recurse",
+                       "px-2 py-0.5 text-[10px] rounded bg-green-600/20 text-green-300 border border-green-500/30"}
 
-        <!-- File Editor Modal -->
-        <%= if @editor_open do %>
-          <div class="bx--modal bx--modal--open" tabindex="-1" role="dialog" aria-modal="true">
-            <div class="bx--modal-container">
-              <div class="bx--modal-header">
-                <p class="bx--modal-header__label">{@editing_file}</p>
-                <p class="bx--modal-header__heading bx--type-beta">Recurse Editor</p>
-                <button class="bx--modal-close" type="button" phx-click="close_editor">
-                  <svg class="bx--modal-close__icon" width="20" height="20">
-                    <path d="M15.8 5.8L10 11.6 4.2 5.8 3.5 6.5 9.3 12.3 3.5 18.1 4.2 18.8 10 13 15.8 18.8 16.5 18.1 10.7 12.3 16.5 6.5z"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="bx--modal-content">
-                <div
-                  id="file-recurse-editor"
-                  phx-hook="LspRecurseEditor"
-                  phx-update="ignore"
-                  data-content={@file_content}
-                  data-file-path={@editing_file}
-                  data-language="elixir"
-                  data-lsp-enabled="true"
-                  class="bx--text-area"
-                  style="height: 600px; font-family: 'IBM Plex Mono', monospace;"
+                    "fallback" ->
+                      {"Fallback",
+                       "px-2 py-0.5 text-[10px] rounded bg-gray-600/20 text-gray-300 border border-gray-500/30"}
+
+                    _ ->
+                      {"Pending",
+                       "px-2 py-0.5 text-[10px] rounded bg-slate-600/20 text-slate-300 border border-slate-500/30"}
+                  end %>
+                <span class={badge_class} title="Sticky editor engine">{badge_label}</span>
+                <button
+                  class="px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 rounded"
+                  phx-click="save_all_changes"
                 >
-                  <div class="bx--loading">
-                    <svg class="bx--loading__svg">
-                      <circle class="bx--loading__background" cx="50%" cy="50%" r="42"/>
-                      <circle class="bx--loading__stroke" cx="50%" cy="50%" r="42"/>
-                    </svg>
-                    Loading Recurse editor...
-                  </div>
-                </div>
-              </div>
-              <div class="bx--modal-footer">
-                <button class="bx--btn bx--btn--secondary" phx-click="close_editor">
-                  Cancel
-                </button>
-                <button class="bx--btn bx--btn--primary" phx-click="save_file" phx-value-content={@file_content}>
                   Save
                 </button>
+                <div
+                  :if={Map.get(assigns, :unsaved_changes, false)}
+                  class="px-2 py-1 text-xs rounded bg-red-900/50 text-red-300 border border-red-500/20"
+                >
+                  Unsaved changes
+                </div>
               </div>
             </div>
-          </div>
-        <% end %>
-
-        <!-- Sticky Recurse Footer Editor (neutral wrapper, no Carbon classes) -->
-        <div id="sticky-editor-drawer" class="fixed bottom-0 left-0 right-0 h-[400px] z-[9000] bg-black/50 backdrop-blur-sm">
-          <!-- Optional simple header -->
-          <div class="flex items-center justify-between px-4 py-2 border-b border-gray-700 bg-black/60 text-gray-200">
-            <div class="text-sm">{(@editing_file && @editing_file) || "docs/lsp.md"} • {length(@lsp_methods || [])} methods • {@stats.completion_rate}% complete</div>
-            <div class="flex items-center gap-2">
-              <% host_engine = Map.get(@editor_hosts_status || %{}, "sticky-recurse-editor") || "pending" %>
-              <% {badge_label, badge_class} =
-                   case host_engine do
-                     "recurse" -> {"Recurse", "px-2 py-0.5 text-[10px] rounded bg-green-600/20 text-green-300 border border-green-500/30"}
-                     "fallback" -> {"Fallback", "px-2 py-0.5 text-[10px] rounded bg-gray-600/20 text-gray-300 border border-gray-500/30"}
-                     _ -> {"Pending", "px-2 py-0.5 text-[10px] rounded bg-slate-600/20 text-slate-300 border border-slate-500/30"}
-                   end %>
-              <span class={badge_class} title="Sticky editor engine">{badge_label}</span>
-              <button class="px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 rounded" phx-click="save_all_changes">Save</button>
-              <div :if={Map.get(assigns, :unsaved_changes, false)} class="px-2 py-1 text-xs rounded bg-red-900/50 text-red-300 border border-red-500/20">Unsaved changes</div>
-            </div>
-          </div>
-
-          <!-- Editor host -->
-          <div class="h-[calc(100%-40px)]">
-            <div
-              id="sticky-recurse-editor"
-              phx-hook="LspRecurseEditor"
-              phx-update="ignore"
-              data-content={@file_content || ""}
-              data-file-path={@editing_file || ""}
-              data-language={(String.ends_with?(@editing_file || "", ".ex") && "elixir") || "plaintext"}
-              data-semantic-enabled="true"
-              data-jsonld-enabled="true"
-              data-jsonld-context={if assigns[:markdown_ld_data], do: Jason.encode!(@markdown_ld_data.context), else: "{}"}
-              class="w-full h-full"
-              style="font-family: 'IBM Plex Mono', monospace;"
-            >
-              <div class="w-full h-full grid place-items-center text-gray-300 text-sm">
-                Loading editor…
+            
+<!-- Editor host -->
+            <div class="h-[calc(100%-40px)]">
+              <div
+                id="sticky-recurse-editor"
+                phx-hook="LspRecurseEditor"
+                phx-update="ignore"
+                data-content={@file_content || ""}
+                data-file-path={@editing_file || ""}
+                data-language={
+                  (String.ends_with?(@editing_file || "", ".ex") && "elixir") || "plaintext"
+                }
+                data-semantic-enabled="true"
+                data-jsonld-enabled="true"
+                data-jsonld-context={
+                  if assigns[:markdown_ld_data],
+                    do: Jason.encode!(@markdown_ld_data.context),
+                    else: "{}"
+                }
+                class="w-full h-full"
+                style="font-family: 'IBM Plex Mono', monospace;"
+              >
+                <div class="w-full h-full grid place-items-center text-gray-300 text-sm">
+                  Loading editor…
+                </div>
               </div>
             </div>
           </div>
@@ -679,5 +833,4 @@
       </div>
     </div>
   </div>
-</div>
 </Layouts.app>

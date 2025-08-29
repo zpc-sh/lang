@@ -11,7 +11,11 @@ defmodule Lang.Metrics.Tokens do
 
   @type summary :: %{
           window: %{from: DateTime.t(), to: DateTime.t(), granularity: String.t()},
-          totals: %{requests: non_neg_integer(), input_tokens: non_neg_integer(), output_tokens: non_neg_integer()},
+          totals: %{
+            requests: non_neg_integer(),
+            input_tokens: non_neg_integer(),
+            output_tokens: non_neg_integer()
+          },
           notes: String.t()
         }
 
@@ -33,7 +37,9 @@ defmodule Lang.Metrics.Tokens do
 
     requests_count =
       case user_id do
-        nil -> 0
+        nil ->
+          0
+
         uid ->
           case APIUsageLogger.current_month_count(uid) do
             {:ok, cnt} -> cnt
@@ -69,4 +75,3 @@ defmodule Lang.Metrics.Tokens do
     {from, to, "day"}
   end
 end
-

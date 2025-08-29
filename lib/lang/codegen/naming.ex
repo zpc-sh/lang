@@ -70,8 +70,10 @@ defmodule Lang.Codegen.Naming do
   defp dedupe_adjacent_ci([h | t]), do: do_dedupe_adjacent_ci([h], t)
 
   defp do_dedupe_adjacent_ci(acc, []), do: acc
+
   defp do_dedupe_adjacent_ci(acc, [h | t]) do
     last = List.last(acc)
+
     if String.downcase(h) == String.downcase(last) do
       do_dedupe_adjacent_ci(acc, t)
     else
@@ -82,4 +84,3 @@ defmodule Lang.Codegen.Naming do
   defp drop_double_lang_head(["lang", "lang" | rest]), do: ["lang" | rest]
   defp drop_double_lang_head(list), do: list
 end
-

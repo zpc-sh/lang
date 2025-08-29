@@ -21,7 +21,9 @@ defmodule Lang.Workers.FileSystemScanWorkerTest do
     on_exit(fn -> File.rm_rf!(temp_dir) end)
 
     # Create user -> project -> run (session)
-    {:ok, user} = User.create(%{email: "scan@test.local", name: "Scan User", organization_name: "Scan Org"})
+    {:ok, user} =
+      User.create(%{email: "scan@test.local", name: "Scan User", organization_name: "Scan Org"})
+
     {:ok, project} = Analysis.create_project(%{name: "Scan Project", user_id: user.id})
     {:ok, run} = Run.create(%{project_id: project.id, metadata: %{}})
 

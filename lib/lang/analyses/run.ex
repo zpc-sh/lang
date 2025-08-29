@@ -119,6 +119,7 @@ defmodule Lang.Analyses.Run do
               "active_files" => [],
               "created_at" => DateTime.utc_now() |> DateTime.to_iso8601()
             }
+
             _ = Lang.Workspace.Store.put_context(run.id, ctx)
           rescue
             _ -> :ok

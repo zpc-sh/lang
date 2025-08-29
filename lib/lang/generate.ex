@@ -10,4 +10,3 @@ defmodule Lang.Generate do
     resource(Lang.Generate.Artifact)
   end
 end
-

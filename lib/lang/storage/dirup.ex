@@ -102,7 +102,10 @@ defmodule Lang.Storage.Dirup do
   Update a pattern confidence score.
   """
   def update_pattern_confidence(id, confidence) when is_binary(id) do
-    Req.post(req(), url: "/patterns/#{URI.encode(id)}/confidence", json: %{confidence: confidence})
+    Req.post(req(),
+      url: "/patterns/#{URI.encode(id)}/confidence",
+      json: %{confidence: confidence}
+    )
     |> to_result()
   end
 

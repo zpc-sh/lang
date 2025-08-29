@@ -36,7 +36,8 @@ defmodule Lang.Storage.PatternStore do
     PatternEntity.get_many(ids)
   end
 
-  @spec update_confidence(String.t(), number() | Decimal.t()) :: {:ok, PatternEntity.t()} | {:error, term()}
+  @spec update_confidence(String.t(), number() | Decimal.t()) ::
+          {:ok, PatternEntity.t()} | {:error, term()}
   def update_confidence(id, confidence) when is_binary(id) do
     PatternEntity.update_confidence(id, decimal(confidence))
   end

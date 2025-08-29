@@ -14,7 +14,7 @@ defmodule Lang.Conversation.RehearsalEngine do
     session_data = %{
       id: generate_session_id(),
       scenario: scenario,
-      participants: participants,
+      participants: Enum.uniq(List.wrap(participants)),
       conversation_tree: %{
         nodes: [],
         current_position: nil,
@@ -25,6 +25,22 @@ defmodule Lang.Conversation.RehearsalEngine do
     }
 
     GenServer.call(__MODULE__, {:start_session, session_data})
+  end
+
+  def add_participant(session_id, participant) when is_binary(session_id) and is_binary(participant) do
+    GenServer.call(__MODULE__, {:add_participant, session_id, participant})
+  end
+
+  def remove_participant(session_id, participant)
+      when is_binary(session_id) and is_binary(participant) do
+    GenServer.call(__MODULE__, {:remove_participant, session_id, participant})
+  end
+
+  def list_participants(session_id) when is_binary(session_id) do
+    case GenServer.call(__MODULE__, {:get_session, session_id}) do
+      {:ok, %{participants: parts}} -> {:ok, parts}
+      other -> other
+    end
   end
 
   def add_conversation_turn(session_id, turn_data) do
@@ -74,6 +90,36 @@ defmodule Lang.Conversation.RehearsalEngine do
     }
 
     {:reply, {:ok, session_data}, %{state | sessions: sessions, stats: stats}}
+  end
+
+  @impl true
+  def handle_call({:add_participant, session_id, participant}, _from, state) do
+    case Map.get(state.sessions, session_id) do
+      nil ->
+        {:reply, {:error, :session_not_found}, state}
+
+      session ->
+        participants = session.participants || []
+        if participant in participants do
+          {:reply, {:ok, participants}, state}
+        else
+          updated = %{session | participants: participants ++ [participant]}
+          {:reply, {:ok, updated.participants}, %{state | sessions: Map.put(state.sessions, session_id, updated)}}
+        end
+    end
+  end
+
+  @impl true
+  def handle_call({:remove_participant, session_id, participant}, _from, state) do
+    case Map.get(state.sessions, session_id) do
+      nil ->
+        {:reply, {:error, :session_not_found}, state}
+
+      session ->
+        participants = Enum.reject(session.participants || [], &(&1 == participant))
+        updated = %{session | participants: participants}
+        {:reply, {:ok, updated.participants}, %{state | sessions: Map.put(state.sessions, session_id, updated)}}
+    end
   end
 
   @impl true

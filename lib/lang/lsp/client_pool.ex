@@ -52,7 +52,9 @@ defmodule Lang.LSP.ClientPool do
 
     workers =
       for _ <- 1..max(1, pool_size) do
-        {:ok, pid} = Lang.LSP.ClientWorker.start_link(host: host, port: port, root_path: root_path)
+        {:ok, pid} =
+          Lang.LSP.ClientWorker.start_link(host: host, port: port, root_path: root_path)
+
         pid
       end
 
@@ -78,13 +80,19 @@ defmodule Lang.LSP.ClientPool do
     infos =
       Enum.map(workers, fn pid ->
         case GenServer.call(pid, :metrics, 1000) do
-          %{inflight: inflight, initialized: init, max_inflight: max} -> %{pid: pid, inflight: inflight, initialized: init, max_inflight: max}
-          _ -> %{pid: pid, error: :no_response}
+          %{inflight: inflight, initialized: init, max_inflight: max} ->
+            %{pid: pid, inflight: inflight, initialized: init, max_inflight: max}
+
+          _ ->
+            %{pid: pid, error: :no_response}
         end
       end)
 
     # Emit telemetry event for external observers
-    :telemetry.execute([:lang, :lsp, :client, :pool, :metrics], %{}, %{workers: length(workers), details: infos})
+    :telemetry.execute([:lang, :lsp, :client, :pool, :metrics], %{}, %{
+      workers: length(workers),
+      details: infos
+    })
 
     {:reply, %{workers: length(workers), details: infos}, state}
   end

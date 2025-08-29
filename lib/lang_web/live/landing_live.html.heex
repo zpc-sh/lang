@@ -1,4 +1,8 @@
-<Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
+<Layouts.app
+  flash={@flash}
+  current_user={assigns[:current_user]}
+  current_scope={assigns[:current_scope]}
+>
   <!-- Structured Data for SEO -->
   <LangWeb.SEO.structured_data type={:organization} data={%{}} />
   <LangWeb.SEO.structured_data
@@ -42,7 +46,7 @@
       filter: drop-shadow(0 0 20px rgba(74, 158, 255, 0.5));
     }
   </style>
-
+  
 <!-- Hero Section -->
   <section class="relative min-h-[100vh] overflow-hidden bg-black flex items-center">
     <!-- Animated Background -->
@@ -142,7 +146,7 @@
                 }
               });
             </script>
-
+            
 <!-- Stats Row -->
             <div class="grid grid-cols-3 gap-6 py-6">
               <div>
@@ -193,7 +197,7 @@
                 Try It Now
               </a>
             </div>
-
+            
 <!-- Demo Output -->
             <%= if @typing_text || @demo_output do %>
               <div class="mt-8 p-6 bg-gray-900/80 backdrop-blur border border-gray-700 rounded-xl shadow-2xl animate-fadeIn">
@@ -207,7 +211,7 @@
               </div>
             <% end %>
           </div>
-
+          
 <!-- Right: Interactive Visual -->
           <div class="relative hidden lg:block">
             <div class="relative animate-float">
@@ -293,7 +297,7 @@
                   />
                 </svg>
               </div>
-
+              
 <!-- Orbiting Elements -->
               <div class="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500/20 backdrop-blur rounded-lg px-4 py-2 border border-blue-500/30">
                 <div class="text-sm font-mono text-blue-300">API Docs</div>
@@ -319,7 +323,7 @@
       </div>
     </div>
   </section>
-
+  
 <!-- Features Section -->
 
   <section id="features" class="py-16 px-6 sm:px-12 lg:px-16">
@@ -352,7 +356,7 @@
             Native Rust performance delivers 60-100x faster processing than traditional solutions.
           </p>
         </div>
-
+        
 <!-- Feature 2 -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
           <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
@@ -371,7 +375,7 @@
             Parse PDFs, Word docs, emails, code files, and more with consistent accuracy.
           </p>
         </div>
-
+        
 <!-- Feature 3 -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
           <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
@@ -390,7 +394,7 @@
             AI-powered content extraction that understands context and structure.
           </p>
         </div>
-
+        
 <!-- Feature 4 -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
           <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
@@ -409,7 +413,7 @@
             RESTful APIs with comprehensive SDKs for seamless integration.
           </p>
         </div>
-
+        
 <!-- Feature 5 -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
           <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
@@ -426,7 +430,7 @@
           <h3 class="text-xl font-semibold mb-3">Enterprise Security</h3>
           <p class="text-gray-400">SOC2 compliant with end-to-end encryption and audit trails.</p>
         </div>
-
+        
 <!-- Feature 6 -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
           <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
@@ -448,7 +452,7 @@
       </div>
     </div>
   </section>
-
+  
 <!-- AI Agent Integration Section -->
   <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gradient-to-b from-black to-gray-950">
     <div class="max-w-7xl mx-auto">
@@ -507,7 +511,7 @@
             </div>
           </div>
         </div>
-
+        
 <!-- Right: Benefits -->
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8">
           <h4 class="text-2xl font-semibold mb-6">AI Agent Benefits</h4>
@@ -621,7 +625,7 @@
           </div>
         </div>
       </div>
-
+      
 <!-- Code Example -->
       <div class="mt-12 bg-gray-900/50 rounded-xl p-6 border border-gray-800">
         <h4 class="text-lg font-medium mb-4">Integration Example</h4>
@@ -655,7 +659,7 @@ const response = await openai.complete({
       </div>
     </div>
   </section>
-
+  
 <!-- FAQ Section -->
   <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gray-950">
     <div class="max-w-4xl mx-auto">
@@ -681,7 +685,7 @@ const response = await openai.complete({
             LANG pre-structures your data before it reaches AI, resulting in 99% fewer hallucinations, 100x faster responses, and 80% cost reduction. Instead of sending raw text that AI has to "guess" about, LANG provides clean, structured data that AI can work with accurately. Plus, LANG handles non-text data like networks, filesystems, and databases that generic AI can't process effectively.
           </p>
         </div>
-
+        
 <!-- FAQ Item 2 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-purple-400">
@@ -691,7 +695,7 @@ const response = await openai.complete({
             Our native Rust NIFs deliver 60-100x faster processing than pure Elixir or Python solutions. API responses typically complete in under 100ms, while complex filesystem scans that might take minutes with other tools complete in seconds. Real-time analysis happens at wire speed.
           </p>
         </div>
-
+        
 <!-- FAQ Item 3 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-green-400">
@@ -701,7 +705,7 @@ const response = await openai.complete({
             No! LANG works as a drop-in replacement. Just change your AI's API endpoint to point to LANG - that's it. We automatically enhance any AI agent (GPT, Claude, Gemini, or custom) with structured intelligence. Your existing prompts and workflows continue working, just 10-100x better.
           </p>
         </div>
-
+        
 <!-- FAQ Item 4 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-yellow-400">
@@ -711,7 +715,7 @@ const response = await openai.complete({
             LANG is truly universal - we analyze network traffic patterns, scan entire filesystems, parse database schemas, process production logs, understand code repositories, and more. Our Pro tier ($49/month) unlocks all these "beyond text" capabilities with native performance.
           </p>
         </div>
-
+        
 <!-- FAQ Item 5 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-cyan-400">
@@ -721,7 +725,7 @@ const response = await openai.complete({
             Rate limits depend on your tier: Free gets 1,000 calls/month (rate limited), Plus gets 50,000 calls/month, and Pro gets unlimited API calls. All plans include rate limit headers in responses so you can track usage. Business plans have no limits and priority queues.
           </p>
         </div>
-
+        
 <!-- FAQ Item 6 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-pink-400">
@@ -731,7 +735,7 @@ const response = await openai.complete({
             Absolutely. LANG processes 1TB+ of text daily, handles 10,000+ concurrent WebSocket connections, and supports 50K+ simultaneous users. Our Business plan includes dedicated infrastructure, SLA guarantees, SSO integration, and custom model training. We're SOC2 compliant with end-to-end encryption.
           </p>
         </div>
-
+        
 <!-- FAQ Item 7 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-orange-400">
@@ -741,7 +745,7 @@ const response = await openai.complete({
             LANG supports complex Directed Acyclic Graph (DAG) workflows where multiple AI agents work together. You can chain agents, run them in parallel, or create sophisticated pipelines - all while LANG ensures each agent gets perfectly structured data. This enables building powerful multi-agent systems without the usual complexity.
           </p>
         </div>
-
+        
 <!-- FAQ Item 8 -->
         <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
           <h3 class="text-xl font-semibold mb-3 text-indigo-400">
@@ -772,7 +776,7 @@ const response = await openai.complete({
       </div>
     </div>
   </section>
-
+  
 <!-- Live Demo Playground -->
   <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gradient-to-b from-gray-950 to-black">
     <div class="max-w-6xl mx-auto">
@@ -860,7 +864,7 @@ const response = await openai.complete({
       </div>
     </div>
   </section>
-
+  
 <!-- AI Performance Comparison -->
   <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gradient-to-b from-black to-gray-950">
     <div class="max-w-6xl mx-auto">
@@ -880,7 +884,7 @@ const response = await openai.complete({
           See why raw AI without structured intelligence is just expensive guesswork
         </p>
       </div>
-
+      
 <!-- Benchmark Visualization -->
       <div class="grid lg:grid-cols-2 gap-8 mb-12">
         <!-- Without LANG -->
@@ -949,7 +953,7 @@ const response = await openai.complete({
             <p class="text-sm text-red-300">⚠️ Generic AI hallucinates on structured data</p>
           </div>
         </div>
-
+        
 <!-- With LANG -->
         <div class="bg-gray-900/50 border border-green-900/50 rounded-xl p-8">
           <h3 class="text-2xl font-semibold mb-6 text-green-400">✅ With LANG</h3>
@@ -1017,13 +1021,13 @@ const response = await openai.complete({
           </div>
         </div>
       </div>
-
+      
 <!-- Real Examples Carousel -->
       <div class="relative overflow-hidden">
         <h4 class="text-2xl font-semibold mb-8 text-center">
           Real World Examples
         </h4>
-
+        
 <!-- Mobile: Stack view with swipe -->
         <div class="lg:hidden">
           <div class="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
@@ -1059,7 +1063,7 @@ const response = await openai.complete({
                   </div>
                 </div>
               </div>
-
+              
 <!-- Example 2: Network -->
               <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
                 <h5 class="text-lg font-medium mb-4 text-purple-400">Network Traffic Analysis</h5>
@@ -1089,7 +1093,7 @@ const response = await openai.complete({
                   </div>
                 </div>
               </div>
-
+              
 <!-- Example 3: FileSystem -->
               <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
                 <h5 class="text-lg font-medium mb-4 text-green-400">FileSystem Analysis</h5>
@@ -1119,7 +1123,7 @@ const response = await openai.complete({
                   </div>
                 </div>
               </div>
-
+              
 <!-- Example 4: Logs -->
               <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
                 <h5 class="text-lg font-medium mb-4 text-yellow-400">Production Log Analysis</h5>
@@ -1149,7 +1153,7 @@ const response = await openai.complete({
                   </div>
                 </div>
               </div>
-
+              
 <!-- Example 5: Database -->
               <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
                 <h5 class="text-lg font-medium mb-4 text-cyan-400">Database Schema Analysis</h5>
@@ -1181,13 +1185,13 @@ const response = await openai.complete({
               </div>
             </div>
           </div>
-
+          
 <!-- Mobile scroll hint -->
           <div class="text-center mt-4 text-sm text-gray-500">
             <span>← Swipe to see more examples →</span>
           </div>
         </div>
-
+        
 <!-- Desktop: Current implementation with buttons -->
         <div class="hidden lg:block">
           <div class="bg-gray-900/30 rounded-xl p-8 border border-gray-800">
@@ -1229,7 +1233,7 @@ const response = await openai.complete({
                 </div>
               </div>
             </div>
-
+            
 <!-- Example 2: Network (visible when example_index == 1) -->
             <div :if={@example_index == 1} class="space-y-6">
               <h5 class="text-xl font-medium text-center text-purple-400">
@@ -1269,7 +1273,7 @@ const response = await openai.complete({
                 </div>
               </div>
             </div>
-
+            
 <!-- Example 3: FileSystem (visible when example_index == 2) -->
             <div :if={@example_index == 2} class="space-y-6">
               <h5 class="text-xl font-medium text-center text-green-400">FileSystem Analysis</h5>
@@ -1308,7 +1312,7 @@ const response = await openai.complete({
                 </div>
               </div>
             </div>
-
+            
 <!-- Example 4: Logs (visible when example_index == 3) -->
             <div :if={@example_index == 3} class="space-y-6">
               <h5 class="text-xl font-medium text-center text-yellow-400">
@@ -1348,7 +1352,7 @@ const response = await openai.complete({
                 </div>
               </div>
             </div>
-
+            
 <!-- Example 5: Database (visible when example_index == 4) -->
             <div :if={@example_index == 4} class="space-y-6">
               <h5 class="text-xl font-medium text-center text-cyan-400">
@@ -1391,7 +1395,7 @@ const response = await openai.complete({
               </div>
             </div>
           </div>
-
+          
 <!-- Navigation Controls -->
           <div class="flex justify-center items-center gap-4 mt-6">
             <button
@@ -1408,7 +1412,7 @@ const response = await openai.complete({
                 </path>
               </svg>
             </button>
-
+            
 <!-- Dots Indicator -->
             <div class="flex gap-2">
               <button
@@ -1472,7 +1476,7 @@ const response = await openai.complete({
       </div>
     </div>
   </section>
-
+  
 <!-- Pricing Section -->
   <section id="pricing" class="py-16 px-6 sm:px-12 lg:px-16 bg-gray-900/50">
     <div class="max-w-7xl mx-auto">
@@ -1487,7 +1491,7 @@ const response = await openai.complete({
           Start free and scale as you grow. No hidden fees, no surprises.
         </p>
       </div>
-
+      
 <!-- Tab Switcher -->
       <div class="flex justify-center mb-8">
         <div class="bg-gray-900 border border-gray-800 rounded-lg p-1 flex">
@@ -1605,7 +1609,7 @@ const response = await openai.complete({
             Start Free
           </a>
         </div>
-
+        
 <!-- Plus Tier -->
         <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 relative">
           <div class="space-y-4 mb-8">
@@ -1708,7 +1712,7 @@ const response = await openai.complete({
             Get Started
           </button>
         </div>
-
+        
 <!-- Pro Tier -->
         <div class="bg-gray-900 border-2 border-blue-500 rounded-2xl p-8 relative">
           <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
@@ -1850,7 +1854,7 @@ const response = await openai.complete({
           </button>
         </div>
       </div>
-
+      
 <!-- Business Tab Content -->
       <div :if={@pricing_tab == "business"} class="max-w-3xl mx-auto">
         <div class="bg-gray-900 border-2 border-purple-500 rounded-2xl p-8">
@@ -2013,7 +2017,7 @@ const response = await openai.complete({
       </div>
     </div>
   </section>
-
+  
 <!-- Integration Partners -->
   <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gray-950/50">
     <div class="max-w-6xl mx-auto text-center">
@@ -2054,7 +2058,7 @@ const response = await openai.complete({
       </div>
     </div>
   </section>
-
+  
 <!-- CTA Section -->
   <section class="py-16 px-6 sm:px-12 lg:px-16">
     <div class="max-w-4xl mx-auto text-center">

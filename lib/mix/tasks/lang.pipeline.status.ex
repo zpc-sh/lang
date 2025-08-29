@@ -21,7 +21,8 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
 
   @impl true
   def run(argv) do
-    {opts, rest, _} = OptionParser.parse(argv, switches: [violations: :boolean, json: :boolean, only: :string])
+    {opts, rest, _} =
+      OptionParser.parse(argv, switches: [violations: :boolean, json: :boolean, only: :string])
 
     case rest do
       [run_id] when is_binary(run_id) ->
@@ -45,7 +46,9 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
         end
 
       _ ->
-        Mix.shell().info("Usage: mix lang.pipeline.status RUN_ID [--violations] [--json] [--only VALUE]")
+        Mix.shell().info(
+          "Usage: mix lang.pipeline.status RUN_ID [--violations] [--json] [--only VALUE]"
+        )
     end
   end
 
@@ -54,7 +57,11 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
     Mix.shell().info("Run: #{summary.id}")
     Mix.shell().info("Status: #{summary.status}")
     Mix.shell().info("Files: #{summary.file_count}")
-    Mix.shell().info("Warnings: #{summary.warnings_count}  Critical: #{summary.critical_issues_count}  Violations: #{summary.violations_count}")
+
+    Mix.shell().info(
+      "Warnings: #{summary.warnings_count}  Critical: #{summary.critical_issues_count}  Violations: #{summary.violations_count}"
+    )
+
     Mix.shell().info("Duration: #{summary.duration_ms}ms")
     Mix.shell().info("")
   end
@@ -90,12 +97,14 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
     violations_summary =
       if opts[:violations] do
         q = Violation |> Ash.Query.filter(analyzed_file.analysis_session_id == ^run.id)
+
         case Ash.read(q) do
           {:ok, violations} ->
             {_total, counts} = summarize_violations(violations, opts[:only])
             counts
 
-          _ -> nil
+          _ ->
+            nil
         end
       else
         nil
@@ -122,6 +131,7 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
       {:ok, files0} ->
         files = maybe_filter_files(files0, opts[:only])
         total = length(files)
+
         {completed, failed, skipped} =
           Enum.reduce(files, {0, 0, 0}, fn f, {c, f2, s} ->
             case f.status do
@@ -132,7 +142,9 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
             end
           end)
 
-        Mix.shell().info("Files (#{total}) - completed: #{completed}, failed: #{failed}, skipped: #{skipped}")
+        Mix.shell().info(
+          "Files (#{total}) - completed: #{completed}, failed: #{failed}, skipped: #{skipped}"
+        )
 
         Enum.each(files, fn f ->
           viol_count = length(f.violations || [])
@@ -206,8 +218,11 @@ defmodule Mix.Tasks.Lang.Pipeline.Status do
 
   defp summarize_violations(violations, only) do
     counts = reduce_severity_counts(violations)
+
     case parse_severity(to_string(only || "")) do
-      nil -> {length(violations), counts}
+      nil ->
+        {length(violations), counts}
+
       sev ->
         filtered_total = Enum.count(violations, &(&1.severity == sev))
         {filtered_total, Map.take(counts, [sev])}

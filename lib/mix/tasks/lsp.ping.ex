@@ -19,9 +19,9 @@ defmodule Mix.Tasks.Lsp.Ping do
     case API.ping() do
       {:ok, result} ->
         Mix.shell().info("LSP ping OK: #{inspect(result)}")
+
       {:error, reason} ->
         Mix.shell().error("LSP ping FAILED: #{inspect(reason)}")
     end
   end
 end
-

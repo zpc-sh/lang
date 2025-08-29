@@ -202,6 +202,7 @@ defmodule Lang.LSP.Dispatch do
     path = Lang.JSONLD.get(params, "path") || Lang.JSONLD.get(params, "root")
     lang = Lang.JSONLD.get(params, "language")
     pat = Lang.JSONLD.get(params, "pattern")
+
     opts = [
       max_results: Lang.JSONLD.get(params, "max_results", 100),
       max_depth: Lang.JSONLD.get(params, "max_depth", 15)
@@ -281,7 +282,16 @@ defmodule Lang.LSP.Dispatch do
           end)
         end)
 
-        wrap_result(id, {:ok, %{stream_id: stream_id, topic: topic, interval_ms: interval_ms, duration_ms: duration_ms}})
+        wrap_result(
+          id,
+          {:ok,
+           %{
+             stream_id: stream_id,
+             topic: topic,
+             interval_ms: interval_ms,
+             duration_ms: duration_ms
+           }}
+        )
     end
   end
 
@@ -294,30 +304,46 @@ defmodule Lang.LSP.Dispatch do
   # Storage handlers (Dirup-backed)
   # ----------------------------------------------------------------------------
   defp storage_connect(%{"id" => id}) do
-    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.get_status()), else: wrap_result(id, {:error, :dirup_disabled})
+    if dirup_enabled?(),
+      do: wrap_result(id, Lang.Storage.Dirup.get_status()),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_get_status(%{"id" => id}) do
-    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.get_status()), else: wrap_result(id, {:error, :dirup_disabled})
+    if dirup_enabled?(),
+      do: wrap_result(id, Lang.Storage.Dirup.get_status()),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_create_scratch(%{"id" => id, "params" => raw}) do
     params = maybe_json_map(raw)
-    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.create_scratch(params)), else: wrap_result(id, {:error, :dirup_disabled})
+
+    if dirup_enabled?(),
+      do: wrap_result(id, Lang.Storage.Dirup.create_scratch(params)),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_get_scratch(%{"id" => id, "params" => raw}) do
     params = maybe_json_map(raw)
     scratch_id = Lang.JSONLD.get(params, "id") || Lang.JSONLD.get(params, "scratch_id")
-    if dirup_enabled?(), do: wrap_result(id, (scratch_id && Lang.Storage.Dirup.get_scratch(scratch_id)) || {:error, :missing_id}), else: wrap_result(id, {:error, :dirup_disabled})
+
+    if dirup_enabled?(),
+      do:
+        wrap_result(
+          id,
+          (scratch_id && Lang.Storage.Dirup.get_scratch(scratch_id)) || {:error, :missing_id}
+        ),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_update_scratch(%{"id" => id, "params" => raw}) do
     params = maybe_json_map(raw)
     scratch_id = Lang.JSONLD.get(params, "id") || Lang.JSONLD.get(params, "scratch_id")
     attrs = Lang.JSONLD.get(params, "attrs") || Map.drop(params, ["id", "scratch_id"])
+
     if dirup_enabled?() do
-      wrap_result(id,
+      wrap_result(
+        id,
         if scratch_id do
           Lang.Storage.Dirup.update_scratch(scratch_id, attrs)
         else
@@ -331,17 +357,30 @@ defmodule Lang.LSP.Dispatch do
 
   defp storage_cleanup_scratch(%{"id" => id, "params" => raw}) do
     params = maybe_json_map(raw)
-    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.cleanup_scratch(params)), else: wrap_result(id, {:error, :dirup_disabled})
+
+    if dirup_enabled?(),
+      do: wrap_result(id, Lang.Storage.Dirup.cleanup_scratch(params)),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_get_project_context(%{"id" => id, "params" => raw}) do
     params = maybe_json_map(raw)
     project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
-    if dirup_enabled?(), do: wrap_result(id, (project_id && Lang.Storage.Dirup.get_project_context(project_id)) || {:error, :missing_project_id}), else: wrap_result(id, {:error, :dirup_disabled})
+
+    if dirup_enabled?(),
+      do:
+        wrap_result(
+          id,
+          (project_id && Lang.Storage.Dirup.get_project_context(project_id)) ||
+            {:error, :missing_project_id}
+        ),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_validate_auth(%{"id" => id}) do
-    if dirup_enabled?(), do: wrap_result(id, Lang.Storage.Dirup.validate_auth()), else: wrap_result(id, {:error, :dirup_disabled})
+    if dirup_enabled?(),
+      do: wrap_result(id, Lang.Storage.Dirup.validate_auth()),
+      else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp dirup_enabled? do
@@ -615,7 +654,7 @@ defmodule Lang.LSP.Dispatch do
     project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
     graph = Lang.InMemory.Store.get(:graphs, project_id, %{nodes: [], edges: []})
     q = Lang.JSONLD.get(params, "query", "") |> to_string() |> String.downcase()
-    
+
     results =
       Enum.filter(graph.nodes, fn n ->
         s = String.downcase(to_string(n["label"] || n[:label] || n["id"] || n[:id] || ""))
@@ -868,6 +907,7 @@ defmodule Lang.LSP.Dispatch do
   defp mcp_connection_destroy(%{"id" => id, "params" => raw_params}) do
     params = maybe_json_map(raw_params)
     conn_id = Lang.JSONLD.get(params, "connection_id") || Lang.JSONLD.get(params, "id")
+
     case Lang.MCP.ConnectionManager.destroy_connection(conn_id) do
       :ok ->
         wrap_result(id, {:ok, %{destroyed: true}})
@@ -880,6 +920,7 @@ defmodule Lang.LSP.Dispatch do
   defp mcp_connection_status(%{"id" => id, "params" => raw_params}) do
     params = maybe_json_map(raw_params)
     conn_id = Lang.JSONLD.get(params, "connection_id") || Lang.JSONLD.get(params, "id")
+
     case Lang.MCP.ConnectionManager.get_status(conn_id) do
       {:ok, status} ->
         wrap_result(id, {:ok, status})
@@ -1133,11 +1174,18 @@ defmodule Lang.LSP.Dispatch do
       query: Lang.JSONLD.get(params, "query", ""),
       context: Lang.JSONLD.get(params, "context", %{}),
       scope: Lang.JSONLD.get(params, "scope"),
-      target_element: Lang.JSONLD.get(params, "target_element") || Lang.JSONLD.get(params, "targetElement"),
-      change_description: Lang.JSONLD.get(params, "change_description") || Lang.JSONLD.get(params, "changeDescription"),
-      analysis_depth: parse_atom(Lang.JSONLD.get(params, "analysis_depth") || Lang.JSONLD.get(params, "analysisDepth")),
+      target_element:
+        Lang.JSONLD.get(params, "target_element") || Lang.JSONLD.get(params, "targetElement"),
+      change_description:
+        Lang.JSONLD.get(params, "change_description") ||
+          Lang.JSONLD.get(params, "changeDescription"),
+      analysis_depth:
+        parse_atom(
+          Lang.JSONLD.get(params, "analysis_depth") || Lang.JSONLD.get(params, "analysisDepth")
+        ),
       use_graph_reasoning: Lang.JSONLD.get(params, "use_graph_reasoning", true),
-      provider_preference: Lang.JSONLD.get(params, "provider_preference") || Lang.JSONLD.get(params, "provider"),
+      provider_preference:
+        Lang.JSONLD.get(params, "provider_preference") || Lang.JSONLD.get(params, "provider"),
       user_id: Lang.JSONLD.get(params, "user_id") || Lang.JSONLD.get(params, "user"),
       project_id: Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project"),
       run_id: Lang.JSONLD.get(params, "run_id"),
@@ -1599,7 +1647,10 @@ defmodule Lang.LSP.Dispatch do
       kind: kind,
       input: Lang.JSONLD.get(params, "input", %{}),
       model_type: Lang.JSONLD.get(params, "model_type") || Lang.JSONLD.get(params, "model"),
-      target_ratio: parse_decimal(Lang.JSONLD.get(params, "target_ratio") || Lang.JSONLD.get(params, "targetRatio")),
+      target_ratio:
+        parse_decimal(
+          Lang.JSONLD.get(params, "target_ratio") || Lang.JSONLD.get(params, "targetRatio")
+        ),
       user_id: Lang.JSONLD.get(params, "user_id") || Lang.JSONLD.get(params, "user"),
       project_id: Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project"),
       run_id: Lang.JSONLD.get(params, "run_id"),
@@ -1629,6 +1680,7 @@ defmodule Lang.LSP.Dispatch do
   defp parse_decimal(_), do: nil
 
   defp normalize_sanitize_type(v) when is_atom(v), do: v
+
   defp normalize_sanitize_type(v) when is_binary(v) do
     case String.downcase(v) do
       "html" -> :html
@@ -1638,14 +1690,19 @@ defmodule Lang.LSP.Dispatch do
       _ -> :generic
     end
   end
+
   defp normalize_sanitize_type(_), do: :generic
 
   defp timeline(operation, %{"id" => id, "params" => raw_params}) do
     params = maybe_json_map(raw_params)
+
     with :ok <- realtime_request?(params) do
       case operation do
         :create ->
-          content_id = Lang.JSONLD.get(params, "content_id") || Lang.JSONLD.get(params, "content") || "default_#{:rand.uniform(10000)}"
+          content_id =
+            Lang.JSONLD.get(params, "content_id") || Lang.JSONLD.get(params, "content") ||
+              "default_#{:rand.uniform(10000)}"
+
           initial_state = Lang.JSONLD.get(params, "initial_state", %{})
           metadata = Lang.JSONLD.get(params, "metadata", %{})
 
@@ -1658,7 +1715,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :add_state ->
-          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+
           state_data = Lang.JSONLD.get(params, "state_data", %{})
           metadata = Lang.JSONLD.get(params, "metadata", %{})
 
@@ -1675,7 +1734,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :navigate ->
-          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+
           state_id = Lang.JSONLD.get(params, "state_id")
 
           if timeline_id && state_id do
@@ -1691,7 +1752,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :branch ->
-          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+
           from_state_id = Lang.JSONLD.get(params, "from_state_id")
           branch_name = Lang.JSONLD.get(params, "branch_name") || Lang.JSONLD.get(params, "name")
 
@@ -1708,7 +1771,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :diff ->
-          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+
           from_state_id = Lang.JSONLD.get(params, "from_state_id")
           to_state_id = Lang.JSONLD.get(params, "to_state_id")
 
@@ -1725,7 +1790,9 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :replay ->
-          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+
           from_state_id = Lang.JSONLD.get(params, "from_state_id")
           to_state_id = Lang.JSONLD.get(params, "to_state_id")
           options = Lang.JSONLD.get(params, "options", %{})
@@ -1748,7 +1815,8 @@ defmodule Lang.LSP.Dispatch do
           end
 
         :analyze ->
-          timeline_id = Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
 
           if timeline_id do
             case Lang.Timeline.Core.analyze_timeline(timeline_id) do

@@ -65,19 +65,25 @@ defmodule Nullity.CDFM.Spec do
         %{} = local -> Map.merge(ctx, local)
         _ -> ctx
       end
+
     id = raw["@id"] || raw[:id]
     name_from_id = normalize_id_to_name(id, ctx)
     short_name = raw["name"] || raw[:name] || ""
-    name = cond do
-      is_binary(name_from_id) and name_from_id != "" -> name_from_id
-      String.contains?(short_name, ".") -> short_name
-      true -> short_name
-    end
+
+    name =
+      cond do
+        is_binary(name_from_id) and name_from_id != "" -> name_from_id
+        String.contains?(short_name, ".") -> short_name
+        true -> short_name
+      end
 
     impl = raw["implementation"] || raw[:implementation] || %{}
     impl_module = raw["module"] || raw[:module] || impl["impl_module"] || impl[:impl_module]
     impl_file = impl["file"] || impl[:file] || impl["impl_file"] || impl[:impl_file]
-    impl_function = impl["function"] || impl[:function] || impl["impl_function"] || impl[:impl_function]
+
+    impl_function =
+      impl["function"] || impl[:function] || impl["impl_function"] || impl[:impl_function]
+
     impl_arity = impl["arity"] || impl[:arity] || impl["impl_arity"] || impl[:impl_arity]
 
     %Method{
@@ -95,7 +101,10 @@ defmodule Nullity.CDFM.Spec do
       result_schema: raw["result_schema"] || raw[:result_schema] || build_result_schema(raw),
       metadata:
         (raw["metadata"] || raw[:metadata] || %{})
-        |> Map.merge(Map.take(impl, ["track", :track, "dependencies", :dependencies]) |> stringify_keys()),
+        |> Map.merge(
+          Map.take(impl, ["track", :track, "dependencies", :dependencies])
+          |> stringify_keys()
+        ),
       links: raw["links"] || raw[:links] || %{}
     }
   end
@@ -130,6 +139,7 @@ defmodule Nullity.CDFM.Spec do
   """
   def parse_spec!(content) when is_binary(content) do
     trimmed = String.trim_leading(content)
+
     cond do
       String.starts_with?(trimmed, ["{", "["]) -> parse_jsonld!(content)
       true -> parse_yaml!(content)
@@ -164,17 +174,21 @@ defmodule Nullity.CDFM.Spec do
   defp yaml_to_elixir(other), do: other
 
   defp normalize_id_to_name(nil, _ctx), do: nil
+
   defp normalize_id_to_name(id, ctx) when is_binary(id) do
     cond do
       String.starts_with?(id, "http") and String.contains?(id, "#") ->
         String.split(id, "#") |> List.last()
+
       String.contains?(id, ":") ->
         # compact IRI, e.g., "lang:agent.spawn"
         [prefix, rest] = String.split(id, ":", parts: 2)
         _iri = Map.get(ctx, prefix) || Map.get(ctx, String.to_atom(prefix))
         # Return as dot-name with lang prefix
         if prefix in ["lang", :lang], do: "lang." <> rest, else: rest
-      true -> id
+
+      true ->
+        id
     end
   end
 
@@ -195,6 +209,7 @@ defmodule Nullity.CDFM.Spec do
   defp to_atom_maybe(v) when is_binary(v), do: String.to_atom(v)
 
   defp normalize_priority(nil), do: nil
+
   defp normalize_priority(p) when is_binary(p) do
     case String.downcase(p) do
       "critical" -> "Critical"
@@ -208,6 +223,7 @@ defmodule Nullity.CDFM.Spec do
   # Build schemas from JSON-LD parameters/returns blocks if present
   defp build_params_schema(raw) do
     params = raw["parameters"] || raw[:parameters]
+
     if is_list(params) do
       props =
         params
@@ -239,11 +255,13 @@ defmodule Nullity.CDFM.Spec do
 
   defp build_result_schema(raw) do
     returns = raw["returns"] || raw[:returns]
+
     if is_map(returns) do
       success = returns["success"] || returns[:success]
       error = returns["error"] || returns[:error]
 
       schemas = []
+
       schemas =
         if is_map(success) do
           [schema_from_kv(success) | schemas]
@@ -272,9 +290,11 @@ defmodule Nullity.CDFM.Spec do
 
     %{"type" => "object", "properties" => props}
   end
+
   defp schema_from_kv(_), do: %{"type" => "object"}
 
   defp map_xsd_type(nil), do: "object"
+
   defp map_xsd_type(t) when is_binary(t) do
     case String.downcase(t) do
       "xsd:string" -> "string"

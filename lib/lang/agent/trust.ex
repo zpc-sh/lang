@@ -8,9 +8,19 @@ defmodule Lang.Agent.Trust do
     with {:ok, agent} <- Agent.read_by_id(agent_id),
          {:ok, updated} <-
            agent
-           |> Ash.Changeset.for_update(:update_trust_score, %{new_score: Decimal.from_float(new_score), reason: reason})
+           |> Ash.Changeset.for_update(:update_trust_score, %{
+             new_score: Decimal.from_float(new_score),
+             reason: reason
+           })
            |> Ash.update() do
-      AgentEvents.track_trust_update(agent_id, agent.trust_score, updated.trust_score, reason, %{})
+      AgentEvents.track_trust_update(
+        agent_id,
+        agent.trust_score,
+        updated.trust_score,
+        reason,
+        %{}
+      )
+
       {:ok, updated}
     else
       nil -> {:error, :not_found}

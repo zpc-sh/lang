@@ -35,25 +35,31 @@ defmodule Mix.Tasks.Lsp.Validate do
       {:ok, lines} ->
         md = Enum.join(List.wrap(lines), "\n")
         rows = extract_rows(md)
+
         rows
         |> Enum.flat_map(fn r ->
           Validator.validate_doc_row(r)
           |> Enum.map(fn issue -> "docs/lsp.md: #{r.method}: #{issue}" end)
         end)
-      {:error, reason} -> ["failed to read docs/lsp.md: #{inspect(reason)}"]
+
+      {:error, reason} ->
+        ["failed to read docs/lsp.md: #{inspect(reason)}"]
     end
   end
 
   defp validate_specs(dir) do
-    files = case FSScanner.search(dir, ~S/\.(jsonld|ya?ml)$/, max_results: 50_000) do
-      {:ok, results} when is_list(results) ->
-        Enum.map(results, fn
-          %{:path => path} -> path
-          %{"path" => path} -> path
-          path when is_binary(path) -> path
-        end)
-      _ -> []
-    end
+    files =
+      case FSScanner.search(dir, ~S/\.(jsonld|ya?ml)$/, max_results: 50_000) do
+        {:ok, results} when is_list(results) ->
+          Enum.map(results, fn
+            %{:path => path} -> path
+            %{"path" => path} -> path
+            path when is_binary(path) -> path
+          end)
+
+        _ ->
+          []
+      end
 
     files
     |> Enum.flat_map(&validate_spec_file/1)
@@ -106,7 +112,9 @@ defmodule Mix.Tasks.Lsp.Validate do
         desc = desc_cell
         file = impl_from_cell(file_cell)
         %{method: method, status: status, priority: priority, description: desc, impl_file: file}
-      _ -> nil
+
+      _ ->
+        nil
     end
   end
 

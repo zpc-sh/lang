@@ -41,4 +41,3 @@ defmodule Lang.InMemory.Store do
     :persistent_term.put(@store_key, new_store)
   end
 end
-

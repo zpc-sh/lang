@@ -28,7 +28,13 @@ defmodule LangWeb.Api.V2.SpatialControllerSuccessTest do
   end
 
   test "trace_path returns shortest path", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/trace_path/#{project_id}", %{from: "a.ex", to: "c.ex", language: "elixir"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/trace_path/#{project_id}", %{
+        from: "a.ex",
+        to: "c.ex",
+        language: "elixir"
+      })
+
     body = json_response(conn, 200)
     assert body["from"] == "a.ex"
     assert body["to"] == "c.ex"
@@ -38,34 +44,66 @@ defmodule LangWeb.Api.V2.SpatialControllerSuccessTest do
   end
 
   test "find_related returns related nodes", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/find_related/#{project_id}", %{file: "a.ex", language: "elixir"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/find_related/#{project_id}", %{
+        file: "a.ex",
+        language: "elixir"
+      })
+
     body = json_response(conn, 200)
     assert body["file"] == "a.ex"
     assert is_list(body["related"]) or is_list(body[:related])
   end
 
   test "traverse returns symbols when kinds provided", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/traverse/#{project_id}", %{file: "a.ex", depth: 2, language: "elixir", kinds: "function"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/traverse/#{project_id}", %{
+        file: "a.ex",
+        depth: 2,
+        language: "elixir",
+        kinds: "function"
+      })
+
     body = json_response(conn, 200)
     assert is_list(body["nodes"]) or is_list(body[:nodes])
     assert is_list(body["edges"]) or is_list(body[:edges])
     # symbols map should include a.ex with function entries
     symbols = body["symbols"] || %{}
     assert Map.has_key?(symbols, "a.ex")
-    assert Enum.any?(symbols["a.ex"], fn s -> (s["kind"] || s[:kind]) in ["function", :function] end)
+
+    assert Enum.any?(symbols["a.ex"], fn s ->
+             (s["kind"] || s[:kind]) in ["function", :function]
+           end)
   end
 
   test "traverse honors types filter (use only)", %{conn: conn, project_id: project_id} do
     # From a.ex, only 'import' edge exists first; with types=use, graph should not expand
-    conn = get(conn, ~p"/api/v2/spatial/traverse/#{project_id}", %{file: "a.ex", depth: 2, language: "elixir", types: "use"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/traverse/#{project_id}", %{
+        file: "a.ex",
+        depth: 2,
+        language: "elixir",
+        types: "use"
+      })
+
     body = json_response(conn, 200)
     nodes = body["nodes"] || []
     assert length(nodes) == 1
     assert (List.first(nodes)["file"] || List.first(nodes)[:file]) == "a.ex"
   end
 
-  test "trace_path honors types filter (use only yields not_found)", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/trace_path/#{project_id}", %{from: "a.ex", to: "c.ex", language: "elixir", types: "use"})
+  test "trace_path honors types filter (use only yields not_found)", %{
+    conn: conn,
+    project_id: project_id
+  } do
+    conn =
+      get(conn, ~p"/api/v2/spatial/trace_path/#{project_id}", %{
+        from: "a.ex",
+        to: "c.ex",
+        language: "elixir",
+        types: "use"
+      })
+
     body = json_response(conn, 200)
     assert body["not_found"] == true
   end

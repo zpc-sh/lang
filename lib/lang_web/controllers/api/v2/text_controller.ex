@@ -36,6 +36,7 @@ defmodule LangWeb.Api.V2.TextController do
   """
   def parse(conn, params) do
     integrity? = truthy?(Map.get(params, "integrity"))
+
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_parse_options(params),
          {:ok, document} <- parse_content(content, options),
@@ -79,6 +80,7 @@ defmodule LangWeb.Api.V2.TextController do
   """
   def entities(conn, params) do
     integrity? = truthy?(Map.get(params, "integrity"))
+
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_entity_options(params),
          {:ok, document} <- parse_content(content, %{format: detect_format(content)}),
@@ -111,6 +113,7 @@ defmodule LangWeb.Api.V2.TextController do
   """
   def semantic(conn, params) do
     integrity? = truthy?(Map.get(params, "integrity"))
+
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_semantic_options(params),
          {:ok, document} <- parse_content(content, options),
@@ -145,6 +148,7 @@ defmodule LangWeb.Api.V2.TextController do
   """
   def stylometry(conn, params) do
     integrity? = truthy?(Map.get(params, "integrity"))
+
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_stylometry_options(params),
          {:ok, analysis} <- perform_stylometric_analysis(content, options) do
@@ -180,6 +184,7 @@ defmodule LangWeb.Api.V2.TextController do
   """
   def markdown_ld(conn, params) do
     integrity? = truthy?(Map.get(params, "integrity"))
+
     with {:ok, content} <- validate_content(params),
          :ok <- validate_markdown_format(content),
          {:ok, document} <- parse_markdown_ld(content),
@@ -211,6 +216,7 @@ defmodule LangWeb.Api.V2.TextController do
   """
   def analyze(conn, params) do
     integrity? = truthy?(Map.get(params, "integrity"))
+
     with {:ok, content} <- validate_content(params),
          {:ok, options} <- validate_analyze_options(params),
          {:ok, results} <-
@@ -800,7 +806,7 @@ defmodule LangWeb.Api.V2.TextController do
     end
   end
 
-  defp truthy?(v) when is_binary(v), do: String.downcase(v) in ["1","true","yes","on"]
+  defp truthy?(v) when is_binary(v), do: String.downcase(v) in ["1", "true", "yes", "on"]
   defp truthy?(v) when is_boolean(v), do: v
   defp truthy?(_), do: false
 end

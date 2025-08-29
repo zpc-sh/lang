@@ -16,13 +16,15 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
       spec_status: method_map[:spec_status] || method_map["spec_status"],
       impl_file: method_map[:impl_file] || method_map["impl_file"],
       impl_module: method_map[:impl_module] || method_map["impl_module"],
-      impl_function: to_string(method_map[:impl_function] || method_map["impl_function"] || "handle"),
+      impl_function:
+        to_string(method_map[:impl_function] || method_map["impl_function"] || "handle"),
       impl_arity: method_map[:impl_arity] || method_map["impl_arity"],
       params_schema: method_map[:params_schema] || method_map["params_schema"] || %{},
       result_schema: method_map[:result_schema] || method_map["result_schema"] || %{},
       links: method_map[:links] || method_map["links"] || %{},
       metadata: method_map[:metadata] || method_map["metadata"] || %{}
     }
+
     cond do
       ensure_repo_started() and function_exported?(LspMethod, :upsert, 1) ->
         case LspMethod.upsert(attrs) do
@@ -60,7 +62,9 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
                  metadata: m.metadata
                }
              end)}
-          _ -> read_all_from_specs_dir()
+
+          _ ->
+            read_all_from_specs_dir()
         end
 
       true ->
@@ -73,6 +77,7 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
     cond do
       ensure_repo_started() and function_exported?(LspMethod, :delete_by_name, 1) ->
         LspMethod.delete_by_name(name)
+
       true ->
         delete_method_from_specs(name)
     end
@@ -84,7 +89,9 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
       |> Enum.flat_map(fn pat -> Path.wildcard(Path.join(dir, pat)) end)
 
     case Enum.find(files, fn path -> file_contains_method?(path, name) end) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       path ->
         case File.rm(path) do
           :ok -> {:ok, :deleted}
@@ -98,19 +105,24 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
       {:ok, content} ->
         specs = Nullity.CDFM.Spec.parse_spec!(content)
         Enum.any?(specs, fn s -> s.name == name end)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 
   defp ensure_repo_started do
     try do
       case Process.whereis(Lang.Repo) do
-        pid when is_pid(pid) -> true
+        pid when is_pid(pid) ->
+          true
+
         _ ->
           # Start minimal dependencies needed for Repo
           _ = Application.ensure_all_started(:logger)
           _ = Application.ensure_all_started(:ssl)
           _ = Application.ensure_all_started(:postgrex)
+
           case Lang.Repo.start_link() do
             {:ok, _} -> true
             {:error, {:already_started, _}} -> true

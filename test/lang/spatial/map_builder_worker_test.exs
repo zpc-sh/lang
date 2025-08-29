@@ -10,7 +10,13 @@ defmodule Lang.Spatial.MapBuilderWorkerTest do
   @moduletag :integration
 
   test "map builder creates snapshot with fs stats when path provided" do
-    {:ok, user} = User.create(%{email: "spatial@test.local", name: "Spatial User", organization_name: "Spatial Org"})
+    {:ok, user} =
+      User.create(%{
+        email: "spatial@test.local",
+        name: "Spatial User",
+        organization_name: "Spatial Org"
+      })
+
     {:ok, project} = Analysis.create_project(%{name: "Spatial Project", user_id: user.id})
 
     tmp = System.tmp_dir!() |> Path.join("spatial_map_test")
@@ -18,7 +24,10 @@ defmodule Lang.Spatial.MapBuilderWorkerTest do
     File.write!(Path.join(tmp, "a.ex"), "defmodule A do end\n")
     File.write!(Path.join(tmp, "b.js"), "function b() {}\n")
 
-    assert :ok = MapBuilderWorker.perform(%Oban.Job{args: %{"project_id" => project.id, "path" => tmp}})
+    assert :ok =
+             MapBuilderWorker.perform(%Oban.Job{
+               args: %{"project_id" => project.id, "path" => tmp}
+             })
 
     {:ok, map} =
       Map
@@ -30,4 +39,3 @@ defmodule Lang.Spatial.MapBuilderWorkerTest do
     assert is_map(map.stats)
   end
 end
-

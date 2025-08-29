@@ -60,7 +60,15 @@ defmodule Lang.Api do
   Used by deployment verification.
   """
   def resources do
-    domains = [Lang.Analyses, Lang.Spatial, Lang.Think, Lang.Generate, Lang.Accounts, Lang.Billing]
+    domains = [
+      Lang.Analyses,
+      Lang.Spatial,
+      Lang.Think,
+      Lang.Generate,
+      Lang.Accounts,
+      Lang.Billing
+    ]
+
     Enum.map(domains, fn domain ->
       resources =
         try do

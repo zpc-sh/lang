@@ -3,7 +3,12 @@ defmodule LangWeb.Api.V2.TextView do
   alias LangWeb.Api.V2.TextView
   alias MarkdownLD.Hash
 
-  def render("parse_result.json", %{document: document, analysis: analysis, metadata: metadata, integrity?: integrity?}) do
+  def render("parse_result.json", %{
+        document: document,
+        analysis: analysis,
+        metadata: metadata,
+        integrity?: integrity?
+      }) do
     base = %{
       "@context" => "https://lang.nulity.com/context/text",
       "@type" => "ParseResult",
@@ -14,10 +19,12 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+
     maybe_integrity(base, integrity?)
   end
 
-  def render("parse_result.json", assigns), do: render("parse_result.json", Map.put(assigns, :integrity?, false))
+  def render("parse_result.json", assigns),
+    do: render("parse_result.json", Map.put(assigns, :integrity?, false))
 
   def render("entities.json", %{entities: entities, metadata: metadata, integrity?: integrity?}) do
     base = %{
@@ -29,10 +36,12 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+
     maybe_integrity(base, integrity?)
   end
 
-  def render("entities.json", assigns), do: render("entities.json", Map.put(assigns, :integrity?, false))
+  def render("entities.json", assigns),
+    do: render("entities.json", Map.put(assigns, :integrity?, false))
 
   def render("semantic.json", %{
         triples: triples,
@@ -56,10 +65,12 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+
     maybe_integrity(base, integrity?)
   end
 
-  def render("semantic.json", assigns), do: render("semantic.json", Map.put(assigns, :integrity?, false))
+  def render("semantic.json", assigns),
+    do: render("semantic.json", Map.put(assigns, :integrity?, false))
 
   def render("stylometry.json", %{
         fingerprint: fingerprint,
@@ -83,10 +94,12 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+
     maybe_integrity(base, integrity?)
   end
 
-  def render("stylometry.json", assigns), do: render("stylometry.json", Map.put(assigns, :integrity?, false))
+  def render("stylometry.json", assigns),
+    do: render("stylometry.json", Map.put(assigns, :integrity?, false))
 
   def render("markdown_ld.json", %{
         markdown: markdown,
@@ -112,13 +125,16 @@ defmodule LangWeb.Api.V2.TextView do
         "metadata" => metadata
       }
     }
+
     maybe_integrity(base, integrity?)
   end
 
-  def render("markdown_ld.json", assigns), do: render("markdown_ld.json", Map.put(assigns, :integrity?, false))
+  def render("markdown_ld.json", assigns),
+    do: render("markdown_ld.json", Map.put(assigns, :integrity?, false))
 
   def render("comprehensive.json", results) do
     integrity? = Map.get(results, :integrity?, false)
+
     base = %{
       "@context" => "https://lang.nulity.com/context/comprehensive",
       "@type" => "ComprehensiveAnalysisResult",
@@ -135,6 +151,7 @@ defmodule LangWeb.Api.V2.TextView do
         }
       }
     }
+
     maybe_integrity(base, integrity?)
   end
 
@@ -360,6 +377,7 @@ defmodule LangWeb.Api.V2.TextView do
   # Integrity helper
   defp maybe_integrity(map, true) do
     data = Map.get(map, "data")
+
     case Hash.dataset_hash(data) do
       {:ok, integ} -> Map.put(map, "integrity", integ)
       _ -> map

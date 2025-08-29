@@ -71,7 +71,10 @@ defmodule Lang.Workers.FileSystemScanWorker do
                 |> Keyword.get(:finalize_delay_seconds, 120)
 
               Lang.Workers.RunFinalizeWorker
-              |> apply(:new, [%{"run_id" => session_id}, [queue: :analysis, scheduled_at: DateTime.add(DateTime.utc_now(), finalize_delay)]])
+              |> apply(:new, [
+                %{"run_id" => session_id},
+                [queue: :analysis, scheduled_at: DateTime.add(DateTime.utc_now(), finalize_delay)]
+              ])
               |> Oban.insert()
 
               # Track event for analytics

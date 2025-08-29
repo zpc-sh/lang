@@ -10,9 +10,22 @@ defmodule Lang.Think.RequestWorkerTest do
   @moduletag :integration
 
   test "think worker completes request and writes result" do
-    {:ok, user} = User.create(%{email: "think@test.local", name: "Think User", organization_name: "Think Org"})
+    {:ok, user} =
+      User.create(%{
+        email: "think@test.local",
+        name: "Think User",
+        organization_name: "Think Org"
+      })
+
     {:ok, project} = Analysis.create_project(%{name: "Think Project", user_id: user.id})
-    {:ok, req} = Request.create(%{kind: :explain_intent, input: %{code: "def x, do: :ok"}, user_id: user.id, project_id: project.id})
+
+    {:ok, req} =
+      Request.create(%{
+        kind: :explain_intent,
+        input: %{code: "def x, do: :ok"},
+        user_id: user.id,
+        project_id: project.id
+      })
 
     assert :ok = RequestWorker.perform(%Oban.Job{args: %{"request_id" => req.id}})
 
@@ -28,4 +41,3 @@ defmodule Lang.Think.RequestWorkerTest do
     assert is_map(res.details)
   end
 end
-

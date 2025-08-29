@@ -23,17 +23,17 @@ defmodule Lang.Agent.CoordinationSummary do
       default([])
     end
 
-    attribute :task_type, :atom
-    attribute :task_goal, :string
-    attribute :strategy, :atom
+    attribute(:task_type, :atom)
+    attribute(:task_goal, :string)
+    attribute(:strategy, :atom)
 
-    attribute :results_total, :integer, default: 0
-    attribute :results_success, :integer, default: 0
-    attribute :results_errors, :integer, default: 0
+    attribute(:results_total, :integer, default: 0)
+    attribute(:results_success, :integer, default: 0)
+    attribute(:results_errors, :integer, default: 0)
 
-    attribute :winner, :string
-    attribute :summary, :map, default: %{}
-    attribute :context, :map, default: %{}
+    attribute(:winner, :string)
+    attribute(:summary, :map, default: %{})
+    attribute(:context, :map, default: %{})
 
     timestamps()
   end
@@ -66,7 +66,10 @@ defmodule Lang.Agent.CoordinationSummary do
         |> Ash.Changeset.change_attribute(:results_errors, Map.get(totals, :errors, 0))
         |> Ash.Changeset.change_attribute(:winner, winner)
         |> Ash.Changeset.change_attribute(:summary, merged)
-        |> Ash.Changeset.change_attribute(:context, Ash.Changeset.get_argument(changeset, :context) || %{})
+        |> Ash.Changeset.change_attribute(
+          :context,
+          Ash.Changeset.get_argument(changeset, :context) || %{}
+        )
       end)
     end
 

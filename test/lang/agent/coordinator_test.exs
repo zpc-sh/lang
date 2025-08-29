@@ -11,7 +11,8 @@ defmodule Lang.Agent.CoordinatorTest do
       delegate_fun: fn id, _task -> {:ok, %{agent: id, score: 1}} end
     }
 
-    assert {:ok, %{results: results, merged: merged}} = Coordinator.coordinate(agent_ids, task, :fanout)
+    assert {:ok, %{results: results, merged: merged}} =
+             Coordinator.coordinate(agent_ids, task, :fanout)
 
     # Results contain tuples of {id, {:ok, payload}}
     assert Enum.all?(results, fn {id, {:ok, %{agent: agent}}} -> id == agent end)
@@ -53,4 +54,3 @@ defmodule Lang.Agent.CoordinatorTest do
     assert merged[:reduced] == 3
   end
 end
-

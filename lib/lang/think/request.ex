@@ -21,6 +21,7 @@ defmodule Lang.Think.Request do
 
     attribute :kind, :atom do
       allow_nil?(false)
+
       constraints(
         one_of: [
           :explain_intent,
@@ -98,11 +99,13 @@ defmodule Lang.Think.Request do
       accept([:kind, :input, :user_id, :project_id, :run_id, :metadata])
       validate(present([:kind]))
       change(set_attribute(:status, :pending))
+
       change(fn changeset, _ ->
         Ash.Changeset.after_action(changeset, fn _cs, req ->
           %{"request_id" => req.id}
           |> Lang.Think.Workers.RequestWorker.new(queue: :analysis)
           |> Oban.insert()
+
           {:ok, req}
         end)
       end)
@@ -116,18 +119,29 @@ defmodule Lang.Think.Request do
       change(fn changeset, ctx ->
         status = ctx.arguments[:status]
         changeset = Ash.Changeset.change_attribute(changeset, :status, status)
+
         case status do
-          :running -> Ash.Changeset.change_attribute(changeset, :started_at, DateTime.utc_now())
-          :completed -> Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
-          :failed -> Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
-          :cancelled -> Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
-          _ -> changeset
+          :running ->
+            Ash.Changeset.change_attribute(changeset, :started_at, DateTime.utc_now())
+
+          :completed ->
+            Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
+
+          :failed ->
+            Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
+
+          :cancelled ->
+            Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
+
+          _ ->
+            changeset
         end
       end)
     end
 
     update :complete do
       accept([:metadata])
+
       change(fn changeset, _ ->
         changeset
         |> Ash.Changeset.change_attribute(:status, :completed)
@@ -138,6 +152,7 @@ defmodule Lang.Think.Request do
     update :fail do
       accept([:error_message, :metadata])
       validate(present(:error_message))
+
       change(fn changeset, _ ->
         changeset
         |> Ash.Changeset.change_attribute(:status, :failed)
@@ -147,6 +162,7 @@ defmodule Lang.Think.Request do
 
     update :cancel do
       accept([:metadata])
+
       change(fn changeset, _ ->
         changeset
         |> Ash.Changeset.change_attribute(:status, :cancelled)
@@ -167,6 +183,10 @@ defmodule Lang.Think.Request do
   end
 
   calculations do
-    calculate(:duration_ms, :integer, expr(fragment("EXTRACT(EPOCH FROM (? - ?)) * 1000", completed_at, started_at)))
+    calculate(
+      :duration_ms,
+      :integer,
+      expr(fragment("EXTRACT(EPOCH FROM (? - ?)) * 1000", completed_at, started_at))
+    )
   end
 end

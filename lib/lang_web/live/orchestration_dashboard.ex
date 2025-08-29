@@ -42,252 +42,256 @@ defmodule LangWeb.Live.OrchestrationDashboard do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
-    <div class="orchestration-dashboard min-h-screen bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900">LANG Orchestration Control Center</h1>
-          <p class="mt-2 text-lg text-gray-600">
-            Monitor and control AI intelligence generation across all environments
-          </p>
-          
+    <Layouts.app
+      flash={@flash}
+      current_user={assigns[:current_user]}
+      current_scope={assigns[:current_scope]}
+    >
+      <div class="orchestration-dashboard min-h-screen bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <!-- Header -->
+          <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">LANG Orchestration Control Center</h1>
+            <p class="mt-2 text-lg text-gray-600">
+              Monitor and control AI intelligence generation across all environments
+            </p>
+            
     <!-- System Health Indicator -->
-          <div class="mt-4 flex items-center space-x-4">
-            <div class={[
-              "flex items-center px-3 py-1 rounded-full text-sm font-medium",
-              system_health_class(@system_health.status)
-            ]}>
+            <div class="mt-4 flex items-center space-x-4">
               <div class={[
-                "w-2 h-2 rounded-full mr-2",
-                system_health_dot_class(@system_health.status)
+                "flex items-center px-3 py-1 rounded-full text-sm font-medium",
+                system_health_class(@system_health.status)
               ]}>
+                <div class={[
+                  "w-2 h-2 rounded-full mr-2",
+                  system_health_dot_class(@system_health.status)
+                ]}>
+                </div>
+                System Status: {String.capitalize(to_string(@system_health.status))}
               </div>
-              System Status: {String.capitalize(to_string(@system_health.status))}
-            </div>
-            <div class="text-sm text-gray-500">
-              Last updated: {format_time(@system_health.last_check)}
+              <div class="text-sm text-gray-500">
+                Last updated: {format_time(@system_health.last_check)}
+              </div>
             </div>
           </div>
-        </div>
-        
+          
     <!-- Control Actions -->
-        <div class="bg-white rounded-lg shadow mb-8 p-6">
-          <h2 class="text-xl font-semibold mb-4">Orchestration Controls</h2>
-          <div class="flex flex-wrap gap-4">
-            <button
-              phx-click="orchestrate-all"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              disabled={@orchestration_status.active}
-            >
-              {if @orchestration_status.active,
-                do: "Orchestrating...",
-                else: "Orchestrate All Environments"}
-            </button>
+          <div class="bg-white rounded-lg shadow mb-8 p-6">
+            <h2 class="text-xl font-semibold mb-4">Orchestration Controls</h2>
+            <div class="flex flex-wrap gap-4">
+              <button
+                phx-click="orchestrate-all"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                disabled={@orchestration_status.active}
+              >
+                {if @orchestration_status.active,
+                  do: "Orchestrating...",
+                  else: "Orchestrate All Environments"}
+              </button>
 
-            <button
-              phx-click="generate-sdks"
-              class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-            >
-              Generate All SDKs
-            </button>
+              <button
+                phx-click="generate-sdks"
+                class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              >
+                Generate All SDKs
+              </button>
 
-            <button
-              phx-click="publish-all"
-              class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-            >
-              Publish Everything
-            </button>
+              <button
+                phx-click="publish-all"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              >
+                Publish Everything
+              </button>
 
-            <button
-              phx-click="stop-orchestration"
-              class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              disabled={not @orchestration_status.active}
-            >
-              Emergency Stop
-            </button>
+              <button
+                phx-click="stop-orchestration"
+                class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                disabled={not @orchestration_status.active}
+              >
+                Emergency Stop
+              </button>
+            </div>
           </div>
-        </div>
-        
+          
     <!-- Environment Status Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <%= for env <- @environments do %>
-            <.environment_card environment={env} />
-          <% end %>
-        </div>
-        
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <%= for env <- @environments do %>
+              <.environment_card environment={env} />
+            <% end %>
+          </div>
+          
     <!-- Metrics Dashboard -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <!-- Active Jobs -->
-          <div class="bg-white rounded-lg shadow">
-            <div class="p-6">
-              <h3 class="text-lg font-medium text-gray-900 mb-4">Active Jobs</h3>
-              <div class="space-y-3">
-                <%= if Enum.empty?(@active_jobs) do %>
-                  <p class="text-gray-500 italic">No active jobs</p>
-                <% else %>
-                  <%= for job <- Enum.take(@active_jobs, 10) do %>
-                    <.job_item job={job} />
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Active Jobs -->
+            <div class="bg-white rounded-lg shadow">
+              <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Active Jobs</h3>
+                <div class="space-y-3">
+                  <%= if Enum.empty?(@active_jobs) do %>
+                    <p class="text-gray-500 italic">No active jobs</p>
+                  <% else %>
+                    <%= for job <- Enum.take(@active_jobs, 10) do %>
+                      <.job_item job={job} />
+                    <% end %>
                   <% end %>
+                </div>
+                <%= if length(@active_jobs) > 10 do %>
+                  <div class="mt-4 text-center">
+                    <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      View all {length(@active_jobs)} jobs
+                    </button>
+                  </div>
                 <% end %>
               </div>
-              <%= if length(@active_jobs) > 10 do %>
-                <div class="mt-4 text-center">
-                  <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View all {length(@active_jobs)} jobs
-                  </button>
-                </div>
-              <% end %>
             </div>
-          </div>
-          
+            
     <!-- Metrics -->
-          <div class="bg-white rounded-lg shadow">
-            <div class="p-6">
-              <h3 class="text-lg font-medium text-gray-900 mb-4">System Metrics</h3>
-              <div class="space-y-4">
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-600">Job Success Rate</span>
-                    <span class="text-sm font-medium">{@metrics.success_rate}%</span>
+            <div class="bg-white rounded-lg shadow">
+              <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">System Metrics</h3>
+                <div class="space-y-4">
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-sm text-gray-600">Job Success Rate</span>
+                      <span class="text-sm font-medium">{@metrics.success_rate}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        class="bg-green-500 h-2 rounded-full"
+                        style={"width: #{@metrics.success_rate}%"}
+                      >
+                      </div>
+                    </div>
                   </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-green-500 h-2 rounded-full"
-                      style={"width: #{@metrics.success_rate}%"}
-                    >
+
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-sm text-gray-600">Queue Utilization</span>
+                      <span class="text-sm font-medium">{@metrics.queue_utilization}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        class="bg-blue-500 h-2 rounded-full"
+                        style={"width: #{@metrics.queue_utilization}%"}
+                      >
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-sm text-gray-600">Processing Speed</span>
+                      <span class="text-sm font-medium">{@metrics.avg_processing_time}ms</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-sm text-gray-600">Total Jobs Today</span>
+                      <span class="text-sm font-medium">{@metrics.jobs_today}</span>
                     </div>
                   </div>
                 </div>
-
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-600">Queue Utilization</span>
-                    <span class="text-sm font-medium">{@metrics.queue_utilization}%</span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-blue-500 h-2 rounded-full"
-                      style={"width: #{@metrics.queue_utilization}%"}
-                    >
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-600">Processing Speed</span>
-                    <span class="text-sm font-medium">{@metrics.avg_processing_time}ms</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-sm text-gray-600">Total Jobs Today</span>
-                    <span class="text-sm font-medium">{@metrics.jobs_today}</span>
-                  </div>
+              </div>
+            </div>
+            
+    <!-- Recent Publications -->
+            <div class="bg-white rounded-lg shadow">
+              <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Publications</h3>
+                <div class="space-y-3">
+                  <%= if Enum.empty?(@recent_publications) do %>
+                    <p class="text-gray-500 italic">No recent publications</p>
+                  <% else %>
+                    <%= for pub <- @recent_publications do %>
+                      <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div>
+                          <p class="text-sm font-medium">{pub.environment} - {pub.artifact_type}</p>
+                          <p class="text-xs text-gray-500">{format_time(pub.published_at)}</p>
+                        </div>
+                        <a
+                          href={pub.url}
+                          target="_blank"
+                          class="text-blue-600 hover:text-blue-800 text-xs"
+                        >
+                          View →
+                        </a>
+                      </div>
+                    <% end %>
+                  <% end %>
                 </div>
               </div>
             </div>
           </div>
           
-    <!-- Recent Publications -->
+    <!-- Job History Table -->
           <div class="bg-white rounded-lg shadow">
             <div class="p-6">
-              <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Publications</h3>
-              <div class="space-y-3">
-                <%= if Enum.empty?(@recent_publications) do %>
-                  <p class="text-gray-500 italic">No recent publications</p>
-                <% else %>
-                  <%= for pub <- @recent_publications do %>
-                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div>
-                        <p class="text-sm font-medium">{pub.environment} - {pub.artifact_type}</p>
-                        <p class="text-xs text-gray-500">{format_time(pub.published_at)}</p>
-                      </div>
-                      <a
-                        href={pub.url}
-                        target="_blank"
-                        class="text-blue-600 hover:text-blue-800 text-xs"
-                      >
-                        View →
-                      </a>
-                    </div>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-    <!-- Job History Table -->
-        <div class="bg-white rounded-lg shadow">
-          <div class="p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Job History</h3>
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Job ID
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Environment
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Task
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Duration
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Completed
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <%= for job <- @job_history do %>
+              <h3 class="text-lg font-medium text-gray-900 mb-4">Job History</h3>
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
                     <tr>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        #{String.slice(job.id, 0..7)}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <span class={[
-                          "inline-flex px-2 py-1 text-xs font-medium rounded-full",
-                          environment_badge_class(job.environment)
-                        ]}>
-                          {job.environment}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {job.task}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <span class={[
-                          "inline-flex px-2 py-1 text-xs font-medium rounded-full",
-                          job_status_class(job.state)
-                        ]}>
-                          {job.state}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format_duration(job.duration)}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format_time(job.completed_at)}
-                      </td>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Job ID
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Environment
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Duration
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Completed
+                      </th>
                     </tr>
-                  <% end %>
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <%= for job <- @job_history do %>
+                      <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          #{String.slice(job.id, 0..7)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <span class={[
+                            "inline-flex px-2 py-1 text-xs font-medium rounded-full",
+                            environment_badge_class(job.environment)
+                          ]}>
+                            {job.environment}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {job.task}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <span class={[
+                            "inline-flex px-2 py-1 text-xs font-medium rounded-full",
+                            job_status_class(job.state)
+                          ]}>
+                            {job.state}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {format_duration(job.duration)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {format_time(job.completed_at)}
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </Layouts.app>
     """
   end

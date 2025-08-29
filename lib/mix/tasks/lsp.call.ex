@@ -39,10 +39,16 @@ defmodule Mix.Tasks.Lsp.Call do
 
         case API.call(method, params) do
           {:ok, result} ->
-            Mix.shell().info(Jason.encode_to_iodata!(%{ok: true, result: result}) |> IO.iodata_to_binary())
+            Mix.shell().info(
+              Jason.encode_to_iodata!(%{ok: true, result: result})
+              |> IO.iodata_to_binary()
+            )
 
           {:error, reason} ->
-            Mix.shell().error(Jason.encode_to_iodata!(%{ok: false, error: inspect(reason)}) |> IO.iodata_to_binary())
+            Mix.shell().error(
+              Jason.encode_to_iodata!(%{ok: false, error: inspect(reason)})
+              |> IO.iodata_to_binary()
+            )
         end
     end
   end
@@ -59,6 +65,7 @@ defmodule Mix.Tasks.Lsp.Call do
     case FSScanner.preview(path, max_lines: 500_000) do
       {:ok, lines} ->
         content = Enum.join(List.wrap(lines), "\n")
+
         case Jason.decode(content) do
           {:ok, map} when is_map(map) -> map
           {:ok, _} -> Mix.raise("File JSON must be an object (map)")
@@ -70,4 +77,3 @@ defmodule Mix.Tasks.Lsp.Call do
     end
   end
 end
-

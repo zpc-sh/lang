@@ -19,4 +19,3 @@ defmodule Lang.Think.Security do
     })
   end
 end
-

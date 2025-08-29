@@ -19,4 +19,3 @@ defmodule Lang.Think.Diagnostics do
     })
   end
 end
-

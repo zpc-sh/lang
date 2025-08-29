@@ -10,4 +10,3 @@ defmodule Lang.Analysis.StreamListener do
     Phoenix.PubSub.subscribe(Lang.PubSub, @topic_prefix <> to_string(stream_id))
   end
 end
-

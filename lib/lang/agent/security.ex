@@ -14,6 +14,7 @@ defmodule Lang.Agent.Security do
   def verify_profile(agent_id, expected) do
     with {:ok, agent} <- Agent.read_by_id(agent_id) do
       baseline = expected_profile(agent, expected)
+
       {:ok,
        %{
          agent_id: agent.id,
@@ -62,7 +63,12 @@ defmodule Lang.Agent.Security do
       class = if anomaly > 0.8 or trust < 0.2, do: :rogue, else: :normal
       details = %{anomaly_score: anomaly, trust_score: trust, context: ctx}
 
-      AgentEvents.track_rogue_detection("lsp", agent.id, details, if(class == :rogue, do: :quarantine, else: :none))
+      AgentEvents.track_rogue_detection(
+        "lsp",
+        agent.id,
+        details,
+        if(class == :rogue, do: :quarantine, else: :none)
+      )
 
       {:ok, class, details}
     else
@@ -93,6 +99,7 @@ defmodule Lang.Agent.Security do
   defp expected_profile(_agent, profile) when is_map(profile), do: profile
 
   defp anomaly_from_sample(nil), do: 0.0
+
   defp anomaly_from_sample(%{data: data}) do
     # Very simple heuristic for now
     err = get_in(data, ["behavioral_patterns", "error_rate"]) || 0.0
@@ -116,8 +123,16 @@ defmodule Lang.Agent.Security do
 
   defp latest_sample(agent_id) do
     case BehavioralSample.read_by_agent(agent_id) do
-      {:ok, [sample | _]} -> %{data: Map.merge(sample.cognitive_metrics, %{"behavioral_patterns" => sample.behavioral_patterns})}
-      _ -> nil
+      {:ok, [sample | _]} ->
+        %{
+          data:
+            Map.merge(sample.cognitive_metrics, %{
+              "behavioral_patterns" => sample.behavioral_patterns
+            })
+        }
+
+      _ ->
+        nil
     end
   end
 end

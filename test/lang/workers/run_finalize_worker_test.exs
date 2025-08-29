@@ -13,7 +13,13 @@ defmodule Lang.Workers.RunFinalizeWorkerTest do
 
   test "finalize worker reschedules while files are not processed" do
     # Create user -> project -> run (session)
-    {:ok, user} = User.create(%{email: "finalize@test.local", name: "Finalize User", organization_name: "Finalize Org"})
+    {:ok, user} =
+      User.create(%{
+        email: "finalize@test.local",
+        name: "Finalize User",
+        organization_name: "Finalize Org"
+      })
+
     {:ok, project} = Analysis.create_project(%{name: "Finalize Project", user_id: user.id})
     {:ok, run} = Run.create(%{project_id: project.id, metadata: %{}})
 
@@ -46,4 +52,3 @@ defmodule Lang.Workers.RunFinalizeWorkerTest do
            end)
   end
 end
-

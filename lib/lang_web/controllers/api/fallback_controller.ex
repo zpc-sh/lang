@@ -9,9 +9,15 @@ defmodule LangWeb.Api.FallbackController do
   # This clause handles errors returned by Ecto's insert/update/delete.
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     if jsonld?(conn) do
-      details = %{changes: changeset.changes, errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-        Enum.reduce(opts, msg, fn {k, v}, acc -> String.replace(acc, "%{#{k}}", to_string(v)) end)
-      end)}
+      details = %{
+        changes: changeset.changes,
+        errors:
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Enum.reduce(opts, msg, fn {k, v}, acc ->
+              String.replace(acc, "%{#{k}}", to_string(v))
+            end)
+          end)
+      }
 
       LangWeb.ApiError.json(conn, :unprocessable_entity, "Validation failed", details)
     else

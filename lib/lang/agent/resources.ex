@@ -9,7 +9,9 @@ defmodule Lang.Agent.Resources do
       {:ok, pid} ->
         :ok = Runtime.update_constraints(pid, resource_limits)
         :ok
-      _ -> {:error, :agent_not_running}
+
+      _ ->
+        {:error, :agent_not_running}
     end
   end
 end

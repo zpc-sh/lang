@@ -16,7 +16,8 @@ defmodule Lang.Agent.Lifecycle do
   @doc """
   Spawn a new agent and start its runtime.
   """
-  def spawn(capabilities, constraints, ctx \\ %{}) when is_list(capabilities) and is_map(constraints) do
+  def spawn(capabilities, constraints, ctx \\ %{})
+      when is_list(capabilities) and is_map(constraints) do
     attrs = %{
       capabilities: capabilities,
       constraints: constraints,
@@ -107,7 +108,8 @@ defmodule Lang.Agent.Lifecycle do
            runtime: runtime
          }}
 
-      _ -> {:ok, %{agent_id: agent_id, state: :unknown, runtime: runtime}}
+      _ ->
+        {:ok, %{agent_id: agent_id, state: :unknown, runtime: runtime}}
     end
   end
 

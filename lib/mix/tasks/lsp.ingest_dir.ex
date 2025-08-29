@@ -15,11 +15,14 @@ defmodule Mix.Tasks.Lsp.IngestDir do
     # Load paths without compiling the whole app
     Mix.Task.run("loadpaths")
     {opts, rest, _} = OptionParser.parse(args, switches: [dry_run: :boolean])
+
     case rest do
       [dir] ->
         files = jsonld_files(dir)
         Enum.each(files, &ingest_file(&1, opts))
-      _ -> Mix.raise("usage: mix lsp.ingest_dir [--dry-run] path/to/specs_dir")
+
+      _ ->
+        Mix.raise("usage: mix lsp.ingest_dir [--dry-run] path/to/specs_dir")
     end
   end
 
@@ -48,6 +51,7 @@ defmodule Mix.Tasks.Lsp.IngestDir do
 
   defp ingest_content(content, opts) do
     specs = Spec.parse_jsonld!(content)
+
     Enum.each(specs, fn s ->
       attrs = %{
         name: s.name,
@@ -64,6 +68,7 @@ defmodule Mix.Tasks.Lsp.IngestDir do
         links: s.links,
         metadata: s.metadata
       }
+
       if opts[:dry_run] do
         Mix.shell().info("[dry-run] would ingest: #{s.name}")
       else

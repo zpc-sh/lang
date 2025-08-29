@@ -4,24 +4,24 @@ defmodule Lang.Workspace.Workspace do
     data_layer: AshPostgres.DataLayer
 
   postgres do
-    table "workspaces"
-    repo Lang.Repo
+    table("workspaces")
+    repo(Lang.Repo)
   end
 
   attributes do
-    uuid_primary_key :id
-    attribute :name, :string
-    attribute :project_id, :string
-    attribute :metadata, :map, default: %{}
-    create_timestamp :inserted_at
-    update_timestamp :updated_at
+    uuid_primary_key(:id)
+    attribute(:name, :string)
+    attribute(:project_id, :string)
+    attribute(:metadata, :map, default: %{})
+    create_timestamp(:inserted_at)
+    update_timestamp(:updated_at)
   end
 
   actions do
-    defaults [:read]
+    defaults([:read])
 
     create :create do
-      accept [:name, :project_id, :metadata]
+      accept([:name, :project_id, :metadata])
     end
   end
 end

@@ -31,4 +31,3 @@ defmodule Lang.Analyses.PipelineTest do
     end
   end
 end
-

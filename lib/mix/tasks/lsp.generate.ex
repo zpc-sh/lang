@@ -16,7 +16,10 @@ defmodule Mix.Tasks.Lsp.Generate do
          blueprints <- Enum.map(methods, &to_blueprint/1),
          {:ok, %{files: files}} <- LSPProjectGenerator.generate_all(blueprints) do
       if opts[:dry_run] do
-        Enum.each(files, fn %{path: path} -> Mix.shell().info("[dry-run] would write: #{path}") end)
+        Enum.each(files, fn %{path: path} ->
+          Mix.shell().info("[dry-run] would write: #{path}")
+        end)
+
         Mix.shell().info("[dry-run] total files: #{length(files)}")
       else
         Enum.each(files, &write!/1)

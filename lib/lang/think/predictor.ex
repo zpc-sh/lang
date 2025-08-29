@@ -28,4 +28,3 @@ defmodule Lang.Think.Predictor do
     })
   end
 end
-

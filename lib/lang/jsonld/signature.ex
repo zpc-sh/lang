@@ -107,4 +107,3 @@ defmodule Lang.JSONLD.Signature do
 
   defp verify_sig_hs256(_, _, _), do: {:error, :missing_sig}
 end
-

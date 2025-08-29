@@ -8,7 +8,13 @@ defmodule Nullity.CDFM.LSPProjectGenerator do
   alias CDFM.Formats.LSP
 
   @type blueprint :: map()
-  @type file_spec :: %{path: String.t(), content: iodata(), type: atom(), mode: atom(), description: String.t()}
+  @type file_spec :: %{
+          path: String.t(),
+          content: iodata(),
+          type: atom(),
+          mode: atom(),
+          description: String.t()
+        }
 
   @doc """
   Generate all artifacts for the given method blueprints.
@@ -25,6 +31,7 @@ defmodule Nullity.CDFM.LSPProjectGenerator do
 
     # 2) Registry from blueprints
     map = Registry.build(to_specs(blueprints))
+
     registry_file = %{
       path: "lib/lang/lsp/registry.ex",
       type: :code,
@@ -42,7 +49,8 @@ defmodule Nullity.CDFM.LSPProjectGenerator do
       content: render_docs(blueprints)
     }
 
-    {:ok, %{files: handler_files ++ [registry_file, docs_file], metadata: %{count: length(blueprints)}}}
+    {:ok,
+     %{files: handler_files ++ [registry_file, docs_file], metadata: %{count: length(blueprints)}}}
   end
 
   defp to_specs(blueprints) do
@@ -66,7 +74,7 @@ defmodule Nullity.CDFM.LSPProjectGenerator do
     defmodule Lang.LSP.Registry do
       @moduledoc "Generated method registry (do not edit manually)"
       @registry %{
-#{entries}
+    #{entries}
       }
 
       @doc "Lookup method → {module, function, arity}"
@@ -87,7 +95,7 @@ defmodule Nullity.CDFM.LSPProjectGenerator do
 
     | Method | Status | Priority | Description | Implementation File |
     |--------|--------|----------|-------------|---------------------|
-#{rows}
+    #{rows}
     """
   end
 
@@ -120,4 +128,3 @@ defmodule Nullity.CDFM.LSPProjectGenerator do
 
   defp get(map, key), do: map[key] || map[Atom.to_string(key)]
 end
-

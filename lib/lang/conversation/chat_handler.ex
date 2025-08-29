@@ -49,6 +49,7 @@ defmodule Lang.Conversation.ChatHandler do
     session_id = Map.get(params, "session_id")
     agent_personality = Map.get(params, "agent", "general")
     workspace_context = Map.get(params, "workspace", %{})
+    speaker = Map.get(params, "speaker", "developer")
 
     case {message, session_id} do
       {nil, _} ->
@@ -58,7 +59,7 @@ defmodule Lang.Conversation.ChatHandler do
         {:error, "session_id is required"}
 
       {msg, sid} when is_binary(msg) and is_binary(sid) ->
-        process_chat_conversation(msg, sid, agent_personality, workspace_context, ctx)
+        process_chat_conversation(msg, sid, agent_personality, workspace_context, Map.put(ctx, "speaker", speaker))
 
       _ ->
         {:error, "message and session_id must be strings"}
@@ -70,6 +71,7 @@ defmodule Lang.Conversation.ChatHandler do
     agent_personality = Map.get(params, "agent", "general")
     workspace_path = Map.get(params, "workspace_path")
     initial_context = Map.get(params, "context", %{})
+    participants_param = Map.get(params, "participants")
 
     # Initialize conversation with workspace context
     workspace_analysis =
@@ -88,8 +90,19 @@ defmodule Lang.Conversation.ChatHandler do
       started_at: DateTime.utc_now()
     }
 
-    case RehearsalEngine.start_session(:ai_chat, [agent_personality, "developer"]) do
-      {:ok, session_id} ->
+    # Build participants list; allow >3 participants
+    base_participants =
+      case participants_param do
+        parts when is_list(parts) ->
+          parts
+        _ ->
+          [agent_personality, "developer"]
+      end
+
+    participants = base_participants |> Enum.map(&to_string/1) |> Enum.uniq()
+
+    case RehearsalEngine.start_session(:ai_chat, participants) do
+      {:ok, %{id: session_id} = _session} ->
         # Store conversation configuration
         store_conversation_config(session_id, conversation_config)
 
@@ -305,6 +318,7 @@ defmodule Lang.Conversation.ChatHandler do
       agent: agent_personality,
       workspace: workspace_context,
       user_context: Map.get(ctx, "user_id"),
+      speaker: Map.get(ctx, "speaker", "developer"),
       conversation_history: get_recent_conversation_context(session_id)
     }
 
@@ -312,7 +326,7 @@ defmodule Lang.Conversation.ChatHandler do
       {:ok, response} ->
         # Add both user message and agent response to conversation
         user_turn = %{
-          speaker: "developer",
+          speaker: Map.get(ctx, "speaker", "developer"),
           message: message,
           intent: message_analysis.intent,
           timestamp: DateTime.utc_now()

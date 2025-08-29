@@ -21,8 +21,15 @@ defmodule LangWeb.ApiError do
             "status" => "error",
             "error" =>
               case details do
-                nil -> %{message: message, timestamp: DateTime.utc_now() |> DateTime.to_iso8601()}
-                _ -> %{message: message, details: details, timestamp: DateTime.utc_now() |> DateTime.to_iso8601()}
+                nil ->
+                  %{message: message, timestamp: DateTime.utc_now() |> DateTime.to_iso8601()}
+
+                _ ->
+                  %{
+                    message: message,
+                    details: details,
+                    timestamp: DateTime.utc_now() |> DateTime.to_iso8601()
+                  }
               end
           }
 

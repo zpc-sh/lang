@@ -33,7 +33,9 @@ defmodule LangWeb.Api.V2.SpatialMapCountsTest do
   end
 
   test "counts_only languages scope and type/kind counts", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{counts_only: "true", languages: "elixir"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{counts_only: "true", languages: "elixir"})
+
     body = json_response(conn, 200)
 
     sym_meta = body["meta"]["symbols"]
@@ -52,7 +54,13 @@ defmodule LangWeb.Api.V2.SpatialMapCountsTest do
   end
 
   test "relation types filter (imports)", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{section: "relations", counts_only: "true", types: "imports"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{
+        section: "relations",
+        counts_only: "true",
+        types: "imports"
+      })
+
     body = json_response(conn, 200)
     rel_meta = body["meta"]["relations"]
     # Only import should be counted in filtered set
@@ -61,27 +69,48 @@ defmodule LangWeb.Api.V2.SpatialMapCountsTest do
   end
 
   test "unknown types and kinds are ignored safely", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{section: "relations", counts_only: "true", types: "__foo__"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{
+        section: "relations",
+        counts_only: "true",
+        types: "__foo__"
+      })
+
     body = json_response(conn, 200)
     rel_meta = body["meta"]["relations"]
     # No known types in filter, so filtered set is empty
     assert rel_meta["counts_by_type"] == %{}
 
-    conn2 = get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{section: "symbols", counts_only: "true", kinds: "__bar__"})
+    conn2 =
+      get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{
+        section: "symbols",
+        counts_only: "true",
+        kinds: "__bar__"
+      })
+
     body2 = json_response(conn2, 200)
     sym_meta = body2["meta"]["symbols"]
     assert sym_meta["counts_by_kind"] == %{}
   end
 
   test "symbol kinds filter (function)", %{conn: conn, project_id: project_id} do
-    conn = get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{section: "symbols", counts_only: "true", kinds: "function"})
+    conn =
+      get(conn, ~p"/api/v2/spatial/map/#{project_id}", %{
+        section: "symbols",
+        counts_only: "true",
+        kinds: "function"
+      })
+
     body = json_response(conn, 200)
     sym_meta = body["meta"]["symbols"]
     assert sym_meta["counts_by_kind"]["function"] == 2
     assert Map.get(sym_meta["counts_by_kind"], "module") in [nil, 0]
   end
 
-  test "combined filters: languages+types+kinds scope counts", %{conn: conn, project_id: project_id} do
+  test "combined filters: languages+types+kinds scope counts", %{
+    conn: conn,
+    project_id: project_id
+  } do
     params = %{
       section: "all",
       counts_only: "true",

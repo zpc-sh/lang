@@ -32,7 +32,14 @@ defmodule Lang.Telemetry.LSPClientLogger do
 
   def handle_event(@event_stop, measures, metadata, _config) do
     method = metadata[:method] || metadata["method"]
-    Logger.debug("LSP request stop", method: method, id: metadata[:id], timeout: metadata[:timeout], recv_error: metadata[:recv_error], duration_ms: measures[:duration_ms])
+
+    Logger.debug("LSP request stop",
+      method: method,
+      id: metadata[:id],
+      timeout: metadata[:timeout],
+      recv_error: metadata[:recv_error],
+      duration_ms: measures[:duration_ms]
+    )
   end
 
   def handle_event(_evt, _measures, _metadata, _config), do: :ok

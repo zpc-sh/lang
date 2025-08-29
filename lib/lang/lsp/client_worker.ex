@@ -38,7 +38,12 @@ defmodule Lang.LSP.ClientWorker do
       client_id: "worker_#{System.unique_integer([:positive])}_#{:os.getpid()}",
       recv_task: nil,
       inflight: %{},
-      max_inflight: Keyword.get(opts, :max_inflight, get_in(Application.get_env(:lang, :lsp_client) || %{}, [:max_inflight]) || 32)
+      max_inflight:
+        Keyword.get(
+          opts,
+          :max_inflight,
+          get_in(Application.get_env(:lang, :lsp_client) || %{}, [:max_inflight]) || 32
+        )
     }
 
     {:ok, state}
@@ -53,31 +58,42 @@ defmodule Lang.LSP.ClientWorker do
       {:reply, {:error, :backpressure}, state}
     else
       case ensure_connected(state, timeout) do
-      {:ok, socket, state} ->
-        {id, state} = next_id(state)
-        start_mono = System.monotonic_time(:millisecond)
-        :telemetry.execute([:lang, :lsp, :client, :request, :start], %{}, %{id: id, method: method})
+        {:ok, socket, state} ->
+          {id, state} = next_id(state)
+          start_mono = System.monotonic_time(:millisecond)
 
-        # register inflight and timeout
-        tref = Process.send_after(self(), {:inflight_timeout, id}, timeout + 1000)
-        state = put_inflight(state, id, {_from, tref, method, start_mono})
+          :telemetry.execute([:lang, :lsp, :client, :request, :start], %{}, %{
+            id: id,
+            method: method
+          })
 
-        case send_jsonrpc(socket, id, method, params) do
-          :ok -> {:noreply, state}
-          {:error, reason} ->
-            cancel_inflight(id, state)
-            {:reply, {:error, reason}, state}
-        end
+          # register inflight and timeout
+          tref = Process.send_after(self(), {:inflight_timeout, id}, timeout + 1000)
+          state = put_inflight(state, id, {_from, tref, method, start_mono})
 
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+          case send_jsonrpc(socket, id, method, params) do
+            :ok ->
+              {:noreply, state}
+
+            {:error, reason} ->
+              cancel_inflight(id, state)
+              {:reply, {:error, reason}, state}
+          end
+
+        {:error, reason} ->
+          {:reply, {:error, reason}, state}
       end
     end
   end
 
   @impl true
   def handle_call(:metrics, _from, state) do
-    {:reply, %{inflight: map_size(state.inflight), initialized: state.initialized?, max_inflight: state.max_inflight}, state}
+    {:reply,
+     %{
+       inflight: map_size(state.inflight),
+       initialized: state.initialized?,
+       max_inflight: state.max_inflight
+     }, state}
   end
 
   @impl true
@@ -88,10 +104,16 @@ defmodule Lang.LSP.ClientWorker do
 
   # Internal helpers
   defp ensure_connected(%{socket: socket, initialized?: true, recv_task: recv} = state, _timeout)
-       when is_port(socket) and is_pid(recv), do: {:ok, socket, state}
+       when is_port(socket) and is_pid(recv),
+       do: {:ok, socket, state}
 
   defp ensure_connected(state, timeout) do
-    case :gen_tcp.connect(state.host, state.port, [:binary, packet: :raw, active: false, nodelay: true], timeout) do
+    case :gen_tcp.connect(
+           state.host,
+           state.port,
+           [:binary, packet: :raw, active: false, nodelay: true],
+           timeout
+         ) do
       {:ok, socket} ->
         case initialize_lsp(socket, state.client_id, state.root_path, timeout) do
           {:ok, _} ->
@@ -103,7 +125,9 @@ defmodule Lang.LSP.ClientWorker do
             :gen_tcp.close(socket)
             {:error, reason}
         end
-      {:error, reason} -> {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -142,15 +166,19 @@ defmodule Lang.LSP.ClientWorker do
           {:ok, %{"id" => id} = full} ->
             send(owner, {:lsp_response, id, full})
             recv_loop(owner, socket)
+
           {:ok, %{"method" => _m} = _notification} ->
             # ignore notifications
             recv_loop(owner, socket)
+
           {:ok, other} ->
             send(owner, {:lsp_response, nil, other})
             recv_loop(owner, socket)
+
           {:error, reason} ->
             send(owner, {:lsp_recv_error, reason})
         end
+
       {:error, reason} ->
         send(owner, {:lsp_recv_error, reason})
     end
@@ -160,15 +188,19 @@ defmodule Lang.LSP.ClientWorker do
     case :gen_tcp.recv(socket, 0, timeout) do
       {:ok, data} ->
         buf = acc <> data
+
         case :binary.match(buf, "\r\n\r\n") do
           {hdr_end, 4} ->
             headers = :binary.part(buf, 0, hdr_end)
             rest = :binary.part(buf, hdr_end + 4, byte_size(buf) - (hdr_end + 4))
+
             case parse_content_length(headers) do
               {:ok, len} -> {:ok, len, rest}
               {:error, _} -> recv_until_header(socket, buf, timeout)
             end
-          :nomatch -> recv_until_header(socket, buf, timeout)
+
+          :nomatch ->
+            recv_until_header(socket, buf, timeout)
         end
 
       {:error, reason} ->
@@ -181,16 +213,22 @@ defmodule Lang.LSP.ClientWorker do
       {pos, _len} ->
         start = pos + byte_size("Content-Length: ")
         suffix = :binary.part(headers, start, byte_size(headers) - start)
+
         case :binary.match(suffix, "\r\n") do
           {eol, _} ->
             len_bin = :binary.part(suffix, 0, eol)
+
             case Integer.parse(len_bin) do
               {int, _} -> {:ok, int}
               :error -> {:error, :invalid_length}
             end
-          :nomatch -> {:error, :no_eol}
+
+          :nomatch ->
+            {:error, :no_eol}
         end
-      :nomatch -> {:error, :no_content_length}
+
+      :nomatch ->
+        {:error, :no_content_length}
     end
   end
 
@@ -240,7 +278,9 @@ defmodule Lang.LSP.ClientWorker do
       {from, tref, _method} ->
         Process.cancel_timer(tref)
         GenServer.reply(from, {:error, :send_failed})
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -249,7 +289,12 @@ defmodule Lang.LSP.ClientWorker do
     {{from, tref, method, start_mono}, state} = pop_inflight(state, id)
     tref && Process.cancel_timer(tref)
     duration_ms = System.monotonic_time(:millisecond) - start_mono
-    :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{id: id, method: method})
+
+    :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{
+      id: id,
+      method: method
+    })
+
     GenServer.reply(from, {:ok, res})
     {:noreply, state}
   end
@@ -259,7 +304,12 @@ defmodule Lang.LSP.ClientWorker do
     {{from, tref, method, start_mono}, state} = pop_inflight(state, id)
     tref && Process.cancel_timer(tref)
     duration_ms = System.monotonic_time(:millisecond) - start_mono
-    :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{id: id, method: method})
+
+    :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{
+      id: id,
+      method: method
+    })
+
     GenServer.reply(from, {:error, err})
     {:noreply, state}
   end
@@ -269,10 +319,18 @@ defmodule Lang.LSP.ClientWorker do
     case pop_inflight(state, id) do
       {{from, _tref, method, start_mono}, state} ->
         duration_ms = System.monotonic_time(:millisecond) - start_mono
-        :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{id: id, method: method, timeout: true})
+
+        :telemetry.execute(
+          [:lang, :lsp, :client, :request, :stop],
+          %{duration_ms: duration_ms},
+          %{id: id, method: method, timeout: true}
+        )
+
         GenServer.reply(from, {:error, :timeout})
         {:noreply, state}
-      {nil, state} -> {:noreply, state}
+
+      {nil, state} ->
+        {:noreply, state}
     end
   end
 
@@ -282,9 +340,16 @@ defmodule Lang.LSP.ClientWorker do
     Enum.each(state.inflight, fn {id, {from, tref, method, start_mono}} ->
       tref && Process.cancel_timer(tref)
       duration_ms = System.monotonic_time(:millisecond) - start_mono
-      :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{id: id, method: method, recv_error: reason})
+
+      :telemetry.execute([:lang, :lsp, :client, :request, :stop], %{duration_ms: duration_ms}, %{
+        id: id,
+        method: method,
+        recv_error: reason
+      })
+
       GenServer.reply(from, {:error, reason})
     end)
+
     {:noreply, %{state | socket: nil, initialized?: false, recv_task: nil, inflight: %{}}}
   end
 
@@ -298,9 +363,15 @@ defmodule Lang.LSP.ClientWorker do
       "rootPath" => root_path,
       "rootUri" => "file://#{root_path}",
       "capabilities" => %{
-        "workspace" => %{"workspaceFolders" => true, "didChangeConfiguration" => %{"dynamicRegistration" => true}},
+        "workspace" => %{
+          "workspaceFolders" => true,
+          "didChangeConfiguration" => %{"dynamicRegistration" => true}
+        },
         "textDocument" => %{
-          "completion" => %{"dynamicRegistration" => true, "completionItem" => %{"snippetSupport" => true}},
+          "completion" => %{
+            "dynamicRegistration" => true,
+            "completionItem" => %{"snippetSupport" => true}
+          },
           "hover" => %{"dynamicRegistration" => true},
           "definition" => %{"dynamicRegistration" => true},
           "references" => %{"dynamicRegistration" => true}
@@ -319,6 +390,7 @@ defmodule Lang.LSP.ClientWorker do
 
   defp send_initialized_notification(socket) do
     notification = %{"jsonrpc" => "2.0", "method" => "initialized", "params" => %{}}
+
     with {:ok, json_io} <- Jason.encode_to_iodata(notification) do
       len = :erlang.iolist_size(json_io)
       header_io = ["Content-Length: ", Integer.to_string(len), "\r\n\r\n"]

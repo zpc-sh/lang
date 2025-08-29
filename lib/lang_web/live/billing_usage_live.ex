@@ -61,7 +61,11 @@ defmodule LangWeb.BillingUsageLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
+    <Layouts.app
+      flash={@flash}
+      current_user={assigns[:current_user]}
+      current_scope={assigns[:current_scope]}
+    >
       <.header>
         Billing Usage
         <:subtitle>Current month usage summary for your organization.</:subtitle>

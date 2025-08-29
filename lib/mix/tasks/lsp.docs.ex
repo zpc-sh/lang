@@ -11,7 +11,8 @@ defmodule Mix.Tasks.Lsp.Docs do
     Mix.Task.run("app.start")
 
     with {:ok, methods} <- Ash.read_all_methods(),
-         {:ok, %{files: files}} <- LSPProjectGenerator.generate_all(Enum.map(methods, &to_blueprint/1)) do
+         {:ok, %{files: files}} <-
+           LSPProjectGenerator.generate_all(Enum.map(methods, &to_blueprint/1)) do
       doc = Enum.find(files, &(&1.path == "docs/lsp.md"))
       if doc, do: write!(doc)
       Mix.shell().info("Regenerated docs/lsp.md")
@@ -41,4 +42,3 @@ defmodule Mix.Tasks.Lsp.Docs do
     }
   end
 end
-

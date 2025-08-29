@@ -15,4 +15,3 @@ defmodule Lang.LSP.CapabilitiesTest do
     assert %{"error" => %{"code" => -32601}} = resp
   end
 end
-

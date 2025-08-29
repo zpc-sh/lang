@@ -49,7 +49,7 @@ defmodule Lang.Storage.PatternEntity do
     end
 
     update :update_confidence do
-      require_atomic? false
+      require_atomic?(false)
       argument(:confidence, :decimal, allow_nil?: false)
 
       change(fn changeset, _ctx ->

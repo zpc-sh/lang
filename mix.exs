@@ -141,26 +141,26 @@ defmodule Lang.MixProject do
       []
     else
       [
-      lang_parser: [
-        path: "native/lang_parser",
-        mode: rustler_mode(Mix.env())
-      ],
-      lang_perf: [
-        path: "native/lang_perf",
-        mode: rustler_mode(Mix.env())
-      ],
-      fs_watcher: [
-        path: "native/fs_watcher",
-        mode: rustler_mode(Mix.env())
-      ],
-      tree_parser: [
-        path: "native/tree_parser",
-        mode: rustler_mode(Mix.env())
-      ],
-      fs_scanner: [
-        path: "native/fs_scanner",
-        mode: rustler_mode(Mix.env())
-      ]
+        lang_parser: [
+          path: "native/lang_parser",
+          mode: rustler_mode(Mix.env())
+        ],
+        lang_perf: [
+          path: "native/lang_perf",
+          mode: rustler_mode(Mix.env())
+        ],
+        fs_watcher: [
+          path: "native/fs_watcher",
+          mode: rustler_mode(Mix.env())
+        ],
+        tree_parser: [
+          path: "native/tree_parser",
+          mode: rustler_mode(Mix.env())
+        ],
+        fs_scanner: [
+          path: "native/fs_scanner",
+          mode: rustler_mode(Mix.env())
+        ]
       ]
     end
   end
@@ -179,10 +179,19 @@ defmodule Lang.MixProject do
       plt_core_path: "_build",
       plt_file: {:no_warn, "_build/#{Mix.env()}/dialyzer.plt"},
       plt_add_apps: [
-        :mix, :iex, :ex_unit,
-        :phoenix, :phoenix_live_view, :phoenix_html, :phoenix_ecto,
-        :ecto, :ecto_sql, :postgrex,
-        :ash, :ash_postgres, :ash_phoenix,
+        :mix,
+        :iex,
+        :ex_unit,
+        :phoenix,
+        :phoenix_live_view,
+        :phoenix_html,
+        :phoenix_ecto,
+        :ecto,
+        :ecto_sql,
+        :postgrex,
+        :ash,
+        :ash_postgres,
+        :ash_phoenix,
         :oban
       ],
       flags: [

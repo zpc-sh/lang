@@ -35,7 +35,7 @@ defmodule Lang.Billing.ConfigManager do
   Gets configuration for a specific plan.
   Returns enhanced plan data with calculated metrics.
   """
-  def get_plan(plan_type) when plan_type in [:free, :pro, :enterprise] do
+  def get_plan(plan_type) when plan_type in [:free, :plus, :pro, :business] do
     case get_raw_plan(plan_type) do
       nil -> {:error, :plan_not_found}
       plan_config -> {:ok, enhance_plan_config(plan_config, plan_type)}
@@ -154,6 +154,23 @@ defmodule Lang.Billing.ConfigManager do
     case current_plan do
       :free ->
         free_plan = get_plan!(:free)
+        plus_plan = get_plan!(:plus)
+
+        if plus_plan do
+          %{
+            recommended: :plus,
+            reason:
+              "#{format_number(plus_plan.requests_per_month)} requests and enhanced features",
+            savings_text: format_savings(free_plan, plus_plan),
+            new_features: get_feature_difference(:free, :plus),
+            cost_comparison: get_cost_comparison(:free, :plus)
+          }
+        else
+          nil
+        end
+
+      :plus ->
+        plus_plan = get_plan!(:plus)
         pro_plan = get_plan!(:pro)
 
         if pro_plan do
@@ -161,9 +178,9 @@ defmodule Lang.Billing.ConfigManager do
             recommended: :pro,
             reason:
               "#{format_number(pro_plan.requests_per_month)} requests and advanced features",
-            savings_text: format_savings(free_plan, pro_plan),
-            new_features: get_feature_difference(:free, :pro),
-            cost_comparison: get_cost_comparison(:free, :pro)
+            savings_text: format_savings(plus_plan, pro_plan),
+            new_features: get_feature_difference(:plus, :pro),
+            cost_comparison: get_cost_comparison(:plus, :pro)
           }
         else
           nil
@@ -171,16 +188,15 @@ defmodule Lang.Billing.ConfigManager do
 
       :pro ->
         pro_plan = get_plan!(:pro)
-        enterprise_plan = get_plan!(:enterprise)
+        business_plan = get_plan!(:business)
 
-        if enterprise_plan do
+        if business_plan do
           %{
-            recommended: :enterprise,
-            reason:
-              "#{format_number(enterprise_plan.requests_per_month)} requests and enterprise features",
-            savings_text: format_savings(pro_plan, enterprise_plan),
-            new_features: get_feature_difference(:pro, :enterprise),
-            cost_comparison: get_cost_comparison(:pro, :enterprise)
+            recommended: :business,
+            reason: "Team collaboration and unlimited features",
+            savings_text: format_savings(pro_plan, business_plan),
+            new_features: get_feature_difference(:pro, :business),
+            cost_comparison: get_cost_comparison(:pro, :business)
           }
         else
           nil

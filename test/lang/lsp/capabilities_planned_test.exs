@@ -12,4 +12,3 @@ defmodule Lang.LSP.CapabilitiesPlannedTest do
     assert "lang.timeline.evolution" in planned
   end
 end
-

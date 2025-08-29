@@ -10,8 +10,11 @@ defmodule Lang.Workers.RunFinalizeWorker do
          {:ok, files} <- read_files(run_id) do
       # If any files are not yet in a terminal state, reschedule and exit
       if Enum.any?(files, fn f -> not File.processed?(f) end) do
-        __MODULE__.new(%{"run_id" => run_id}, scheduled_at: DateTime.add(DateTime.utc_now(), reschedule_delay()))
+        __MODULE__.new(%{"run_id" => run_id},
+          scheduled_at: DateTime.add(DateTime.utc_now(), reschedule_delay())
+        )
         |> Oban.insert()
+
         :ok
       else
         stats = compute_stats(files)

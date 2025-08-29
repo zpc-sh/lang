@@ -10,9 +10,19 @@ defmodule Lang.Generate.RequestWorkerTest do
   @moduledag :integration
 
   test "generate worker emits artifacts" do
-    {:ok, user} = User.create(%{email: "gen@test.local", name: "Gen User", organization_name: "Gen Org"})
+    {:ok, user} =
+      User.create(%{email: "gen@test.local", name: "Gen User", organization_name: "Gen Org"})
+
     {:ok, project} = Analysis.create_project(%{name: "Gen Project", user_id: user.id})
-    {:ok, req} = Request.create(%{strategy: :complete_partial, inputs: %{path: "README.md"}, boundaries: %{}, user_id: user.id, project_id: project.id})
+
+    {:ok, req} =
+      Request.create(%{
+        strategy: :complete_partial,
+        inputs: %{path: "README.md"},
+        boundaries: %{},
+        user_id: user.id,
+        project_id: project.id
+      })
 
     assert :ok = RequestWorker.perform(%Oban.Job{args: %{"request_id" => req.id}})
 
@@ -27,4 +37,3 @@ defmodule Lang.Generate.RequestWorkerTest do
     assert length(artifacts) >= 1
   end
 end
-

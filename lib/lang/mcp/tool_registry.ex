@@ -77,7 +77,8 @@ defmodule Lang.MCP.ToolRegistry do
   defp infer_group(name) do
     name
     |> String.split(".")
-    |> Enum.drop(1) # drop "lang"
+    # drop "lang"
+    |> Enum.drop(1)
     |> List.first()
     |> to_string()
   end

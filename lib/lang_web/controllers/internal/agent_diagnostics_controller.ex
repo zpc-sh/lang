@@ -27,7 +27,9 @@ defmodule LangWeb.Internal.AgentDiagnosticsController do
         conn |> put_status(:too_many_requests) |> json(%{error: "rate_limited"})
 
       {:error, reason} ->
-        conn |> put_status(:internal_server_error) |> json(%{error: "persist_failed", reason: inspect(reason)})
+        conn
+        |> put_status(:internal_server_error)
+        |> json(%{error: "persist_failed", reason: inspect(reason)})
     end
   end
 
@@ -54,6 +56,7 @@ defmodule LangWeb.Internal.AgentDiagnosticsController do
   defp enforce_rate_limit(conn) do
     ip = conn.remote_ip |> Tuple.to_list() |> Enum.join(".")
     config = %{max_requests: 30, window_seconds: 60, burst_allowance: 5}
+
     case Lang.Security.RateLimiter.check_with_config("ip:" <> ip, "internal_diagnostics", config) do
       :ok -> :ok
       {:error, :rate_limited} -> {:error, :rate_limited}

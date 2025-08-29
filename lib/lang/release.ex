@@ -19,6 +19,7 @@ defmodule Lang.Release do
 
   def rollback(repo, version) do
     load_app()
+
     if skip_db?() do
       IO.puts("SKIP_DB=1 set, skipping rollback")
     else

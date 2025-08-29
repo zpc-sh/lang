@@ -48,7 +48,9 @@ defmodule Lang.LSP.SpatialSuccessTest do
     assert is_list(result["edges"]) or is_list(result[:edges])
   end
 
-  test "traverse types normalization (imports) expands across import edges", %{project_id: project_id} do
+  test "traverse types normalization (imports) expands across import edges", %{
+    project_id: project_id
+  } do
     msg = %{
       "jsonrpc" => "2.0",
       "id" => 101,

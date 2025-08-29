@@ -36,7 +36,8 @@ defmodule Lang.LSP.API do
   end
 
   @doc "Filesystem regex search wrapper."
-  def fs_search(path, query, opts \\ %{}, call_opts \\ []) when is_binary(path) and is_binary(query) do
+  def fs_search(path, query, opts \\ %{}, call_opts \\ [])
+      when is_binary(path) and is_binary(query) do
     params = Map.merge(%{"path" => path, "query" => query}, opts)
     Client.request("lang.fs.search", params, call_opts)
   end

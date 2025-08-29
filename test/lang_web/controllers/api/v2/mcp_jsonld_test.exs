@@ -17,4 +17,3 @@ defmodule LangWeb.Api.V2.MCPJSONLDTest do
     assert is_list(body["connections"]) or body["connections"] == []
   end
 end
-

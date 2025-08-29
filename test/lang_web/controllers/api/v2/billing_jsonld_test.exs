@@ -41,4 +41,3 @@ defmodule LangWeb.Api.V2.BillingJSONLDTest do
     assert body["@context"] == @ctx
   end
 end
-

@@ -32,7 +32,10 @@ defmodule LangWeb.Api.V2.SpatialMapAllTest do
     {:ok, conn: Plug.Conn.assign(conn, :current_user, user), project_id: project.id}
   end
 
-  test "section=all returns filtered lists and meta with totals", %{conn: conn, project_id: project_id} do
+  test "section=all returns filtered lists and meta with totals", %{
+    conn: conn,
+    project_id: project_id
+  } do
     params = %{
       section: "all",
       languages: "elixir",
@@ -59,14 +62,19 @@ defmodule LangWeb.Api.V2.SpatialMapAllTest do
     # symbols elixir total_all should equal number of elixir symbols (2)
     assert sym_meta["total_all"] >= sym_meta["total"]
     assert sym_meta["counts_by_kind"]["function"] == sym_meta["total"]
-    assert sym_meta["counts_all_by_language"]["elixir"] >= sym_meta["counts_by_language"]["elixir"]
+
+    assert sym_meta["counts_all_by_language"]["elixir"] >=
+             sym_meta["counts_by_language"]["elixir"]
 
     # relations total_all >= total; and only import shown in filtered counts
     assert rel_meta["total_all"] >= rel_meta["total"]
     assert rel_meta["counts_by_type"]["import"] == rel_meta["total"]
   end
 
-  test "counts_only with combined filters returns only meta and empty lists", %{conn: conn, project_id: project_id} do
+  test "counts_only with combined filters returns only meta and empty lists", %{
+    conn: conn,
+    project_id: project_id
+  } do
     params = %{
       section: "all",
       counts_only: "true",
@@ -86,7 +94,6 @@ defmodule LangWeb.Api.V2.SpatialMapAllTest do
     # Still provide totals and scoped counts
     assert is_integer(sym_meta["total"])
     assert is_integer(sym_meta["total_all"])
-    assert is_map(sym_meta["counts_by_kind"]) and is_map(rel_meta["counts_by_type"]) 
+    assert is_map(sym_meta["counts_by_kind"]) and is_map(rel_meta["counts_by_type"])
   end
 end
-

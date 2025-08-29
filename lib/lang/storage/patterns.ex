@@ -29,6 +29,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.UpdateConfidence do
 
   defp require_params(map, keys) do
     missing = Enum.reject(keys, &Map.has_key?(map, &1))
+
     case missing do
       [] -> :ok
       _ -> {:error, -32602, "Missing required parameters: #{Enum.join(missing, ", ")}"}

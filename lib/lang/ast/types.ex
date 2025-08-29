@@ -9,12 +9,18 @@ defmodule Lang.AST.Snapshot do
 
   @enforce_keys [:uri, :version, :lang, :text_hash, :root]
   defstruct [
-    :uri,          # string
-    :version,      # integer (LSP version)
-    :lang,         # string/language id
-    :text_hash,    # sha256 or similar
-    :root,         # compact root node map or parser ref
-    symbols: [],   # optional precomputed symbols
+    # string
+    :uri,
+    # integer (LSP version)
+    :version,
+    # string/language id
+    :lang,
+    # sha256 or similar
+    :text_hash,
+    # compact root node map or parser ref
+    :root,
+    # optional precomputed symbols
+    symbols: [],
     diagnostics: [],
     meta: %{}
   ]
@@ -30,4 +36,3 @@ defmodule Lang.AST.Snapshot do
           meta: map()
         }
 end
-

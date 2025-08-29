@@ -102,9 +102,10 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Query.Natural do
     found_languages = Enum.filter(languages, &String.contains?(String.downcase(query), &1))
 
     # File types
-    file_extensions = Enum.filter(~w(.ex .exs .rs .js .py .go .java .md .json .yml .yaml), fn ext ->
-      String.contains?(query, ext)
-    end)
+    file_extensions =
+      Enum.filter(~w(.ex .exs .rs .js .py .go .java .md .json .yml .yaml), fn ext ->
+        String.contains?(query, ext)
+      end)
 
     # Function/module patterns
     function_matches = Regex.scan(~r/\b(\w+)\s*\(/, query) |> Enum.map(fn [_, name] -> name end)
@@ -167,7 +168,8 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Query.Natural do
 
   defp extract_keywords(query) do
     # Remove common words and extract meaningful keywords
-    stop_words = ~w(a an and or but the is are was were been be have has had do does did will would could should may might can)
+    stop_words =
+      ~w(a an and or but the is are was were been be have has had do does did will would could should may might can)
 
     query
     |> String.downcase()
@@ -223,7 +225,8 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Query.Natural do
     # Search for tutorial-like content
     tutorials = [
       %{
-        title: "Getting Started with #{List.first(parsed_query.entities[:languages] || ["Elixir"])}",
+        title:
+          "Getting Started with #{List.first(parsed_query.entities[:languages] || ["Elixir"])}",
         type: :tutorial,
         relevance: 0.9,
         content: "Step-by-step guide to get you started",
@@ -318,7 +321,8 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Query.Natural do
         tags: parsed_query.keywords ++ ["security", "best_practices"]
       },
       %{
-        title: "Vulnerability Assessment for #{List.first(parsed_query.keywords, "Applications")}",
+        title:
+          "Vulnerability Assessment for #{List.first(parsed_query.keywords, "Applications")}",
         type: :security_assessment,
         relevance: 0.8,
         content: "How to identify and mitigate security risks",
@@ -434,7 +438,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Query.Natural do
         title: "#{List.first(keywords, "example")}_#{i}#{file_ext}",
         type: :file,
         path: "./lib/#{List.first(keywords, "example")}_#{i}#{file_ext}",
-        relevance: 0.8 - (i * 0.1),
+        relevance: 0.8 - i * 0.1,
         content: "Content related to #{Enum.join(keywords, " ")}",
         line_number: 1,
         tags: keywords
@@ -468,10 +472,10 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Query.Natural do
     base_confidence = 0.5
 
     confidence_factors = [
-      (if String.length(query) > 10, do: 0.1, else: 0.0),
-      (if String.contains?(query, ["specific", "exact"]), do: 0.2, else: 0.0),
-      (if Regex.match?(~r/\b\w+\.\w+\b/, query), do: 0.15, else: 0.0),
-      (if String.contains?(query, ~w(how what where when why)), do: 0.15, else: 0.0)
+      if(String.length(query) > 10, do: 0.1, else: 0.0),
+      if(String.contains?(query, ["specific", "exact"]), do: 0.2, else: 0.0),
+      if(Regex.match?(~r/\b\w+\.\w+\b/, query), do: 0.15, else: 0.0),
+      if(String.contains?(query, ~w(how what where when why)), do: 0.15, else: 0.0)
     ]
 
     base_confidence + Enum.sum(confidence_factors)

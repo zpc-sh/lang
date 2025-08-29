@@ -18,10 +18,12 @@ defmodule Mix.Tasks.Lsp.MdToJsonld do
   def run(args) do
     # Load paths without compiling the whole app
     Mix.Task.run("loadpaths")
-    out_dir = case args do
-      [dir] -> dir
-      _ -> @default_out
-    end
+
+    out_dir =
+      case args do
+        [dir] -> dir
+        _ -> @default_out
+      end
 
     with {:ok, md} <- read_markdown("docs/lsp.md"),
          rows <- extract_rows(md) do
@@ -105,8 +107,15 @@ defmodule Mix.Tasks.Lsp.MdToJsonld do
     end
   end
 
-  defp to_jsonld(%{method: method, status: status, priority: priority, description: desc, impl_file: file}) do
+  defp to_jsonld(%{
+         method: method,
+         status: status,
+         priority: priority,
+         description: desc,
+         impl_file: file
+       }) do
     category = derive_category(method)
+
     %{
       "@context" => %{
         "lang" => "https://lang.nulity.com/schema/v1/",

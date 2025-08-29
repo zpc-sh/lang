@@ -43,4 +43,3 @@ defmodule LangWeb.Api.V2.SpatialMapRelationsPaginationTest do
     assert meta2["total"] == meta1["total"]
   end
 end
-

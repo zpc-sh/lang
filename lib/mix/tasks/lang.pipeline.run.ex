@@ -29,8 +29,11 @@ defmodule Mix.Tasks.Lang.Pipeline.Run do
 
     path =
       case argv do
-        [p | _] -> p
-        _ -> Mix.raise("Usage: mix lang.pipeline.run /path/to/project [--email EMAIL] [--name NAME]")
+        [p | _] ->
+          p
+
+        _ ->
+          Mix.raise("Usage: mix lang.pipeline.run /path/to/project [--email EMAIL] [--name NAME]")
       end
 
     email = opts[:email] || "dev+pipeline@lang.local"
@@ -48,7 +51,9 @@ defmodule Mix.Tasks.Lang.Pipeline.Run do
       Lang.Accounts.User.create(%{email: email, name: name, organization_name: "Dev Org"})
 
     {:ok, project} = Lang.Analysis.create_project(%{name: project_name, user_id: user.id})
-    {:ok, run} = Lang.Analyses.Run.create(%{project_id: project.id, metadata: %{source: :mix_task}})
+
+    {:ok, run} =
+      Lang.Analyses.Run.create(%{project_id: project.id, metadata: %{source: :mix_task}})
 
     {:ok, _job} =
       Lang.Workers.FileSystemScanWorker.scan_async(path, run.id, project.id, user.id,

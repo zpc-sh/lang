@@ -42,4 +42,3 @@ defmodule Lang.Think.Explainer do
     })
   end
 end
-

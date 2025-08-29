@@ -36,7 +36,8 @@ defmodule Lang.AST.Store do
             _ -> nil
           end
 
-        v when is_integer(v) -> v
+        v when is_integer(v) ->
+          v
       end
 
     if ver do
@@ -54,7 +55,7 @@ defmodule Lang.AST.Store do
     # Delete latest pointer
     :ets.delete(@table, {uri, :latest})
     # Brute-force delete all versions for URI (scan small table)
-    match_spec = [{{{uri, :'$1'}, :'$2'}, [], [true]}]
+    match_spec = [{{{uri, :"$1"}, :"$2"}, [], [true]}]
     :ets.select_delete(@table, match_spec)
     :ok
   end
@@ -63,8 +64,14 @@ defmodule Lang.AST.Store do
 
   @impl true
   def init(_opts) do
-    :ets.new(@table, [:set, :public, :named_table, read_concurrency: true, write_concurrency: true])
+    :ets.new(@table, [
+      :set,
+      :public,
+      :named_table,
+      read_concurrency: true,
+      write_concurrency: true
+    ])
+
     {:ok, %{}}
   end
 end
-

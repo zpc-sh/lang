@@ -21,6 +21,7 @@ defmodule Lang.Generate.Request do
 
     attribute :strategy, :atom do
       allow_nil?(false)
+
       constraints(
         one_of: [
           :from_spec,
@@ -71,8 +72,8 @@ defmodule Lang.Generate.Request do
       default(%{})
     end
 
-    attribute :started_at, :utc_datetime
-    attribute :completed_at, :utc_datetime
+    attribute(:started_at, :utc_datetime)
+    attribute(:completed_at, :utc_datetime)
 
     create_timestamp(:inserted_at)
     update_timestamp(:updated_at)
@@ -105,11 +106,13 @@ defmodule Lang.Generate.Request do
       accept([:strategy, :inputs, :boundaries, :user_id, :project_id, :run_id, :metadata])
       validate(present([:strategy]))
       change(set_attribute(:status, :pending))
+
       change(fn changeset, _ ->
         Ash.Changeset.after_action(changeset, fn _cs, req ->
           %{"request_id" => req.id}
           |> Lang.Generate.Workers.RequestWorker.new(queue: :analysis)
           |> Oban.insert()
+
           {:ok, req}
         end)
       end)
@@ -119,21 +122,33 @@ defmodule Lang.Generate.Request do
       accept([:error_message, :metadata])
       argument(:status, :atom, allow_nil?: false)
       validate(one_of(:status, [:pending, :running, :completed, :failed, :cancelled]))
+
       change(fn changeset, ctx ->
         status = ctx.arguments[:status]
         changeset = Ash.Changeset.change_attribute(changeset, :status, status)
+
         case status do
-          :running -> Ash.Changeset.change_attribute(changeset, :started_at, DateTime.utc_now())
-          :completed -> Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
-          :failed -> Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
-          :cancelled -> Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
-          _ -> changeset
+          :running ->
+            Ash.Changeset.change_attribute(changeset, :started_at, DateTime.utc_now())
+
+          :completed ->
+            Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
+
+          :failed ->
+            Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
+
+          :cancelled ->
+            Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
+
+          _ ->
+            changeset
         end
       end)
     end
 
     update :complete do
       accept([:metadata])
+
       change(fn changeset, _ ->
         changeset
         |> Ash.Changeset.change_attribute(:status, :completed)
@@ -144,6 +159,7 @@ defmodule Lang.Generate.Request do
     update :fail do
       accept([:error_message, :metadata])
       validate(present(:error_message))
+
       change(fn changeset, _ ->
         changeset
         |> Ash.Changeset.change_attribute(:status, :failed)
@@ -153,6 +169,7 @@ defmodule Lang.Generate.Request do
 
     update :cancel do
       accept([:metadata])
+
       change(fn changeset, _ ->
         changeset
         |> Ash.Changeset.change_attribute(:status, :cancelled)

@@ -287,4 +287,3 @@ defmodule CDFM.Formats.BaseGenerator do
   defp validate_terminal_ui_options(_opts), do: :ok
   defp validate_rest_api_options(_opts), do: :ok
 end
-

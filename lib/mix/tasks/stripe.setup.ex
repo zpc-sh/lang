@@ -81,13 +81,14 @@ defmodule Mix.Tasks.Stripe.Setup do
   defp setup_stripe(options) do
     Logger.info("🚀 Starting Stripe setup for LANG Platform...")
 
-    with :ok <- validate_environment(),
+    dry_run = options[:dry_run] || false
+
+    with :ok <- validate_environment(dry_run),
          :ok <- configure_stripe(),
          :ok <- validate_config() do
       # Get pricing from config or command line overrides
       config_plans = plans_config()
 
-      dry_run = options[:dry_run] || false
       sync_mode = options[:sync] || false
 
       if dry_run do
@@ -103,7 +104,7 @@ defmodule Mix.Tasks.Stripe.Setup do
     end
   end
 
-  defp validate_environment do
+  defp validate_environment(dry_run \\ false) do
     secret_key = System.get_env("STRIPE_SECRET_KEY")
 
     cond do
@@ -115,7 +116,13 @@ defmodule Mix.Tasks.Stripe.Setup do
 
       String.starts_with?(secret_key, "sk_live_") ->
         Logger.warning("⚠️  Using LIVE Stripe keys - products will be created in production!")
-        confirm_production()
+
+        if dry_run do
+          Logger.info("ℹ️  Dry run mode - no actual changes will be made to production")
+          :ok
+        else
+          confirm_production()
+        end
 
       true ->
         Logger.info("✅ Using test Stripe keys")
@@ -129,12 +136,23 @@ defmodule Mix.Tasks.Stripe.Setup do
 
     response = IO.gets("Are you sure you want to continue? (yes/no): ")
 
-    case String.trim(String.downcase(response)) do
-      "yes" ->
-        :ok
+    case response do
+      :eof ->
+        Logger.info("No input available - setup cancelled")
+        System.halt(0)
 
-      "y" ->
-        :ok
+      response_string when is_binary(response_string) ->
+        case response_string |> String.trim() |> String.downcase() do
+          "yes" ->
+            :ok
+
+          "y" ->
+            :ok
+
+          _ ->
+            Logger.info("Setup cancelled by user")
+            System.halt(0)
+        end
 
       _ ->
         Logger.info("Setup cancelled by user")

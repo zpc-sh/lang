@@ -10,13 +10,34 @@ defmodule Lang.Workers.RunFinalizeWorkerCompleteTest do
   @moduletag :integration
 
   test "finalize worker completes run when all files processed" do
-    {:ok, user} = User.create(%{email: "finalize2@test.local", name: "Finalize2 User", organization_name: "Finalize2 Org"})
+    {:ok, user} =
+      User.create(%{
+        email: "finalize2@test.local",
+        name: "Finalize2 User",
+        organization_name: "Finalize2 Org"
+      })
+
     {:ok, project} = Analysis.create_project(%{name: "Finalize2 Project", user_id: user.id})
     {:ok, run} = Run.create(%{project_id: project.id, metadata: %{}})
 
     # Create completed files for this run
-    {:ok, f1} = File.create(%{analysis_session_id: run.id, file_name: "one.ex", file_path: "one.ex", file_extension: ".ex", file_size_bytes: 10})
-    {:ok, f2} = File.create(%{analysis_session_id: run.id, file_name: "two.js", file_path: "two.js", file_extension: ".js", file_size_bytes: 20})
+    {:ok, f1} =
+      File.create(%{
+        analysis_session_id: run.id,
+        file_name: "one.ex",
+        file_path: "one.ex",
+        file_extension: ".ex",
+        file_size_bytes: 10
+      })
+
+    {:ok, f2} =
+      File.create(%{
+        analysis_session_id: run.id,
+        file_name: "two.js",
+        file_path: "two.js",
+        file_extension: ".js",
+        file_size_bytes: 20
+      })
 
     {:ok, _} = File.complete(f1, %{analysis_result: %{}}, %{processing_time_ms: 5})
     {:ok, _} = File.complete(f2, %{analysis_result: %{}}, %{processing_time_ms: 7})

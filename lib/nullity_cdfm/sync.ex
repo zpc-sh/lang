@@ -34,8 +34,10 @@ defmodule Nullity.CDFM.Sync do
     arity = method[:impl_arity] || 2
 
     file_exists? = is_binary(impl_file) && file_adapter.exists?(impl_file)
-    exported? = file_exists? && is_atom(mod) && is_atom(fun) && is_integer(arity) &&
-      safe_exported?(introspection, mod, fun, arity)
+
+    exported? =
+      file_exists? && is_atom(mod) && is_atom(fun) && is_integer(arity) &&
+        safe_exported?(introspection, mod, fun, arity)
 
     derived =
       cond do
@@ -59,4 +61,3 @@ defmodule Nullity.CDFM.Sync do
   defp to_atom(v) when is_atom(v), do: v
   defp to_atom(v) when is_binary(v), do: String.to_atom(v)
 end
-

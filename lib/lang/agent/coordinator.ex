@@ -13,12 +13,15 @@ defmodule Lang.Agent.Coordinator do
     case strategy do
       :fanout ->
         delegate_fun = Map.get(task, :delegate_fun, &Lifecycle.delegate/2)
+
         results =
           agent_ids
           |> Task.async_stream(fn id -> {id, delegate_fun.(id, task)} end, timeout: 30_000)
           |> Enum.map(&unwrap_result/1)
 
-        merged = merge_results(Enum.map(results, fn {id, res} -> %{agent_id: id, result: res} end))
+        merged =
+          merge_results(Enum.map(results, fn {id, res} -> %{agent_id: id, result: res} end))
+
         AgentEvents.track_coordination("coordinator", agent_ids, task, %{strategy: strategy})
         _ = save_summary(agent_ids, task, %{strategy: strategy, merged: merged})
         {:ok, %{results: results, merged: merged}}
@@ -26,25 +29,35 @@ defmodule Lang.Agent.Coordinator do
       :first_success ->
         delegate_fun = Map.get(task, :delegate_fun, &Lifecycle.delegate/2)
         {results, winner} = try_until_success(agent_ids, task, delegate_fun)
-        merged = merge_results(Enum.map(results, fn {id, res} -> %{agent_id: id, result: res} end))
-        AgentEvents.track_coordination("coordinator", agent_ids, task, %{strategy: strategy, winner: winner})
+
+        merged =
+          merge_results(Enum.map(results, fn {id, res} -> %{agent_id: id, result: res} end))
+
+        AgentEvents.track_coordination("coordinator", agent_ids, task, %{
+          strategy: strategy,
+          winner: winner
+        })
+
         _ = save_summary(agent_ids, task, %{strategy: strategy, merged: merged, winner: winner})
         {:ok, %{results: results, merged: merged, winner: winner}}
 
       :map_reduce ->
         delegate_fun = Map.get(task, :delegate_fun, &Lifecycle.delegate/2)
         reduce_fun = Map.get(task, :reduce_fun)
+
         results =
           agent_ids
           |> Task.async_stream(fn id -> {id, delegate_fun.(id, task)} end, timeout: 30_000)
           |> Enum.map(&unwrap_result/1)
 
         base = map_reduce_merge(results)
+
         merged =
           case reduce_fun do
             fun when is_function(fun, 1) -> Map.put(base, :reduced, fun.(base[:merged_payloads]))
             _ -> base
           end
+
         AgentEvents.track_coordination("coordinator", agent_ids, task, %{strategy: strategy})
         _ = save_summary(agent_ids, task, %{strategy: strategy, merged: merged})
         {:ok, %{results: results, merged: merged}}
@@ -66,7 +79,9 @@ defmodule Lang.Agent.Coordinator do
   def save_summary(agent_ids, task, summary) do
     # Try DB persistence first
     case Lang.Agent.CoordinationSummary.record(agent_ids, task, summary) do
-      {:ok, _rec} -> :ok
+      {:ok, _rec} ->
+        :ok
+
       _ ->
         key = coordination_key(agent_ids, task)
         Store.put(:agent_coordination, key, %{summary: summary, at: DateTime.utc_now()})
@@ -90,7 +105,7 @@ defmodule Lang.Agent.Coordinator do
   defp try_until_success(agent_ids, task, delegate_fun) do
     Enum.reduce_while(agent_ids, {[], nil}, fn id, {acc, _} ->
       case delegate_fun.(id, task) do
-        {:ok, res} -> {:halt, ({acc ++ [{id, {:ok, res}}], id})}
+        {:ok, res} -> {:halt, {acc ++ [{id, {:ok, res}}], id}}
         {:error, reason} -> {:cont, {acc ++ [{id, {:error, reason}}], nil}}
       end
     end)
@@ -110,6 +125,7 @@ defmodule Lang.Agent.Coordinator do
         scored
         |> Enum.sort_by(fn {_id, score} -> -score end)
         |> Enum.map(&elem(&1, 0))
+
       coordination_heavy?(task) ->
         scored =
           Enum.map(agent_ids, fn id ->
@@ -120,6 +136,7 @@ defmodule Lang.Agent.Coordinator do
         scored
         |> Enum.sort_by(fn {_id, score} -> -score end)
         |> Enum.map(&elem(&1, 0))
+
       true ->
         agent_ids
     end
@@ -152,7 +169,8 @@ defmodule Lang.Agent.Coordinator do
         base = if :analysis in caps, do: base + 10, else: base
         base
 
-      _ -> 0
+      _ ->
+        0
     end
   end
 
@@ -174,7 +192,8 @@ defmodule Lang.Agent.Coordinator do
         base = if :analysis in caps, do: base + 10, else: base
         base
 
-      _ -> 0
+      _ ->
+        0
     end
   end
 

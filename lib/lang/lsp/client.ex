@@ -45,7 +45,12 @@ defmodule Lang.LSP.Client do
     root_path = Keyword.get(opts, :root_path, System.cwd!())
 
     with {:ok, socket} <-
-           :gen_tcp.connect(host, port, [:binary, packet: :raw, active: false, nodelay: true], timeout),
+           :gen_tcp.connect(
+             host,
+             port,
+             [:binary, packet: :raw, active: false, nodelay: true],
+             timeout
+           ),
          {:ok, _result} <- initialize_lsp(socket, client_id, root_path, timeout),
          :ok <- send_initialized_notification(socket) do
       {:ok, %{socket: socket, client_id: client_id, initialized: true}}
@@ -222,15 +227,19 @@ defmodule Lang.LSP.Client do
     case :gen_tcp.recv(socket, 0, timeout) do
       {:ok, data} ->
         buf = acc <> data
+
         case :binary.match(buf, "\r\n\r\n") do
           {hdr_end, 4} ->
             headers = :binary.part(buf, 0, hdr_end)
             rest = :binary.part(buf, hdr_end + 4, byte_size(buf) - (hdr_end + 4))
+
             case parse_content_length(headers) do
               {:ok, len} -> {:ok, len, rest}
               {:error, _} -> recv_until_header(socket, buf, timeout)
             end
-          :nomatch -> recv_until_header(socket, buf, timeout)
+
+          :nomatch ->
+            recv_until_header(socket, buf, timeout)
         end
 
       {:error, reason} ->
@@ -243,16 +252,22 @@ defmodule Lang.LSP.Client do
       {pos, _len} ->
         start = pos + byte_size("Content-Length: ")
         suffix = :binary.part(headers, start, byte_size(headers) - start)
+
         case :binary.match(suffix, "\r\n") do
           {eol, _} ->
             len_bin = :binary.part(suffix, 0, eol)
+
             case Integer.parse(len_bin) do
               {int, _} -> {:ok, int}
               :error -> {:error, :invalid_length}
             end
-          :nomatch -> {:error, :no_eol}
+
+          :nomatch ->
+            {:error, :no_eol}
         end
-      :nomatch -> {:error, :no_content_length}
+
+      :nomatch ->
+        {:error, :no_content_length}
     end
   end
 

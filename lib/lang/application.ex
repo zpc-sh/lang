@@ -20,8 +20,11 @@ defmodule Lang.Application do
       [
         optional_child(LangWeb.Telemetry),
         # Attach optional LSP client telemetry logger
-        (Lang.Telemetry.LSPClientLogger.maybe_attach(); nil),
-        (db_enabled?() && optional_child(Lang.Repo)),
+        (
+          Lang.Telemetry.LSPClientLogger.maybe_attach()
+          nil
+        ),
+        db_enabled?() && optional_child(Lang.Repo),
         optional_child(
           {DNSCluster, query: Application.get_env(:lang, :dns_cluster_query) || :ignore}
         ),
@@ -41,7 +44,7 @@ defmodule Lang.Application do
         optional_child({Lang.AST.Store, []}),
 
         # Background processing
-        (db_enabled?() && optional_child({Oban, Application.fetch_env!(:lang, Oban)})),
+        db_enabled?() && optional_child({Oban, Application.fetch_env!(:lang, Oban)}),
 
         # Orchestration system
         optional_child({Lang.Orchestration.Master, []}),

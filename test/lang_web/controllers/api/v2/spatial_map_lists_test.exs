@@ -50,4 +50,3 @@ defmodule LangWeb.Api.V2.SpatialMapListsTest do
     assert Enum.all?(rels, fn r -> r["language"] == "elixir" and r["type"] == "import" end)
   end
 end
-

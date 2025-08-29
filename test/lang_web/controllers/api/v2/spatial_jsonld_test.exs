@@ -32,16 +32,21 @@ defmodule LangWeb.Api.V2.SpatialJSONLDTest do
     {:ok, conn: conn, project_id: project.id}
   end
 
-  test "trace_path returns @context when JSON-LD negotiated", %{conn: conn, project_id: project_id} do
+  test "trace_path returns @context when JSON-LD negotiated", %{
+    conn: conn,
+    project_id: project_id
+  } do
     conn = get(conn, ~p"/api/v2/spatial/trace_path/#{project_id}", %{from: "a.ex", to: "b.ex"})
     body = json_response(conn, 200)
     assert body["@context"] == @ctx
   end
 
-  test "map_summary returns @context when JSON-LD negotiated", %{conn: conn, project_id: project_id} do
+  test "map_summary returns @context when JSON-LD negotiated", %{
+    conn: conn,
+    project_id: project_id
+  } do
     conn = get(conn, ~p"/api/v2/spatial/map/#{project_id}")
     body = json_response(conn, 200)
     assert body["@context"] == @ctx
   end
 end
-

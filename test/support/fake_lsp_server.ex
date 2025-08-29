@@ -33,7 +33,9 @@ defmodule FakeLSPServer do
       {:ok, sock} ->
         Task.start_link(fn -> conn_loop(sock) end)
         accept_loop(lsock)
-      {:error, _} -> :ok
+
+      {:error, _} ->
+        :ok
     end
   end
 
@@ -42,7 +44,12 @@ defmodule FakeLSPServer do
       {:ok, len, rest} ->
         case recv_body(sock, len, rest) do
           {:ok, %{"method" => "initialize", "id" => id}} ->
-            send_json(sock, %{"jsonrpc" => "2.0", "id" => id, "result" => %{"capabilities" => %{}}})
+            send_json(sock, %{
+              "jsonrpc" => "2.0",
+              "id" => id,
+              "result" => %{"capabilities" => %{}}
+            })
+
             conn_loop(sock)
 
           {:ok, %{"method" => "initialized"}} ->
@@ -62,10 +69,12 @@ defmodule FakeLSPServer do
           {:ok, _other} ->
             conn_loop(sock)
 
-          {:error, _} -> :gen_tcp.close(sock)
+          {:error, _} ->
+            :gen_tcp.close(sock)
         end
 
-      {:error, _} -> :gen_tcp.close(sock)
+      {:error, _} ->
+        :gen_tcp.close(sock)
     end
   end
 
@@ -73,17 +82,23 @@ defmodule FakeLSPServer do
     case :gen_tcp.recv(sock, 0, 5_000) do
       {:ok, data} ->
         buf = acc <> data
+
         case :binary.match(buf, "\r\n\r\n") do
           {hdr_end, 4} ->
             headers = :binary.part(buf, 0, hdr_end)
             rest = :binary.part(buf, hdr_end + 4, byte_size(buf) - (hdr_end + 4))
+
             case parse_len(headers) do
               {:ok, len} -> {:ok, len, rest}
               _ -> recv_until_header(sock, buf)
             end
-          :nomatch -> recv_until_header(sock, buf)
+
+          :nomatch ->
+            recv_until_header(sock, buf)
         end
-      {:error, reason} -> {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -92,26 +107,38 @@ defmodule FakeLSPServer do
       {pos, _} ->
         start = pos + byte_size("Content-Length: ")
         suffix = :binary.part(headers, start, byte_size(headers) - start)
+
         case :binary.match(suffix, "\r\n") do
           {eol, _} ->
             case Integer.parse(:binary.part(suffix, 0, eol)) do
               {int, _} -> {:ok, int}
               :error -> {:error, :invalid}
             end
-          :nomatch -> {:error, :invalid}
+
+          :nomatch ->
+            {:error, :invalid}
         end
-      :nomatch -> {:error, :invalid}
+
+      :nomatch ->
+        {:error, :invalid}
     end
   end
 
   defp recv_body(sock, 0, rest), do: Jason.decode(rest)
+
   defp recv_body(sock, len, rest) do
     have = byte_size(rest)
+
     cond do
-      have == len -> Jason.decode(rest)
-      have > len -> Jason.decode(:binary.part(rest, 0, len))
+      have == len ->
+        Jason.decode(rest)
+
+      have > len ->
+        Jason.decode(:binary.part(rest, 0, len))
+
       true ->
         rem = len - have
+
         case :gen_tcp.recv(sock, rem, 5_000) do
           {:ok, data} -> Jason.decode(rest <> data)
           {:error, reason} -> {:error, reason}
@@ -125,4 +152,3 @@ defmodule FakeLSPServer do
     :gen_tcp.send(sock, ["Content-Length: ", Integer.to_string(len), "\r\n\r\n", io])
   end
 end
-

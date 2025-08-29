@@ -25,4 +25,3 @@ defmodule Lang.LSP.TraverseInvalidParamsTest do
     assert %{"error" => %{"code" => -32602}} = resp
   end
 end
-

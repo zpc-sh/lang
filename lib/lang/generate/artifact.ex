@@ -57,6 +57,7 @@ defmodule Lang.Generate.Artifact do
 
   actions do
     defaults([:read])
+
     create :create do
       accept([:request_id, :path, :language, :change_type, :patch, :vfs_uri, :metadata])
     end
@@ -68,4 +69,3 @@ defmodule Lang.Generate.Artifact do
     define(:create, action: :create)
   end
 end
-

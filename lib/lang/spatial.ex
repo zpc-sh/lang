@@ -46,9 +46,12 @@ defmodule Lang.Spatial do
   @spec latest_map_summary(String.t()) :: {:ok, map() | nil} | {:error, term()}
   def latest_map_summary(project_id) do
     case latest_map(project_id) do
-      {:ok, nil} -> {:ok, nil}
+      {:ok, nil} ->
+        {:ok, nil}
+
       {:ok, map} when is_map(map) or is_struct(map) ->
         gs = Map.get(map, :graph_summary) || %{}
+
         {:ok,
          %{
            map_id: Map.get(map, :id),
@@ -59,7 +62,8 @@ defmodule Lang.Spatial do
            relations: normalize_relations(gs)
          }}
 
-      other -> other
+      other ->
+        other
     end
   end
 

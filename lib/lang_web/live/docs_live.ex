@@ -87,7 +87,11 @@ defmodule LangWeb.DocsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={assigns[:current_user]} current_scope={assigns[:current_scope]}>
+    <Layouts.app
+      flash={@flash}
+      current_user={assigns[:current_user]}
+      current_scope={assigns[:current_scope]}
+    >
       <!-- Main Content -->
       <div class="flex">
         <!-- Sidebar -->

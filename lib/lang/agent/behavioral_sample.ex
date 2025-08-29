@@ -316,6 +316,7 @@ defmodule Lang.Agent.BehavioralSample do
 
   def record_sample(agent_id, sample_type, attrs \\ %{}) do
     args = Map.merge(attrs, %{agent_id: agent_id, sample_type: sample_type})
+
     __MODULE__
     |> Ash.Changeset.for_create(:record_sample, args)
     |> Ash.create()

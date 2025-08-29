@@ -36,7 +36,8 @@ defmodule Lang.Utils.WireProtocol do
   - {:more, needed} when more bytes are required
   - {:error, reason}
   """
-  @spec next_frame(binary()) :: {:ok, json(), binary()} | {:more, non_neg_integer()} | {:error, term()}
+  @spec next_frame(binary()) ::
+          {:ok, json(), binary()} | {:more, non_neg_integer()} | {:error, term()}
   def next_frame(buffer) when is_binary(buffer) do
     with {:ok, content_len, rest} <- parse_headers(buffer),
          true <- byte_size(rest) >= content_len or {:more, content_len - byte_size(rest)} do
@@ -72,11 +73,13 @@ defmodule Lang.Utils.WireProtocol do
   end
 
   @doc false
-  @spec parse_headers(binary()) :: {:ok, non_neg_integer(), binary()} | {:more, non_neg_integer()} | {:error, term()}
+  @spec parse_headers(binary()) ::
+          {:ok, non_neg_integer(), binary()} | {:more, non_neg_integer()} | {:error, term()}
   def parse_headers(buffer) do
     case :binary.match(buffer, @crlfcrlf) do
       {idx, 4} ->
         <<headers::binary-size(idx), _sep::binary-size(4), rest::binary>> = buffer
+
         case extract_content_length(headers) do
           {:ok, len} -> {:ok, len, rest}
           {:error, _} = err -> err
@@ -104,7 +107,8 @@ defmodule Lang.Utils.WireProtocol do
             {:cont, acc}
           end
 
-        _ -> {:cont, acc}
+        _ ->
+          {:cont, acc}
       end
     end)
     |> case do

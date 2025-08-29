@@ -30,4 +30,3 @@ defmodule LangWeb.JSONLDNegotiationPlugTest do
     refute Map.has_key?(decoded, "https://schema.org/name")
   end
 end
-

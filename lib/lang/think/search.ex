@@ -28,4 +28,3 @@ defmodule Lang.Think.Search do
     })
   end
 end
-

@@ -64,10 +64,13 @@ defmodule Lang.Orchestration.Master do
       total_orchestrations: 0,
       successful_orchestrations: 0,
       failed_orchestrations: 0,
-      active_jobs: %{},         # job_id => %{env, task, inserted_at}
+      # job_id => %{env, task, inserted_at}
+      active_jobs: %{},
       completed_jobs: MapSet.new(),
-      failed_jobs: %{},         # job_id => reason
-      workflows: %{}            # workflow_id => %{status, started_at, jobs: [job_id], metadata: %{}}
+      # job_id => reason
+      failed_jobs: %{},
+      # workflow_id => %{status, started_at, jobs: [job_id], metadata: %{}}
+      workflows: %{}
     }
 
     {:ok, state}
@@ -89,6 +92,7 @@ defmodule Lang.Orchestration.Master do
   def handle_call({:orchestrate_env, env}, _from, state) do
     {job_ids, state} = enqueue_env_sets([env], state)
     _ = schedule_progress_check(job_ids)
+
     {:reply, {:ok, %{job_ids: job_ids, started_at: DateTime.utc_now()}},
      bump_orchestration(state)}
   end
@@ -121,7 +125,12 @@ defmodule Lang.Orchestration.Master do
         metadata: %{requested_by: Map.get(params, "user_id")}
       })
 
-    Phoenix.PubSub.broadcast(Lang.PubSub, "orchestration:updates", {:workflow_started, workflow_id})
+    Phoenix.PubSub.broadcast(
+      Lang.PubSub,
+      "orchestration:updates",
+      {:workflow_started, workflow_id}
+    )
+
     {:reply, {:ok, workflow_id}, %{state | workflows: workflows}}
   end
 
@@ -136,11 +145,19 @@ defmodule Lang.Orchestration.Master do
   @impl true
   def handle_call({:cancel_workflow, workflow_id}, _from, state) do
     case Map.get(state.workflows, workflow_id) do
-      nil -> {:reply, {:error, :not_found}, state}
+      nil ->
+        {:reply, {:error, :not_found}, state}
+
       wf ->
         # Best-effort: mark cancelled; any running jobs will complete/fail on their own
         workflows = Map.put(state.workflows, workflow_id, Map.put(wf, :status, :cancelled))
-        Phoenix.PubSub.broadcast(Lang.PubSub, "orchestration:updates", {:workflow_cancelled, workflow_id})
+
+        Phoenix.PubSub.broadcast(
+          Lang.PubSub,
+          "orchestration:updates",
+          {:workflow_cancelled, workflow_id}
+        )
+
         {:reply, :ok, %{state | workflows: workflows}}
     end
   end
@@ -174,7 +191,12 @@ defmodule Lang.Orchestration.Master do
         {[job_id | ids], Map.put(acc, job_id, meta)}
       end)
 
-    Phoenix.PubSub.broadcast(Lang.PubSub, "orchestration:updates", {:jobs_enqueued, Enum.reverse(job_ids)})
+    Phoenix.PubSub.broadcast(
+      Lang.PubSub,
+      "orchestration:updates",
+      {:jobs_enqueued, Enum.reverse(job_ids)}
+    )
+
     {Enum.reverse(job_ids), %{state | active_jobs: Map.merge(state.active_jobs, new_active)}}
   end
 
@@ -211,12 +233,19 @@ defmodule Lang.Orchestration.Master do
 
   defp schedule_progress_check(job_ids) do
     %{"action" => "progress_check", "job_ids" => job_ids, "started_at" => DateTime.utc_now()}
-    |> OrchestrationMonitor.new(queue: :metrics, scheduled_at: DateTime.add(DateTime.utc_now(), 30, :second))
+    |> OrchestrationMonitor.new(
+      queue: :metrics,
+      scheduled_at: DateTime.add(DateTime.utc_now(), 30, :second)
+    )
     |> Oban.insert()
   end
 
   defp bump_orchestration(state) do
-    %{state | total_orchestrations: state.total_orchestrations + 1, last_orchestration: DateTime.utc_now()}
+    %{
+      state
+      | total_orchestrations: state.total_orchestrations + 1,
+        last_orchestration: DateTime.utc_now()
+    }
   end
 
   defp enqueue_workflow_jobs(_workflow, _params) do

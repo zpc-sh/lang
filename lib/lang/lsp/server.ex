@@ -398,7 +398,9 @@ defmodule Lang.LSP.Server do
           nil
 
         %{"method" => "textDocument/didOpen", "params" => params} ->
-          uri = get_in(params, ["textDocument", "uri"]) || get_in(params, ["textDocument", "uriString"]) || ""
+          uri =
+            get_in(params, ["textDocument", "uri"]) ||
+              get_in(params, ["textDocument", "uriString"]) || ""
 
           # Store last opened URI on the client for log correlation
           clients =
@@ -438,10 +440,18 @@ defmodule Lang.LSP.Server do
         %{"method" => "textDocument/documentSymbol", "id" => id, "params" => params} ->
           handle_document_symbol(id, params, state)
 
-        %{"method" => "textDocument/semanticTokens/full", "id" => id, "params" => %{"textDocument" => %{"uri" => uri}}} ->
+        %{
+          "method" => "textDocument/semanticTokens/full",
+          "id" => id,
+          "params" => %{"textDocument" => %{"uri" => uri}}
+        } ->
           handle_semantic_tokens_full(id, uri, state)
 
-        %{"method" => "textDocument/semanticTokens/range", "id" => id, "params" => %{"textDocument" => %{"uri" => uri}, "range" => range}} ->
+        %{
+          "method" => "textDocument/semanticTokens/range",
+          "id" => id,
+          "params" => %{"textDocument" => %{"uri" => uri}, "range" => range}
+        } ->
           handle_semantic_tokens_range(id, uri, range, state)
 
         %{"method" => "textDocument/formatting", "id" => id, "params" => params} ->
@@ -679,7 +689,7 @@ defmodule Lang.LSP.Server do
 
         # Get hover info from AI
         hover_info =
-        case Lang.Providers.Router.route_lsp(:hover, %{
+          case Lang.Providers.Router.route_lsp(:hover, %{
                  word: word,
                  context: get_line_at_position(document.text, position),
                  language: document.language_id
@@ -810,7 +820,11 @@ defmodule Lang.LSP.Server do
       document ->
         # Compute full then filter to range; simple and sufficient for now
         tokens = decode_semantic_tokens(build_semantic_tokens(document))
-        %{"start" => %{"line" => sl, "character" => sc}, "end" => %{"line" => el, "character" => ec}} = range
+
+        %{
+          "start" => %{"line" => sl, "character" => sc},
+          "end" => %{"line" => el, "character" => ec}
+        } = range
 
         filtered =
           Enum.filter(tokens, fn {line, start, length, _type, _mods} ->
@@ -901,6 +915,7 @@ defmodule Lang.LSP.Server do
   # Encode list of {line, start, length, type, mods_bitset} into LSP data array
   defp encode_semantic_tokens(tokens) do
     sorted = Enum.sort_by(tokens, fn {l, s, _len, _t, _m} -> {l, s} end)
+
     {data, _} =
       Enum.reduce(sorted, {[], {0, 0}}, fn {line, start, len, type, mods}, {acc, {pl, ps}} ->
         delta_line = line - pl
@@ -928,35 +943,40 @@ defmodule Lang.LSP.Server do
   # Very lightweight Elixir tokenization; per-line regex scanning
   defp semantic_tokens_elixir(text) do
     lines = String.split(text, "\n")
-    keywords = ~w(def defp defmodule defmacro defstruct alias import require use fn do end if else elif cond case receive after try catch rescue raise quote unquote when with for true false nil)
+
+    keywords =
+      ~w(def defp defmodule defmacro defstruct alias import require use fn do end if else elif cond case receive after try catch rescue raise quote unquote when with for true false nil)
 
     # Heredocs first (triple-quoted strings across lines)
     heredoc_tokens = scan_elixir_heredocs(text)
 
     line_tokens =
       Enum.with_index(lines)
-    |> Enum.flat_map(fn {line, ln} ->
-      # Comments (take precedence)
-      comment_idx = String.index(line, "#") || -1
-      {code_part, comment_tokens} =
-        if comment_idx >= 0 do
-          len = String.length(line)
-          {String.slice(line, 0, comment_idx), [{ln, comment_idx, len - comment_idx, "comment", []}]}
-        else
-          {line, []}
-        end
+      |> Enum.flat_map(fn {line, ln} ->
+        # Comments (take precedence)
+        comment_idx = String.index(line, "#") || -1
 
-      tokens = []
-      tokens = add_string_tokens(tokens, code_part, ln)
-      tokens = add_elixir_sigil_tokens(tokens, code_part, ln)
-      tokens = add_number_tokens(tokens, code_part, ln)
-      tokens = add_keyword_tokens(tokens, code_part, ln, keywords)
-      tokens = add_defmodule_tokens(tokens, code_part, ln)
-      tokens = add_def_like_tokens(tokens, code_part, ln)
-      tokens = add_attribute_tokens(tokens, code_part, ln)
+        {code_part, comment_tokens} =
+          if comment_idx >= 0 do
+            len = String.length(line)
 
-      comment_tokens ++ Enum.sort_by(tokens, fn {_, s, _, _, _} -> s end)
-    end)
+            {String.slice(line, 0, comment_idx),
+             [{ln, comment_idx, len - comment_idx, "comment", []}]}
+          else
+            {line, []}
+          end
+
+        tokens = []
+        tokens = add_string_tokens(tokens, code_part, ln)
+        tokens = add_elixir_sigil_tokens(tokens, code_part, ln)
+        tokens = add_number_tokens(tokens, code_part, ln)
+        tokens = add_keyword_tokens(tokens, code_part, ln, keywords)
+        tokens = add_defmodule_tokens(tokens, code_part, ln)
+        tokens = add_def_like_tokens(tokens, code_part, ln)
+        tokens = add_attribute_tokens(tokens, code_part, ln)
+
+        comment_tokens ++ Enum.sort_by(tokens, fn {_, s, _, _, _} -> s end)
+      end)
 
     heredoc_tokens ++ line_tokens
   end
@@ -964,6 +984,7 @@ defmodule Lang.LSP.Server do
   defp add_string_tokens(acc, line, ln) do
     # naive per-line string detection (both ' and ")
     re = ~r/("[^"]*"|'[^']*')/u
+
     Enum.reduce(Regex.scan(re, line, return: :index), acc, fn [{pos, len}], a ->
       a ++ [{ln, pos, len, "string", []}]
     end)
@@ -971,6 +992,7 @@ defmodule Lang.LSP.Server do
 
   defp add_number_tokens(acc, line, ln) do
     re = ~r/\b\d+(?:_\d+)*(?:\.\d+)?\b/u
+
     Enum.reduce(Regex.scan(re, line, return: :index), acc, fn [{pos, len}], a ->
       a ++ [{ln, pos, len, "number", []}]
     end)
@@ -979,9 +1001,11 @@ defmodule Lang.LSP.Server do
   defp add_keyword_tokens(acc, line, ln, keywords) do
     Enum.reduce(keywords, acc, fn kw, a ->
       re = ~r/(^|[^A-Za-z0-9_])#{Regex.escape(kw)}(?![A-Za-z0-9_])/u
+
       Enum.reduce(Regex.scan(re, line, return: :index), a, fn
         [{pos, _len}, {wpos, wlen}], a2 -> a2 ++ [{ln, wpos, wlen, "keyword", []}]
-        [{pos, len}], a2 -> a2 # safety
+        # safety
+        [{pos, len}], a2 -> a2
       end)
     end)
   end
@@ -998,15 +1022,19 @@ defmodule Lang.LSP.Server do
       match = Regex.run(~r/\bdefp?\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/u, line, return: :index) ->
         [{_mpos, _mlen}, {npos, nlen}] = match
         acc ++ [{ln, npos, nlen, "function", ["declaration"]}]
+
       match2 = Regex.run(~r/\bdefmacro\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/u, line, return: :index) ->
         [{_mpos, _mlen}, {npos, nlen}] = match2
         acc ++ [{ln, npos, nlen, "macro", ["declaration"]}]
-      true -> acc
+
+      true ->
+        acc
     end
   end
 
   defp add_attribute_tokens(acc, line, ln) do
     re = ~r/@([a-z_][A-Za-z0-9_]*)/u
+
     Enum.reduce(Regex.scan(re, line, return: :index), acc, fn
       [{_mpos, _mlen}, {npos, nlen}], a -> a ++ [{ln, npos, nlen, "attribute", []}]
       list, a -> a
@@ -1030,7 +1058,8 @@ defmodule Lang.LSP.Server do
   defp segments_for_range(lines, abs_pos, len) do
     # Walk through lines accumulating positions
     {_off, ln, col, acc} =
-      Enum.reduce_while(Enum.with_index(lines), {0, 0, 0, []}, fn {line, idx}, {off, _ln, _col, acc} ->
+      Enum.reduce_while(Enum.with_index(lines), {0, 0, 0, []}, fn {line, idx},
+                                                                  {off, _ln, _col, acc} ->
         line_len = String.length(line)
         line_end = off + line_len
 
@@ -1046,6 +1075,7 @@ defmodule Lang.LSP.Server do
             start = max(abs_pos - off, 0)
             take_len = min(line_len - start, abs_pos + len - (off + start))
             acc = acc ++ [{idx, start, take_len}]
+
             if abs_pos + len <= line_end do
               {:halt, {line_end, idx, 0, acc}}
             else
@@ -1060,6 +1090,7 @@ defmodule Lang.LSP.Server do
   defp add_elixir_sigil_tokens(acc, line, ln) do
     # ~s"...", ~S'...', ~r/.../ ~w|...|
     re = ~r/~[a-zA-Z]("[^"]*"|'[^']*'|\/[^^\/]*\/|\|[^\|]*\|)/u
+
     Enum.reduce(Regex.scan(re, line, return: :index), acc, fn
       [{mpos, mlen}], a -> a ++ [{ln, mpos, mlen, "string", []}]
       _, a -> a
@@ -1069,16 +1100,21 @@ defmodule Lang.LSP.Server do
   # ---------------- JavaScript / TypeScript ----------------
   defp semantic_tokens_javascript(text) do
     lines = String.split(text, "\n")
-    keywords = ~w(function const let var class if else return import from export new try catch finally switch case default for while do break continue throw await async yield this super)
+
+    keywords =
+      ~w(function const let var class if else return import from export new try catch finally switch case default for while do break continue throw await async yield this super)
 
     Enum.with_index(lines)
     |> Enum.flat_map(fn {line, ln} ->
       # Line comments
       comment_idx = String.index(line, "//") || -1
+
       {code_part, comment_tokens} =
         if comment_idx >= 0 do
           len = String.length(line)
-          {String.slice(line, 0, comment_idx), [{ln, comment_idx, len - comment_idx, "comment", []}]}
+
+          {String.slice(line, 0, comment_idx),
+           [{ln, comment_idx, len - comment_idx, "comment", []}]}
         else
           {line, []}
         end
@@ -1111,16 +1147,21 @@ defmodule Lang.LSP.Server do
   # ---------------- Python ----------------
   defp semantic_tokens_python(text) do
     lines = String.split(text, "\n")
-    keywords = ~w(def class import from as if elif else try except finally with for while return yield lambda pass break continue True False None and or not in is raise assert global nonlocal async await)
+
+    keywords =
+      ~w(def class import from as if elif else try except finally with for while return yield lambda pass break continue True False None and or not in is raise assert global nonlocal async await)
 
     Enum.with_index(lines)
     |> Enum.flat_map(fn {line, ln} ->
       # Line comments
       comment_idx = String.index(line, "#") || -1
+
       {code_part, comment_tokens} =
         if comment_idx >= 0 do
           len = String.length(line)
-          {String.slice(line, 0, comment_idx), [{ln, comment_idx, len - comment_idx, "comment", []}]}
+
+          {String.slice(line, 0, comment_idx),
+           [{ln, comment_idx, len - comment_idx, "comment", []}]}
         else
           {line, []}
         end
@@ -1259,8 +1300,10 @@ defmodule Lang.LSP.Server do
   defp scan_line_for_word(line_text, word) do
     wlen = String.length(word)
     max_i = max(String.length(line_text) - wlen, 0)
+
     Enum.reduce(0..max_i, [], fn i, acc ->
       segment = String.slice(line_text, i, wlen)
+
       if segment == word and boundary_ok?(line_text, i - 1) and boundary_ok?(line_text, i + wlen) do
         [{i, wlen} | acc]
       else
@@ -1272,8 +1315,12 @@ defmodule Lang.LSP.Server do
 
   defp boundary_ok?(line_text, idx) do
     cond do
-      idx < 0 -> true
-      idx >= String.length(line_text) -> true
+      idx < 0 ->
+        true
+
+      idx >= String.length(line_text) ->
+        true
+
       true ->
         ch = String.at(line_text, idx)
         not Regex.match?(~r/[A-Za-z0-9_]/u, ch)
@@ -1570,23 +1617,47 @@ defmodule Lang.LSP.Server do
     |> Enum.flat_map(fn {line, ln} ->
       mods =
         case Regex.run(~r/^\s*defmodule\s+([A-Z][A-Za-z0-9_.]*)/, line, return: :index) do
-          nil -> []
+          nil ->
+            []
+
           [{_mpos, _mlen}, {npos, nlen}] ->
-            [%{name: String.slice(line, npos, nlen), kind: 2, range: one_line_range(ln, npos, nlen)}]
+            [
+              %{
+                name: String.slice(line, npos, nlen),
+                kind: 2,
+                range: one_line_range(ln, npos, nlen)
+              }
+            ]
         end
 
       funs =
         case Regex.run(~r/^\s*defp?\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/, line, return: :index) do
-          nil -> []
+          nil ->
+            []
+
           [{_mpos, _mlen}, {npos, nlen}] ->
-            [%{name: String.slice(line, npos, nlen), kind: 12, range: one_line_range(ln, npos, nlen)}]
+            [
+              %{
+                name: String.slice(line, npos, nlen),
+                kind: 12,
+                range: one_line_range(ln, npos, nlen)
+              }
+            ]
         end
 
       macros =
         case Regex.run(~r/^\s*defmacro\s+([a-z_][A-Za-z0-9_]*)(?=[\s\(])/, line, return: :index) do
-          nil -> []
+          nil ->
+            []
+
           [{_mpos, _mlen}, {npos, nlen}] ->
-            [%{name: String.slice(line, npos, nlen), kind: 12, range: one_line_range(ln, npos, nlen)}]
+            [
+              %{
+                name: String.slice(line, npos, nlen),
+                kind: 12,
+                range: one_line_range(ln, npos, nlen)
+              }
+            ]
         end
 
       mods ++ funs ++ macros

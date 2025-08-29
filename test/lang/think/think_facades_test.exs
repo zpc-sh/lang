@@ -24,7 +24,9 @@ defmodule Lang.Think.ThinkFacadesTest do
   end
 
   test "diagnose facade and worker writes hints" do
-    stack = "(FunctionClauseError) no function clause matching in MyApp.foo/1\n  (ecto) ...\n  (db_connection) ..."
+    stack =
+      "(FunctionClauseError) no function clause matching in MyApp.foo/1\n  (ecto) ...\n  (db_connection) ..."
+
     {:ok, req} = Diagnostics.diagnose(%{input: %{stacktrace: stack}})
 
     :ok = perform_think(req)
@@ -68,10 +70,10 @@ defmodule Lang.Think.ThinkFacadesTest do
 
   defp perform_think(%Request{id: id}) do
     job = %Oban.Job{args: %{"request_id" => id}}
+
     case RequestWorker.perform(job) do
       :ok -> :ok
       other -> raise "perform returned #{inspect(other)}"
     end
   end
 end
-

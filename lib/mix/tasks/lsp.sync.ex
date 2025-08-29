@@ -17,7 +17,8 @@ defmodule Mix.Tasks.Lsp.Sync do
 
     # Regenerate docs from updated statuses
     with {:ok, methods} <- Ash.read_all_methods(),
-         {:ok, %{files: files}} <- LSPProjectGenerator.generate_all(Enum.map(methods, &to_blueprint/1)) do
+         {:ok, %{files: files}} <-
+           LSPProjectGenerator.generate_all(Enum.map(methods, &to_blueprint/1)) do
       doc = Enum.find(files, &(&1.path == "docs/lsp.md"))
       if doc, do: write!(doc)
       Mix.shell().info("Synced statuses and docs")

@@ -54,13 +54,13 @@ defmodule Lang.Telemetry.LSPClientHistogram do
         end
       end
 
-    total = case :ets.lookup(@table, {:total, method}) do
-      [{_, t}] -> t
-      _ -> 0
-    end
+    total =
+      case :ets.lookup(@table, {:total, method}) do
+        [{_, t}] -> t
+        _ -> 0
+      end
 
     require Logger
     Logger.info("LSP request histogram", method: method, total: total, buckets: counts)
   end
 end
-
