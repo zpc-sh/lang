@@ -168,4 +168,7 @@ defmodule Lang.LSP.Registry do
   end
 
   def lookup(other), do: Map.get(@registry, other)
+
+  @doc "Return the full method registry as a map"
+  def lookup_all, do: @registry
 end

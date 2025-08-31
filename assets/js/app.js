@@ -160,13 +160,14 @@ const langHooks = {
       this.handleEvent("copy-to-clipboard", ({text}) => {
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(text).then(() => {
-            console.log("Text copied to clipboard");
+            this.showToast("Copied!");
           }).catch(err => {
             console.error("Failed to copy text: ", err);
             this.fallbackCopy(text);
           });
         } else {
-          this.fallbackCopy(text);
+          const ok = this.fallbackCopy(text);
+          if (ok) this.showToast("Copied!");
         }
       });
     },
@@ -183,12 +184,223 @@ const langHooks = {
 
       try {
         document.execCommand('copy');
-        console.log("Text copied using fallback method");
+        return true;
       } catch (err) {
         console.error("Fallback copy failed: ", err);
+        return false;
       }
 
       textArea.remove();
+    },
+
+    showToast(message) {
+      try {
+        const el = document.createElement('div');
+        el.textContent = message || 'Copied!';
+        el.style.position = 'fixed';
+        el.style.top = '12px';
+        el.style.right = '12px';
+        el.style.zIndex = '2147483647';
+        el.style.background = 'rgba(0,0,0,0.82)';
+        el.style.color = 'white';
+        el.style.padding = '6px 10px';
+        el.style.borderRadius = '6px';
+        el.style.fontSize = '12px';
+        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        el.style.transition = 'opacity 300ms ease';
+        document.body.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 350);
+        }, 900);
+      } catch (_) {}
+    }
+  }
+  ,
+  MdldSession: {
+    mounted() {
+      this.csrf = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || null;
+      this.terminalEl = this.el.querySelector('[data-terminal]');
+      this.connectBtn = this.el.querySelector('[data-action="connect"]');
+      this.renderer = (this.el.dataset.renderer || 'rio').toLowerCase();
+      this.ws = null;
+      this.cols = parseInt(this.el.dataset.cols || '100', 10);
+      this.rows = parseInt(this.el.dataset.rows || '28', 10);
+      this.mode = this.el.dataset.mode || 'pty';
+
+      try {
+        const ro = new ResizeObserver(() => {
+          if (!this.terminalEl) return;
+          const w = this.terminalEl.clientWidth || 800;
+          const h = this.terminalEl.clientHeight || 400;
+          // crude cell size estimate; real impl should query renderer metrics
+          const cw = 8, ch = 16;
+          const cols = Math.max(40, Math.floor(w / cw));
+          const rows = Math.max(10, Math.floor(h / ch));
+          if (cols !== this.cols || rows !== this.rows) {
+            this.cols = cols; this.rows = rows;
+            if (this.term && this.term.resize) {
+              try { this.term.resize(cols, rows); } catch (_) {}
+            }
+            this.send({ type: 'resize', cols, rows });
+          }
+        });
+        ro.observe(this.terminalEl);
+        this._ro = ro;
+      } catch(_) {}
+
+      if (this.connectBtn) {
+        this.connectBtn.addEventListener('click', () => this.connect());
+      }
+    },
+
+    write(data) {
+      if (this.term && typeof this.term.write === 'function') {
+        this.term.write(data);
+      } else {
+        this.log(data);
+      }
+    },
+    disable() {
+      if (this.connectBtn) this.connectBtn.disabled = true;
+      try { this._ro && this._ro.disconnect(); } catch(_) {}
+    },
+
+    openSocket(url) {
+      try {
+        this.ws = new WebSocket((new URL(url, window.location.href)).href);
+      } catch (e) {
+        this.log(`WS error: ${e.message}`);
+        return;
+      }
+      this.ws.onopen = () => {
+        this.log('WS connected');
+        this.send({ type: 'hello', cols: this.cols, rows: this.rows, mode: this.mode });
+      };
+      this.ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === 'stdout') {
+            this.write(msg.data);
+            this._bytesOut = (this._bytesOut || 0) + (msg.data ? msg.data.length : 0);
+            this.updateStats();
+          } else if (msg.type === 'exit') {
+            this.log(`Session exit: ${msg.status}`);
+            this.disable();
+          }
+        } catch (_) {
+          this.write(ev.data);
+        }
+      };
+      this.ws.onclose = () => this.log('WS closed');
+      this.ws.onerror = () => this.log('WS error');
+    },
+    send(obj) {
+      try { this.ws && this.ws.readyState === 1 && this.ws.send(JSON.stringify(obj)); } catch (_) {}
+    },
+    async initRenderer() {
+      if (!this.terminalEl) return;
+      if (this.renderer === 'rio') {
+        await this.loadRio();
+        if (window.Rio && typeof window.Rio.Terminal === 'function') {
+          this.term = new window.Rio.Terminal({
+            parent: this.terminalEl,
+            width: this.cols,
+            height: this.rows,
+            sixel: true,
+            onData: (data) => this.send({ type: 'stdin', data })
+          });
+          return;
+        }
+      }
+      this.renderPlaceholder();
+    },
+    async loadRio() {
+      const tryUrl = async (u) => {
+        try { await import(/* @vite-ignore */ u); return true; } catch (_) { return false; }
+      };
+      const ok = await tryUrl('/vendor/rio/rio.js') || await tryUrl('https://cdn.example.com/rio/rio.js');
+      if (!ok) this.log('RIO not available; falling back.');
+    },
+    async connect() {
+      const connectPath = this.el.dataset.connect || '';
+      if (!connectPath) {
+        this.log("No connect endpoint defined.");
+        return;
+      }
+      const payload = {
+        session_id: this.el.dataset.sessionId,
+        cap: this.el.dataset.cap || 'interactive',
+        cols: parseInt(this.el.dataset.cols || '100', 10),
+        rows: parseInt(this.el.dataset.rows || '28', 10),
+        mode: this.el.dataset.mode || 'pty',
+        proto: this.el.dataset.proto || 'ssh'
+      };
+      // Optional upstream params for proxy authorization
+      const extras = ['host','port','user','fingerprint','path','url','policy'];
+      extras.forEach((k) => {
+        const v = this.el.dataset[k];
+        if (v !== undefined) {
+          payload[k] = v;
+        }
+      });
+      try {
+        const resp = await fetch(connectPath, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(this.csrf ? { 'x-csrf-token': this.csrf } : {})
+          },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin'
+        });
+        if (!resp.ok) throw new Error(`Connect failed: ${resp.status}`);
+        const data = await resp.json();
+        this.log(`Ticket minted. Proxy: ${data.wss_url || 'n/a'}`);
+        await this.initRenderer();
+        this.openSocket(data.wss_url);
+      } catch (e) {
+        this.log(`Error: ${e.message}`);
+      }
+    },
+    renderPlaceholder() {
+      if (this.terminalEl) {
+        this.terminalEl.textContent = '';
+        const pre = document.createElement('pre');
+        pre.className = 'text-green-400';
+        pre.textContent = '[mdld] Connected (stub). WebSocket proxy not implemented yet.';
+        this.terminalEl.appendChild(pre);
+        this.term = { write: (d) => { pre.textContent += d; pre.scrollTop = pre.scrollHeight; } };
+      }
+      if (this.connectBtn) {
+        this.connectBtn.textContent = 'Connected';
+        this.connectBtn.disabled = true;
+        this.connectBtn.classList.remove('btn-primary');
+        this.connectBtn.classList.add('btn-disabled');
+      }
+    },
+
+    updateStats() {
+      if (!this.terminalEl) return;
+      let badge = this.el.querySelector('[data-session-stats]');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.dataset.sessionStats = '1';
+        badge.className = 'mt-1 text-[11px] text-gray-500 flex gap-2';
+        this.terminalEl.parentElement.appendChild(badge);
+      }
+      const mb = (this._bytesOut||0)/ (1024*1024);
+      badge.textContent = `Transferred: ${mb.toFixed(2)} MB`;
+    },
+    log(msg) {
+      if (this.terminalEl) {
+        const div = document.createElement('div');
+        div.className = 'text-gray-400 text-xs';
+        div.textContent = msg;
+        this.terminalEl.appendChild(div);
+      } else {
+        console.log('[MdldSession]', msg);
+      }
     }
   }
 };

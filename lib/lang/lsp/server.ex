@@ -132,17 +132,22 @@ defmodule Lang.LSP.Server do
   def handle_info({:client_connected, client_id, socket}, state) do
     Logger.info("LSP client connected: #{client_id}")
 
-    PhoenixIntegration.report_metrics(
-      :connection,
-      %{client_count: map_size(state.clients) + 1},
-      %{action: :connect}
-    )
+    PhoenixIntegration.report_metrics(:connection, %{client_count: map_size(state.clients) + 1}, %{action: :connect})
+    PhoenixIntegration.broadcast_client_event(:connected, %{
+      client_id: client_id,
+      connected_at: DateTime.utc_now(),
+      label: nil
+    })
 
     clients =
       Map.put(state.clients, client_id, %{
         socket: socket,
         buffer: "",
-        initialized: false
+        initialized: false,
+        connected_at: System.system_time(:second),
+        last_seen: nil,
+        request_count: 0,
+        methods: %{}
       })
 
     {:noreply, %{state | clients: clients}}
@@ -152,11 +157,21 @@ defmodule Lang.LSP.Server do
   def handle_info({:client_disconnected, client_id}, state) do
     Logger.info("LSP client disconnected: #{client_id}")
 
-    PhoenixIntegration.report_metrics(
-      :connection,
-      %{client_count: map_size(state.clients) - 1},
-      %{action: :disconnect}
-    )
+    PhoenixIntegration.report_metrics(:connection, %{client_count: map_size(state.clients) - 1}, %{action: :disconnect})
+
+    meta = Map.get(state.clients, client_id) || %{}
+    duration_s =
+      case meta[:connected_at] do
+        t when is_integer(t) -> System.system_time(:second) - t
+        _ -> nil
+      end
+
+    PhoenixIntegration.broadcast_client_event(:disconnected, %{
+      client_id: client_id,
+      duration_s: duration_s,
+      request_count: meta[:request_count] || 0,
+      methods: meta[:methods] || %{}
+    })
 
     clients = Map.delete(state.clients, client_id)
     {:noreply, %{state | clients: clients}}
@@ -372,6 +387,12 @@ defmodule Lang.LSP.Server do
               meta -> Map.put(state.clients, client_id, Map.put(meta, :label, cid))
             end
 
+          PhoenixIntegration.broadcast_client_event(:activity, %{
+            client_id: client_id,
+            label: cid,
+            activity: :identify
+          })
+
           # No response for notifications
           _ = clients
           nil
@@ -380,9 +401,52 @@ defmodule Lang.LSP.Server do
           handle_initialize(id, params, state)
 
         %{"method" => "initialized"} ->
+          # Mark server initialized and greet the specific client for onboarding
           state = %{state | initialized: true}
           Logger.info("LSP server initialized")
-          nil
+
+          # Best-effort: send a friendly hello to the client that just initialized
+          case Map.get(state.clients, client_id) do
+            %{socket: socket} ->
+              # LSP info message
+              send_json_rpc(socket, %{
+                "jsonrpc" => "2.0",
+                "method" => "window/showMessage",
+                "params" => %{
+                  # 3 = Info
+                  "type" => 3,
+                  "message" => "Lang LSP ready. Try lang.chat start_session or textDocument/completion."
+                }
+              })
+
+              # Log a more detailed tip
+              send_json_rpc(socket, %{
+                "jsonrpc" => "2.0",
+                "method" => "window/logMessage",
+                "params" => %{
+                  # 3 = Info
+                  "type" => 3,
+                  "message" => "Tip: call rpc.capabilities and lang.onboard for methods, health, and quickstart examples."
+                }
+              })
+
+              # Update per-client initialized flag
+              clients =
+                case Map.get(state.clients, client_id) do
+                  nil -> state.clients
+                  meta -> Map.put(state.clients, client_id, Map.put(meta, :initialized, true))
+                end
+
+              state = %{state | clients: clients}
+              nil
+
+            _ ->
+              nil
+          end
+
+          PhoenixIntegration.broadcast_client_event(:initialized, %{
+            client_id: client_id
+          })
 
         %{"method" => "shutdown", "id" => id} ->
           state = %{state | shutdown_requested: true}
@@ -484,6 +548,19 @@ defmodule Lang.LSP.Server do
         method: message["method"]
       })
 
+      # Update client stats and broadcast activity
+      case {client_id, Map.get(message, "method")} do
+        {id, meth} when is_binary(meth) ->
+          state = update_client_stats(state, id, meth)
+          PhoenixIntegration.broadcast_client_event(:activity, %{
+            client_id: id,
+            method: meth,
+            duration_ms: duration
+          })
+          :ok
+        _ -> :ok
+      end
+
       case state.mode do
         :tcp ->
           client = Map.get(state.clients, client_id)
@@ -493,6 +570,25 @@ defmodule Lang.LSP.Server do
           send_json_rpc(:stdio, response)
       end
     end
+
+    state
+  end
+
+  defp update_client_stats(state, client_id, method) do
+    {_, state} =
+      get_and_update_in(state.clients[client_id], fn
+        nil -> {nil, nil}
+        meta ->
+          count = (meta[:request_count] || 0) + 1
+          methods = Map.update(meta[:methods] || %{}, method, 1, &(&1 + 1))
+          new_meta =
+            meta
+            |> Map.put(:request_count, count)
+            |> Map.put(:methods, methods)
+            |> Map.put(:last_seen, System.system_time(:second))
+
+          {meta, new_meta}
+      end)
 
     state
   end

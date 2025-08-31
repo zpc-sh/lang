@@ -5,10 +5,11 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
   @behaviour Nullity.CDFM.Adapters.Store
 
   alias Lang.LSP.LspMethod
+  alias MarkdownLD.Hash, as: LDHash
 
   @impl true
   def upsert_method(method_map) when is_map(method_map) do
-    attrs = %{
+    base = %{
       name: method_map[:name] || method_map["name"],
       category: method_map[:category] || method_map["category"],
       description: method_map[:description] || method_map["description"],
@@ -25,11 +26,32 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
       metadata: method_map[:metadata] || method_map["metadata"] || %{}
     }
 
+    # Compute a deterministic content hash to make upserts idempotent
+    spec_hash =
+      case LDHash.dataset_hash(base) do
+        {:ok, %{hash: h}} -> h
+        _ -> nil
+      end
+
+    attrs =
+      if is_binary(spec_hash) do
+        meta = Map.put(base.metadata || %{}, "spec_hash", spec_hash)
+        Map.put(base, :metadata, meta)
+      else
+        base
+      end
+
     cond do
-      ensure_repo_started() and function_exported?(LspMethod, :upsert, 1) ->
-        case LspMethod.upsert(attrs) do
-          {:ok, rec} -> {:ok, rec}
-          {:error, reason} -> {:error, reason}
+      repo_ready?() and function_exported?(LspMethod, :upsert, 1) ->
+        case fetch_existing(attrs.name) do
+          {:ok, %{metadata: %{"spec_hash" => ^spec_hash}} = rec} when is_binary(spec_hash) ->
+            {:ok, rec}
+
+          _ ->
+            case LspMethod.upsert(attrs) do
+              {:ok, rec} -> {:ok, rec}
+              {:error, reason} -> {:error, reason}
+            end
         end
 
       true ->
@@ -40,7 +62,7 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
   @impl true
   def read_all_methods do
     cond do
-      ensure_repo_started() and function_exported?(LspMethod, :read_all, 0) ->
+      repo_ready?() and function_exported?(LspMethod, :read_all, 0) ->
         case LspMethod.read_all() do
           {:ok, list} ->
             {:ok,
@@ -75,11 +97,24 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
   @impl true
   def delete_method(name) when is_binary(name) do
     cond do
-      ensure_repo_started() and function_exported?(LspMethod, :delete_by_name, 1) ->
+      repo_ready?() and function_exported?(LspMethod, :delete_by_name, 1) ->
         LspMethod.delete_by_name(name)
 
       true ->
         delete_method_from_specs(name)
+    end
+  end
+
+  defp fetch_existing(nil), do: {:error, :missing_name}
+  defp fetch_existing(name) do
+    try do
+      import Ash.Query
+      case LspMethod |> filter(name == ^name) |> Ash.read_one() do
+        {:ok, nil} -> {:error, :not_found}
+        other -> other
+      end
+    rescue
+      _ -> {:error, :unavailable}
     end
   end
 
@@ -111,6 +146,15 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
     end
   end
 
+  # DB readiness: respect SKIP_DB and verify the lsp_methods table exists
+  defp repo_ready? do
+    if skip_db?() do
+      false
+    else
+      ensure_repo_started() and table_exists?(Lang.Repo, "lsp_methods")
+    end
+  end
+
   defp ensure_repo_started do
     try do
       case Process.whereis(Lang.Repo) do
@@ -132,6 +176,23 @@ defmodule Nullity.CDFM.Adapters.Store.Ash do
     rescue
       _ -> false
     end
+  end
+
+  defp table_exists?(repo, table_name) do
+    try do
+      # Works on Postgres: returns nil if the table (regclass) doesn’t exist
+      case Ecto.Adapters.SQL.query(repo, "SELECT to_regclass($1)", ["public." <> table_name]) do
+        {:ok, %{rows: [[reg]]}} -> not is_nil(reg)
+        _ -> false
+      end
+    rescue
+      _ -> false
+    end
+  end
+
+  defp skip_db? do
+    val = System.get_env("SKIP_DB") || "0"
+    String.downcase(val) in ["1", "true", "yes", "on"]
   end
 
   defp read_all_from_specs_dir(dir \\ "priv/lsp/specs") do

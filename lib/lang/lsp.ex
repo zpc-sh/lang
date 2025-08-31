@@ -12,5 +12,10 @@ defmodule Lang.LSP do
 
   resources do
     resource(Lang.LSP.LspMethod)
+    resource(Lang.LSP.Events.CompletionEvent)
+    resource(Lang.LSP.Events.ClientEvent)
+    resource(Lang.LSP.Events.MetricEvent)
+    resource(Lang.LSP.Events.DiagnosticEvent)
+    resource(Lang.LSP.Events.AnalysisStreamEvent)
   end
 end

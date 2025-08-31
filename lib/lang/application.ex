@@ -56,6 +56,9 @@ defmodule Lang.Application do
 
         # Orchestration system
         optional_child({Lang.Orchestration.Master, []}),
+        optional_child(Lang.Orchestration.QwenAgent),
+        optional_child(Lang.Orchestration.ClaudeAgent),
+        optional_child(Lang.Orchestration.OpenAIAgent),
 
         # LSP Server Supervisor (keep late so deps are ready)
         optional_child({Lang.LSP.Supervisor, []}),
@@ -73,6 +76,7 @@ defmodule Lang.Application do
         optional_child(LangWeb.Endpoint)
       ]
       |> Enum.reject(&is_nil/1)
+      |> maybe_add_dev_watchers()
 
     opts = [strategy: :one_for_one, name: Lang.Supervisor]
     Supervisor.start_link(children, opts)
@@ -123,6 +127,17 @@ defmodule Lang.Application do
   end
 
   defp optional_child(other), do: other
+
+  defp maybe_add_dev_watchers(children) do
+    if Application.get_env(:lang, :dev_routes, false) do
+      priv = :code.priv_dir(:lang) |> to_string()
+      jsonld_dir = Path.join([priv, "dev", "jsonld"]) |> Path.expand()
+      watcher = {Lang.Dev.DevFSWatcher, %{name: :jsonld, path: jsonld_dir, topic: "dev:fs:jsonld", interval_ms: 2_000}}
+      children ++ [watcher]
+    else
+      children
+    end
+  end
 
   defp db_enabled? do
     val = System.get_env("SKIP_DB") || "0"

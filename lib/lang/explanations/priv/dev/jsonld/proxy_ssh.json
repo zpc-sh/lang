@@ -1,0 +1,9 @@
+{
+  "lds:action": "proxy.connect",
+  "lds:proto": "ssh",
+  "lds:host": "example.com",
+  "lds:port": 22,
+  "lds:user": "ubuntu",
+  "lds:fingerprint": "sha256:BASE64...",
+  "lds:policy": "attach"
+}

@@ -21,6 +21,7 @@ defmodule Lang.Proxy.Adapters.Telnet do
   def run_script(host, port, script, opts \\ [])
       when is_binary(host) and is_integer(port) and is_list(script) do
     with :ok <- ensure_allowed_host(host),
+         :ok <- ensure_not_blocklisted(host),
          {:ok, socket} <- open(host, port, opts) do
       try do
         {count, transcript} = exec_script(socket, script, opts)
@@ -107,6 +108,15 @@ defmodule Lang.Proxy.Adapters.Telnet do
     end
   end
 
+  defp ensure_not_blocklisted(host) do
+    block = Application.get_env(:lang, :telnet_blocklist, [])
+    if is_list(block) and host in block do
+      {:error, :host_blocklisted}
+    else
+      :ok
+    end
+  end
+
   defp safe_close(nil), do: :ok
   defp safe_close(socket) do
     try do
@@ -116,4 +126,3 @@ defmodule Lang.Proxy.Adapters.Telnet do
     end
   end
 end
-

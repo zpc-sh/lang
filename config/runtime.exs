@@ -47,6 +47,16 @@ if external_config.openai_api_key do
   config :lang, :openai, api_key: external_config.openai_api_key
 end
 
+# LSP specs import configuration (idempotent)
+specs_mode = System.get_env("LANG_SPECS_STORE") || "db"
+specs_import = System.get_env("LANG_SPECS_IMPORT") || "changed"
+specs_dir = System.get_env("LANG_SPECS_DIR") || "priv/lsp/specs"
+
+config :lang, :lsp_specs,
+  mode: specs_mode,
+  import: specs_import,
+  dir: specs_dir
+
 # Configure Stripe
 stripe_config = %{
   api_key: System.get_env("STRIPE_SECRET_KEY"),

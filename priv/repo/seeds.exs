@@ -1,7 +1,8 @@
-alias Lang.LSP.LspMethod
+alias Nullity.CDFM.Adapters.Store.Ash, as: SpecStore
 alias Lang.Workspace.Workspace
 
-def ensure_repo_started do
+# Helper function to ensure repo is started
+ensure_repo_started = fn ->
   case Process.whereis(Lang.Repo) do
     pid when is_pid(pid) ->
       :ok
@@ -19,11 +20,13 @@ def ensure_repo_started do
   end
 end
 
-def ingest_specs_dir(dir \\ "priv/lsp/specs") do
+# Helper function to ingest LSP specs
+ingest_specs_dir = fn dir ->
   IO.puts("Seeding LSP methods from #{dir} ...")
 
   files =
-    ["**/*.jsonld", "**/*.yaml", "**/*.yml"] |> Enum.flat_map(&Path.wildcard(Path.join(dir, &1)))
+    ["**/*.jsonld", "**/*.yaml", "**/*.yml"]
+    |> Enum.flat_map(&Path.wildcard(Path.join(dir, &1)))
 
   Enum.each(files, fn path ->
     case File.read(path) do
@@ -47,7 +50,7 @@ def ingest_specs_dir(dir \\ "priv/lsp/specs") do
             metadata: s.metadata || %{}
           }
 
-          case LspMethod.upsert(attrs) do
+          case SpecStore.upsert_method(attrs) do
             {:ok, _} -> :ok
             {:error, reason} -> IO.puts("Failed upsert #{s.name}: #{inspect(reason)}")
           end
@@ -59,10 +62,11 @@ def ingest_specs_dir(dir \\ "priv/lsp/specs") do
   end)
 end
 
-def ensure_default_workspace do
+# Helper function to ensure default workspace exists
+ensure_default_workspace = fn ->
   IO.puts("Ensuring default workspace ...")
-  # Minimal direct insert via Ash
-  case Workspace |> Ash.Query.filter(project_id == "default") |> Ash.read() do
+
+  case Workspace |> Ash.Query.filter(project_id: "default") |> Ash.read() do
     {:ok, []} ->
       case Workspace
            |> Ash.Changeset.for_create(:create, %{
@@ -80,7 +84,8 @@ def ensure_default_workspace do
   end
 end
 
-ensure_repo_started()
-ingest_specs_dir()
-ensure_default_workspace()
+# Execute seeding operations
+ensure_repo_started.()
+ingest_specs_dir.("priv/lsp/specs")
+ensure_default_workspace.()
 IO.puts("Seeds completed.")

@@ -55,7 +55,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
             <p class="mt-2 text-lg text-gray-600">
               Monitor and control AI intelligence generation across all environments
             </p>
-            
+
     <!-- System Health Indicator -->
             <div class="mt-4 flex items-center space-x-4">
               <div class={[
@@ -74,7 +74,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
               </div>
             </div>
           </div>
-          
+
     <!-- Control Actions -->
           <div class="bg-white rounded-lg shadow mb-8 p-6">
             <h2 class="text-xl font-semibold mb-4">Orchestration Controls</h2>
@@ -112,14 +112,14 @@ defmodule LangWeb.Live.OrchestrationDashboard do
               </button>
             </div>
           </div>
-          
+
     <!-- Environment Status Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <%= for env <- @environments do %>
               <.environment_card environment={env} />
             <% end %>
           </div>
-          
+
     <!-- Metrics Dashboard -->
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             <!-- Active Jobs -->
@@ -144,7 +144,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
                 <% end %>
               </div>
             </div>
-            
+
     <!-- Metrics -->
             <div class="bg-white rounded-lg shadow">
               <div class="p-6">
@@ -194,7 +194,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
                 </div>
               </div>
             </div>
-            
+
     <!-- Recent Publications -->
             <div class="bg-white rounded-lg shadow">
               <div class="p-6">
@@ -223,7 +223,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
               </div>
             </div>
           </div>
-          
+
     <!-- Job History Table -->
           <div class="bg-white rounded-lg shadow">
             <div class="p-6">
@@ -491,7 +491,7 @@ defmodule LangWeb.Live.OrchestrationDashboard do
   end
 
   # Telemetry handler
-  def handle_job_telemetry([:oban, :job, :stop], measurements, metadata, _config) do
+  def handle_job_telemetry([:oban, :job, :stop], measurements, _metadata, _config) do
     # Process Oban job telemetry data
     # This would update real-time metrics
   end

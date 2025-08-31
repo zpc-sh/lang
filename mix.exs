@@ -109,6 +109,7 @@ defmodule Lang.MixProject do
       {:req, "~> 0.5"},
       {:finch, "~> 0.13"},
       {:mint, "~> 1.0"},
+      {:mint_web_socket, "~> 1.0"},
 
       # Payment Processing
       {:stripity_stripe, "~> 3.0"},

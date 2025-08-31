@@ -364,20 +364,7 @@ defmodule Lang.Providers.Router do
     provider = Keyword.get(opts, :provider) || select_completion_provider(params)
 
     prompt = build_completion_prompt(params)
-
-    case provider do
-      :xai ->
-        XAI.complete(prompt, opts)
-
-      :openai ->
-        OpenAI.complete(prompt, opts)
-
-      :anthropic ->
-        Anthropic.complete(prompt, opts)
-
-      _ ->
-        {:error, "Invalid provider for completion"}
-    end
+    try_with_fallback(:complete, provider, prompt, opts)
   end
 
   defp route_hover(params, opts) do
@@ -397,12 +384,7 @@ defmodule Lang.Providers.Router do
     - Example usage if relevant
     """
 
-    case provider do
-      :xai -> XAI.query(prompt, max_tokens: 200)
-      :openai -> OpenAI.query(prompt, max_tokens: 200)
-      :anthropic -> Anthropic.query(prompt, max_tokens: 200)
-      _ -> {:error, "Invalid provider for hover"}
-    end
+    try_with_fallback(:query, provider, prompt, Keyword.put_new(opts, :max_tokens, 200))
   end
 
   defp route_explain(params, opts) do
@@ -422,12 +404,7 @@ defmodule Lang.Providers.Router do
     - Potential improvements
     """
 
-    case provider do
-      :xai -> XAI.analyze(prompt, opts)
-      :openai -> OpenAI.analyze(prompt, opts)
-      :anthropic -> Anthropic.analyze(prompt, opts)
-      _ -> {:error, "Invalid provider for explain"}
-    end
+    try_with_fallback(:analyze, provider, prompt, opts)
   end
 
   defp route_refactor(params, opts) do
@@ -449,12 +426,7 @@ defmodule Lang.Providers.Router do
     Return only the refactored code.
     """
 
-    case provider do
-      :xai -> XAI.generate(prompt, opts)
-      :openai -> OpenAI.generate(prompt, opts)
-      :anthropic -> Anthropic.generate(prompt, opts)
-      _ -> {:error, "Invalid provider for refactor"}
-    end
+    try_with_fallback(:generate, provider, prompt, opts)
   end
 
   defp route_generate_tests(params, opts) do
@@ -476,12 +448,7 @@ defmodule Lang.Providers.Router do
     Return only the test code.
     """
 
-    case provider do
-      :xai -> XAI.generate(prompt, opts)
-      :openai -> OpenAI.generate(prompt, opts)
-      :anthropic -> Anthropic.generate(prompt, opts)
-      _ -> {:error, "Invalid provider for test generation"}
-    end
+    try_with_fallback(:generate, provider, prompt, opts)
   end
 
   defp select_completion_provider(%{language: "elixir", prefix: prefix}) do
@@ -520,6 +487,40 @@ defmodule Lang.Providers.Router do
   # =============================================================================
   # Utilities
   # =============================================================================
+
+  defp try_with_fallback(kind, provider, prompt, opts) do
+    providers = [provider | determine_fallback_order(provider)]
+
+    Enum.reduce_while(providers, {:error, :no_provider}, fn prov, _acc ->
+      if provider_available?(prov) do
+        case run_provider(kind, prov, prompt, opts) do
+          {:ok, _} = ok -> {:halt, ok}
+          {:error, _} = err -> {:cont, err}
+          other -> {:cont, other}
+        end
+      else
+        {:cont, {:error, {:provider_unavailable, prov}}}
+      end
+    end)
+  end
+
+  defp run_provider(:complete, :xai, prompt, opts), do: XAI.complete(prompt, opts)
+  defp run_provider(:complete, :openai, prompt, opts), do: OpenAI.complete(prompt, opts)
+  defp run_provider(:complete, :anthropic, prompt, opts), do: Anthropic.complete(prompt, opts)
+
+  defp run_provider(:query, :xai, prompt, opts), do: XAI.query(prompt, opts)
+  defp run_provider(:query, :openai, prompt, opts), do: OpenAI.query(prompt, opts)
+  defp run_provider(:query, :anthropic, prompt, opts), do: Anthropic.query(prompt, opts)
+
+  defp run_provider(:analyze, :xai, prompt, opts), do: XAI.analyze(prompt, opts)
+  defp run_provider(:analyze, :openai, prompt, opts), do: OpenAI.analyze(prompt, opts)
+  defp run_provider(:analyze, :anthropic, prompt, opts), do: Anthropic.analyze(prompt, opts)
+
+  defp run_provider(:generate, :xai, prompt, opts), do: XAI.generate(prompt, opts)
+  defp run_provider(:generate, :openai, prompt, opts), do: OpenAI.generate(prompt, opts)
+  defp run_provider(:generate, :anthropic, prompt, opts), do: Anthropic.generate(prompt, opts)
+
+  defp run_provider(_kind, _prov, _prompt, _opts), do: {:error, :invalid_provider}
 
   defp sanitize_params(params) when is_map(params) do
     # Remove sensitive data from logs

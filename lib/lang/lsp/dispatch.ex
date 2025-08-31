@@ -32,6 +32,19 @@ defmodule Lang.LSP.Dispatch do
 
   def process(%{"method" => method} = msg) do
     case method do
+      # Dev model pipeline (guarded by :dev_routes)
+      "lang.dev.models.list" -> dev_models_list(msg)
+      "lang.dev.models.get" -> dev_models_get(msg)
+      "lang.dev.models.history" -> dev_models_history(msg)
+      "lang.dev.models.render" -> dev_models_render(msg)
+      "lang.dev.models.ingest" -> dev_models_ingest(msg)
+      "lang.dev.models.status" -> dev_models_status(msg)
+      "lang.dev.models.drift" -> dev_models_drift(msg)
+      "lang.dev.models.diff" -> dev_models_diff(msg)
+      # Dev LSP tap/trace
+      "lang.dev.lsp.tap_start" -> dev_lsp_tap_start(msg)
+      "lang.dev.lsp.tap_stop" -> dev_lsp_tap_stop(msg)
+      "lang.dev.lsp.trace" -> dev_lsp_trace(msg)
       "lang.think.explain_intent" -> think(:explain_intent, msg)
       "lang.think.explain_why" -> think(:explain_why, msg)
       "lang.think.explain_how" -> think(:explain_how, msg)
@@ -160,9 +173,12 @@ defmodule Lang.LSP.Dispatch do
       # JSON-LD helpers
       "lang.jsonld.compact" -> jsonld_compact(msg)
       "lang.jsonld.expand" -> jsonld_expand(msg)
+      # Onboarding/help
+      "lang.onboard" -> onboard(msg)
       # RPC operations
       "rpc.initialize" -> rpc_initialize(msg)
       "rpc.shutdown" -> rpc_shutdown(msg)
+      "rpc.capabilities" -> rpc_capabilities(msg)
       "rpc.ping" -> rpc_ping(msg)
       m when m in @not_impl_methods -> not_implemented(msg)
       _ -> nil
@@ -961,6 +977,70 @@ defmodule Lang.LSP.Dispatch do
   end
 
   # ----------------------------------------------------------------------------
+  # Onboarding helper
+  # ----------------------------------------------------------------------------
+  defp onboard(%{"id" => id, "params" => _params}) do
+    # Provider health + tips to get started quickly from an LSP client
+    provider_health = Lang.Providers.Provider.health_check_all()
+
+    examples = %{
+      lsp: [
+        %{method: "lang.chat", params: %{action: "start_session", participants: ["user", "general"]}},
+        %{method: "lang.chat", params: %{action: "send_message", message: "Explain the main modules"}},
+        %{method: "lang.tokens.estimate", params: %{text: "def hello, do: :world"}},
+        %{method: "lang.fs.scan", params: %{path: System.cwd!(), max_depth: 3}}
+      ],
+      tips: [
+        "Use start_session to get a greeting and session_id",
+        "Then send_message with session_id for replies",
+        "Try hover/completion on an open buffer for inline help",
+        "Call rpc.capabilities to discover supported methods"
+      ]
+    }
+
+    missing = missing_api_keys()
+
+    wrap_result(id,
+      {:ok,
+       %{
+         message: "Welcome to LANG LSP — you’re ready to go.",
+         provider_health: provider_health,
+         missing_api_keys: missing,
+         examples: examples
+       }}
+    )
+  end
+
+  defp missing_api_keys do
+    cfg = Application.get_env(:lang, :ai_providers) || %{}
+
+    [
+      {:openai, :openai_api_key},
+      {:anthropic, :anthropic_api_key},
+      {:xai, :xai_api_key},
+      {:gemini, :gemini_api_key}
+    ]
+    |> Enum.reduce([], fn {prov, key}, acc ->
+      case cfg[key] do
+        nil -> [{prov, to_string(key)} | acc]
+        _ -> acc
+      end
+    end)
+    |> Enum.reverse()
+  end
+
+  # Return advertised capabilities and registered methods for onboarding/introspection
+  defp rpc_capabilities(%{"id" => id, "params" => _params}) do
+    caps = %{
+      version: "1.0.0",
+      features: ["streaming", "batch", "async"],
+      methods: Lang.LSP.Registry.lookup_all() |> Map.keys()
+    }
+
+    wrap_result(id, {:ok, caps})
+  end
+
+  # ----------------------------------------------------------------------------
   # JSON-LD operations (local, no remote @context fetching)
   # ----------------------------------------------------------------------------
   defp jsonld_compact(%{"id" => id, "params" => raw_params}) do
@@ -1244,7 +1324,16 @@ defmodule Lang.LSP.Dispatch do
           "lang.query.impact",
           "lang.query.dependency",
           "lang.query.ownership",
-          "lang.metrics.tokens"
+        "lang.metrics.tokens",
+        # Dev model pipeline
+        "lang.dev.models.list",
+        "lang.dev.models.get",
+        "lang.dev.models.history",
+        "lang.dev.models.render",
+        "lang.dev.models.ingest",
+        "lang.dev.models.status",
+        "lang.dev.models.drift",
+        "lang.dev.models.diff"
         ],
         "planned" => @not_impl_methods
       }
@@ -1308,6 +1397,100 @@ defmodule Lang.LSP.Dispatch do
   end
 
   defp not_implemented(_), do: nil
+
+  # ----------------------------------------------------------------------------
+  # Dev models (Lang.Dev.*) – guarded by :dev_routes
+  # ----------------------------------------------------------------------------
+  defp dev_enabled?(), do: Application.get_env(:lang, :dev_routes)
+
+  defp dev_models_list(%{"id" => id}) do
+    if dev_enabled?(), do: wrap_result(id, Lang.LSP.Dev.Models.List.handle(%{}, %{})), else: wrap_result(id, {:error, :dev_routes_disabled})
+  end
+
+  defp dev_models_get(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Models.Get.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_models_history(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Models.History.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_models_render(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Models.Render.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_models_ingest(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Models.Ingest.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_models_status(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Models.Status.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_models_drift(%{"id" => id}) do
+    if dev_enabled?(), do: wrap_result(id, Lang.LSP.Dev.Models.Drift.handle(%{}, %{})), else: wrap_result(id, {:error, :dev_routes_disabled})
+  end
+
+  defp dev_models_diff(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Models.Diff.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_lsp_tap_start(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Lsp.TapStart.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_lsp_tap_stop(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Lsp.TapStop.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
+
+  defp dev_lsp_trace(%{"id" => id, "params" => raw}) do
+    if dev_enabled?() do
+      params = maybe_json_map(raw)
+      wrap_result(id, Lang.LSP.Dev.Lsp.Trace.handle(params, %{}))
+    else
+      wrap_result(id, {:error, :dev_routes_disabled})
+    end
+  end
 
   # ----------------------------------------------------------------------------
   # JSON helpers for tolerant parsing of stringified params

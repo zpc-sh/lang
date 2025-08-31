@@ -11,10 +11,16 @@ defmodule LangWeb.DocsController do
         case FSScanner.preview(doc_path, max_lines: 10_000) do
           {:ok, lines} ->
             content = Enum.join(lines, "\n")
-            html = render_markdown(content)
+            {html, has_sessions?} = render_markdown(content)
+            limits = session_limits()
 
             conn
-            |> render(:show, content: html, title: extract_title(content))
+            |> render(:show,
+              content: html,
+              title: extract_title(content),
+              has_sessions?: has_sessions?,
+              session_limits: limits
+            )
 
           {:error, _} ->
             conn
@@ -45,6 +51,9 @@ defmodule LangWeb.DocsController do
 
   defp render_markdown(content) do
     # Simple markdown to HTML conversion without external dependencies
+    # First, transform Markdown-LD session fences into HTML blocks
+    {content, has_sessions?} = transform_mdld_sessions(content)
+
     html =
       content
       |> String.split("\n")
@@ -52,7 +61,134 @@ defmodule LangWeb.DocsController do
       |> Enum.join("\n")
       |> wrap_in_paragraphs()
 
-    style_html(html)
+    {style_html(html), has_sessions?}
+  end
+
+  defp transform_mdld_sessions(content) when is_binary(content) do
+    lines = String.split(content, "\n")
+
+    {acc, _state} =
+      Enum.reduce(lines, {[], :normal}, fn line, {out, state} ->
+        case state do
+          :normal ->
+            # Match ```session {lds:...}
+            case Regex.run(~r/^```session\s*(\{[^}]*\})?\s*$/, line) do
+              [_, attrs_str] ->
+                attrs = parse_session_attrs(attrs_str)
+                # Accumulate until closing fence
+                {out ++ [{:session_start, attrs}], :in_session}
+
+              nil ->
+                {out ++ [line], :normal}
+            end
+
+          :in_session ->
+            if String.trim(line) == "```" do
+              {out ++ [:session_end], :normal}
+            else
+              # Ignore inner lines for now; could be description
+              {out, :in_session}
+            end
+        end
+      end)
+
+    # Now render the accumulated tokens into content
+    has_sessions? = Enum.any?(acc, fn
+      {:session_start, _} -> true
+      _ -> false
+    end)
+
+    acc
+    |> Enum.reduce({[], nil}, fn token, {out, current_attrs} ->
+      case token do
+        {:session_start, attrs} -> {out, attrs}
+        :session_end ->
+          html = render_session_block(current_attrs || %{})
+          {out ++ [html], nil}
+        line when is_binary(line) -> {out ++ [line], current_attrs}
+      end
+    end)
+    |> elem(0)
+    |> Enum.join("\n")
+    |> then(fn transformed -> {transformed, has_sessions?} end)
+  end
+
+  defp transform_mdld_sessions(content), do: {content, false}
+
+  defp parse_session_attrs(nil), do: %{}
+  defp parse_session_attrs(""), do: %{}
+  defp parse_session_attrs(braced) when is_binary(braced) do
+    # Strip braces { ... }
+    inner =
+      braced
+      |> String.trim()
+      |> String.trim_leading("{")
+      |> String.trim_trailing("}")
+
+    # Split on whitespace boundaries while preserving quoted values
+    # Accept keys like lds:session=val or lds:session="val with spaces"
+    regex = ~r/(\S+?=\"[^\"]*\"|\S+?='[^']*'|\S+?=\S+)/
+
+    Regex.scan(regex, inner)
+    |> Enum.map(&List.first/1)
+    |> Enum.reduce(%{}, fn pair, acc ->
+      case String.split(pair, "=", parts: 2) do
+        [k, v] ->
+          v = String.trim(v)
+          v =
+            v
+            |> String.trim_leading("\"")
+            |> String.trim_trailing("\"")
+            |> String.trim_leading("'")
+            |> String.trim_trailing("'")
+
+          Map.put(acc, k, v)
+
+        _ -> acc
+      end
+    end)
+  end
+
+  defp render_session_block(attrs) when is_map(attrs) do
+    id = Map.get(attrs, "lds:session", "sess-unknown")
+    title = Map.get(attrs, "lds:title", "Interactive Session")
+    policy = Map.get(attrs, "lds:policy", "disabled")
+    cap = Map.get(attrs, "lds:cap", "interactive")
+    cols = Map.get(attrs, "lds:cols", "100")
+    rows = Map.get(attrs, "lds:rows", "28")
+    mode = Map.get(attrs, "lds:mode", "pty")
+    renderer = Map.get(attrs, "lds:renderer", "rio")
+    connect = Map.get(attrs, "lds:connect", "")
+    proto = Map.get(attrs, "lds:proto", "ssh")
+
+    disabled? = policy not in ["attach", "trusted"] or connect == ""
+
+    ~s(<div class="mdld-session my-4" data-mdld-session data-session-id="#{html_escape(id)}" data-connect="#{html_escape(connect)}" data-cap="#{html_escape(cap)}" data-cols="#{html_escape(cols)}" data-rows="#{html_escape(rows)}" data-mode="#{html_escape(mode)}" data-proto="#{html_escape(proto)}" data-renderer="#{html_escape(renderer)}" phx-hook="MdldSession">)
+    <> ~s(<div class="flex items-center justify-between mb-2">)
+    <> ~s(<div class="text-sm text-gray-400">#{html_escape(title)} · #{html_escape(String.upcase(proto))}</div>)
+    <> if disabled?, do: ~s(<button class="btn btn-sm btn-disabled" disabled>Connect</button>), else: ~s(<button class="btn btn-sm btn-primary" data-action="connect">Connect</button>)
+    <> ~s(</div>)
+    <> ~s(<div class="terminal border border-gray-700 rounded bg-black text-gray-100 p-2 h-72 overflow-auto" data-terminal></div>)
+    <> ~s|<div class="mt-1 text-[11px] text-gray-500">Server-mediated only. Do not connect directly (telnet/ssh).</div>|
+    <> ~s(</div>)
+  end
+
+  defp html_escape(str) when is_binary(str) do
+    str
+    |> String.replace("&", "&amp;")
+    |> String.replace("<", "&lt;")
+    |> String.replace(">", "&gt;")
+    |> String.replace(~S("), "&quot;")
+    |> String.replace("'", "&#39;")
+  end
+  defp html_escape(other), do: to_string(other)
+
+  defp session_limits do
+    cfg = Application.get_env(:lang, :session_proxy, [])
+    %{
+      idle_timeout_ms: Keyword.get(cfg, :idle_timeout_ms, 10 * 60_000),
+      bandwidth_limit_bytes: Keyword.get(cfg, :bandwidth_limit_bytes, 50 * 1024 * 1024)
+    }
   end
 
   defp process_line(line) do
@@ -101,6 +237,8 @@ defmodule LangWeb.DocsController do
     |> Enum.map(fn block ->
       cond do
         String.contains?(block, ["<h1>", "<h2>", "<h3>", "<pre>", "<ul>", "<ol>"]) -> block
+        # Preserve injected Markdown-LD session blocks as-is
+        String.contains?(block, ["data-mdld-session", "class=\"mdld-session"]) -> block
         String.contains?(block, "<li>") -> "<ul>" <> block <> "</ul>"
         String.trim(block) == "" -> ""
         true -> "<p>" <> block <> "</p>"

@@ -19,23 +19,61 @@ defmodule Lang.LSP.PhoenixIntegration do
   This allows real-time display of diagnostics in Phoenix LiveView.
   """
   def broadcast_diagnostics(uri, diagnostics) do
-    PubSub.broadcast(@pubsub, "lsp:diagnostics", %{
-      uri: uri,
-      diagnostics: diagnostics,
-      timestamp: DateTime.utc_now()
-    })
+    _ =
+      try do
+        Lang.LSP.Events.DiagnosticEvent
+        |> Ash.Changeset.for_create(:emit, %{
+          uri: uri,
+          diagnostics: diagnostics,
+          at: DateTime.utc_now()
+        })
+        |> Ash.create()
+      rescue
+        _ -> :ok
+      end
+    :ok
   end
 
   @doc """
   Broadcasts completion results for caching and analysis.
   """
   def broadcast_completions(uri, position, completions) do
-    PubSub.broadcast(@pubsub, "lsp:completions", %{
-      uri: uri,
-      position: position,
-      completions: completions,
-      timestamp: DateTime.utc_now()
-    })
+    _ =
+      try do
+        Lang.LSP.Events.CompletionEvent
+        |> Ash.Changeset.for_create(:emit, %{
+          uri: uri,
+          position: position,
+          completions: completions,
+          at: DateTime.utc_now()
+        })
+        |> Ash.create()
+      rescue
+        _ -> :ok
+      end
+    :ok
+  end
+
+  @doc """
+  Broadcast client lifecycle/activity events for real-time dashboards.
+
+  Types:
+  - :connected | :disconnected | :initialized | :activity | :stats
+  """
+  def broadcast_client_event(type, payload) when type in [:connected, :disconnected, :initialized, :activity, :stats] do
+    _ =
+      try do
+        Lang.LSP.Events.ClientEvent
+        |> Ash.Changeset.for_create(:emit, %{
+          event_type: type,
+          payload: payload,
+          at: DateTime.utc_now()
+        })
+        |> Ash.create()
+      rescue
+        _ -> :ok
+      end
+    :ok
   end
 
   @doc """
@@ -75,20 +113,36 @@ defmodule Lang.LSP.PhoenixIntegration do
       |> Stream.chunk_every(10)
       |> Stream.with_index()
       |> Enum.each(fn {chunk, index} ->
-        PubSub.broadcast(@pubsub, "lsp:analysis_stream:#{stream_id}", %{
-          chunk: chunk,
-          index: index,
-          uri: uri
-        })
+        _ =
+          try do
+            Lang.LSP.Events.AnalysisStreamEvent
+            |> Ash.Changeset.for_create(:emit, %{
+              stream_id: stream_id,
+              chunk: %{items: chunk},
+              index: index,
+              uri: uri
+            })
+            |> Ash.create()
+          rescue
+            _ -> :ok
+          end
 
         # Rate limiting
         Process.sleep(50)
       end)
 
-      PubSub.broadcast(@pubsub, "lsp:analysis_stream:#{stream_id}", %{
-        complete: true,
-        uri: uri
-      })
+      _ =
+        try do
+          Lang.LSP.Events.AnalysisStreamEvent
+          |> Ash.Changeset.for_create(:emit, %{
+            stream_id: stream_id,
+            complete: true,
+            uri: uri
+          })
+          |> Ash.create()
+        rescue
+          _ -> :ok
+        end
     end)
 
     {:ok, stream_id}
@@ -98,11 +152,23 @@ defmodule Lang.LSP.PhoenixIntegration do
   Monitor LSP server health using Telemetry.
   """
   def report_metrics(event, measurements, metadata \\ %{}) do
-    :telemetry.execute(
-      [:lang, :lsp, event],
-      measurements,
-      metadata
-    )
+    # Emit telemetry for observability tools
+    :telemetry.execute([:lang, :lsp, event], measurements, metadata)
+
+    # Publish to Ash PubSub for the dashboard
+    _ =
+      try do
+        Lang.LSP.Events.MetricEvent
+        |> Ash.Changeset.for_create(:emit, %{
+          event: event,
+          measurements: measurements,
+          metadata: metadata,
+          at: DateTime.utc_now()
+        })
+        |> Ash.create()
+      rescue
+        _ -> :ok
+      end
   end
 
   @doc """

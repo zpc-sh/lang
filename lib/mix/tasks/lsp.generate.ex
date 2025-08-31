@@ -22,8 +22,17 @@ defmodule Mix.Tasks.Lsp.Generate do
 
         Mix.shell().info("[dry-run] total files: #{length(files)}")
       else
-        Enum.each(files, &write!/1)
-        Mix.shell().info("Generated #{length(files)} files")
+        {wrote, unchanged} =
+          Enum.reduce(files, {0, 0}, fn f, {w, u} ->
+            case write!(f) do
+              :ok -> {w + 1, u}
+              :unchanged -> {w, u + 1}
+            end
+          end)
+
+        Mix.shell().info(
+          "Generated #{length(files)} files (wrote #{wrote}, unchanged #{unchanged})"
+        )
       end
     else
       {:error, reason} -> Mix.raise("generation failed: #{inspect(reason)}")
@@ -31,8 +40,9 @@ defmodule Mix.Tasks.Lsp.Generate do
   end
 
   defp write!(%{path: path, content: content}) do
-    case FSScanner.write(path, content) do
+    case FSScanner.write_if_changed(path, content) do
       :ok -> :ok
+      :unchanged -> :unchanged
       {:error, reason} -> Mix.raise("write failed #{path}: #{inspect(reason)}")
     end
   end

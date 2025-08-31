@@ -127,3 +127,6 @@ stripe_*
 native/*/Cargo.lock
 native/lang_perf/Cargo.lock
 native/tree_parser/Cargo.lock
+native/*/Cargo.lock
+native/lang_perf/Cargo.lock
+native/tree_parser/Cargo.lock

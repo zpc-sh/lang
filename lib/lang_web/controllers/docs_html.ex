@@ -7,6 +7,20 @@ defmodule LangWeb.DocsHTML do
     ~H"""
     <div class="min-h-screen bg-gray-950 text-gray-100">
       <div class="max-w-4xl mx-auto px-6 py-12">
+        <%= if @has_sessions? do %>
+          <div class="mb-6 rounded-lg border border-amber-600/40 bg-amber-900/10 p-4">
+            <div class="flex items-start gap-3">
+              <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-amber-400 mt-0.5" />
+              <div class="text-sm text-amber-200/90">
+                Safety: This page references live sessions via a server proxy. Do not connect directly (telnet/ssh). Use the Connect button or the documented connect API. All activity is audited and subject to org policy.
+                <div class="mt-2 text-amber-300/80">
+                  Limits: idle <%= trunc((@session_limits[:idle_timeout_ms] || 0) / 60000) %>m · bandwidth <%= Number.Delimit.number_to_delimited(div((@session_limits[:bandwidth_limit_bytes] || 0), 1024*1024)) %> MB
+                  · <a href="/audits/sessions" class="underline hover:text-amber-200">View Session Audit</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
         <article class="prose prose-invert prose-lg max-w-none">
           {raw(@content)}
         </article>

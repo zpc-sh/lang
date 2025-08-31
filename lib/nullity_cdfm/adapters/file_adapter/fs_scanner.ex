@@ -40,6 +40,25 @@ defmodule Nullity.CDFM.Adapters.FileAdapter.FSScanner do
     end
   end
 
+  # Non-callback helper: write only if content changed
+  def write_if_changed(path, content) when is_binary(path) and is_binary(content) do
+    current =
+      case exists?(path) do
+        true ->
+          case read(path) do
+            {:ok, bin} when is_binary(bin) -> bin
+            _ -> nil
+          end
+        false -> nil
+      end
+
+    if is_binary(current) and current == content do
+      :unchanged
+    else
+      write(path, content)
+    end
+  end
+
   @impl true
   def exists?(path) do
     cond do

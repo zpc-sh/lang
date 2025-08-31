@@ -416,10 +416,10 @@ defmodule LangWeb.ApiPortalLive do
   end
 
   defp fetch_organization(org_id) do
-    import Ash.Query
 
+    import Ash.Query
     case Lang.Accounts.Organization
-         |> Ash.Query.filter(id == ^org_id)
+         |> filter(id == ^org_id)
          |> Ash.read_one() do
       {:ok, nil} ->
         %{

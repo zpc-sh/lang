@@ -44,6 +44,7 @@ Complete documentation is available in the [`priv/docs/`](priv/docs/) directory:
 - **[Getting Started Guide](priv/docs/guides/getting-started.md)** - Quick setup and first steps
 - **[Deployment Guide](priv/docs/guides/deployment.md)** - Production deployment with Fly.io
 - **[FAQ](priv/docs/guides/faq.md)** - Frequently asked questions
+- **[Terminal Sessions Onboarding](priv/docs/guides/terminal-sessions-onboarding.md)** - Safe, server-mediated terminal usage from Markdown
 - **[API Documentation](priv/docs/api/index.md)** - Complete API reference
 - **[Architecture](priv/docs/architecture/index.md)** - System architecture and components
 - **[Tutorials](priv/docs/tutorials/index.md)** - Step-by-step tutorials
@@ -487,3 +488,20 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 **Built with ❤️ using Elixir and Phoenix**
 
 *Transforming how we interact with text, one format at a time.*
+## Local Dev Services (Postgres + Redis)
+
+Use the provided Mix tasks (they call `docker compose` under the hood and exit):
+
+- Start: `mix dev.db.up`
+- Status: `mix dev.db.status`
+- Stop: `mix dev.db.down` (keep volumes)
+- Wipe: `mix dev.db.wipe` (removes volumes)
+- Restart: `mix dev.db.restart`
+- PSQL helper: `mix dev.psql` or `mix dev.psql --query "select now();"`
+- Redis helper: `mix dev.redis_cli`
+
+Requirements:
+- `direnv` with `.envrc` loading the reusable `use_phoenix` module (`use phoenix`) to export `DB_*`, `PHX_*`, `REDIS_*` vars.
+- `docker` (with `docker compose`), `psql` and `redis-cli` available on PATH.
+
+`docker-compose.yml` lives in the project root and is parameterized via environment variables. The `use_phoenix` direnv module will pick free ports when defaults are busy and export `DATABASE_URL` and `REDIS_URL` for the app.

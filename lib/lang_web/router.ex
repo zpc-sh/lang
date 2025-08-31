@@ -1,10 +1,22 @@
 defmodule LangWeb.Router do
   use LangWeb, :router
+  use Lang.DevKit.Router
   use AshAuthentication.Phoenix.Router
   import Phoenix.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {LangWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug LangWeb.Plugs.AuthPlug, :load_from_session
+  end
+
+  # Browser JSON pipeline for authenticated JSON endpoints used by the web UI
+  pipeline :browser_json do
+    plug :accepts, ["html", "json"]
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {LangWeb.Layouts, :root}
@@ -53,6 +65,18 @@ defmodule LangWeb.Router do
     get "/robots.txt", RobotsController, :index
   end
 
+  # WS proxy endpoint for session attachments
+  scope "/ws", LangWeb do
+    pipe_through :api
+    get "/sessions/attach", SessionWsController, :attach
+  end
+
+  # API connect route for agents (Bearer auth)
+  scope "/api", LangWeb do
+    pipe_through [:api, :require_authenticated_api]
+    post "/sessions/:id/connect", SessionConnectController, :connect
+  end
+
   # Authentication routes
   scope "/auth", LangWeb do
     pipe_through :browser
@@ -96,6 +120,14 @@ defmodule LangWeb.Router do
       live "/billing", BillingLive, :index
       live "/billing/usage", BillingUsageLive, :index
       live "/fs/watch", FSWatchLive, :index
+      live "/audits/sessions", SessionAuditLive, :index
+
+      # Markdown-LD Session Connect (browser-authenticated JSON endpoint)
+      # Use a browser_json pipeline to accept JSON requests
+      scope "/api", LangWeb do
+        pipe_through [:browser_json]
+        post "/sessions/:id/connect", SessionConnectController, :connect
+      end
     end
   end
 
@@ -202,14 +234,18 @@ defmodule LangWeb.Router do
     # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
-    scope "/dev" do
-      pipe_through :browser
+    # Mount DevKit routes (defines its own /dev scope)
+    codex_devkit_routes(scope: "/dev", web_module: LangWeb)
 
-      live "/lsp", LangWeb.LspEditor.LspEditorLive, :index
+    # Additional dev pages not in DevKit (avoid double-wrapping /dev)
+    live "/dev/lsp", LangWeb.LspEditor.LspEditorLive, :index
+    live "/dev/agents", LangWeb.AgentsLive, :index
+    live "/dev/proxy/terminal", LangWeb.ProxyTerminalLive, :index
+    live "/dev/examples", LangWeb.DevJsonldExamplesLive, :index
 
-      live_dashboard "/dashboard", metrics: LangWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
-    end
+    live "/dev/agents-doc", LangWeb.DevAgentsDocLive, :index
+    live_dashboard "/dev/dashboard", metrics: LangWeb.Telemetry
+    forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
 
     # Mount Oban Web UI only when available (dev only)
     if Code.ensure_loaded?(Oban.Web) do

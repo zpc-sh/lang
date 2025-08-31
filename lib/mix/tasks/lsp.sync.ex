@@ -20,16 +20,20 @@ defmodule Mix.Tasks.Lsp.Sync do
          {:ok, %{files: files}} <-
            LSPProjectGenerator.generate_all(Enum.map(methods, &to_blueprint/1)) do
       doc = Enum.find(files, &(&1.path == "docs/lsp.md"))
-      if doc, do: write!(doc)
-      Mix.shell().info("Synced statuses and docs")
+      result = if doc, do: write!(doc), else: :unchanged
+      case result do
+        :ok -> Mix.shell().info("Synced statuses and docs (updated)")
+        :unchanged -> Mix.shell().info("Synced statuses and docs (unchanged)")
+      end
     else
       {:error, reason} -> Mix.shell().error("docs generation failed: #{inspect(reason)}")
     end
   end
 
   defp write!(%{path: path, content: content}) do
-    case FSScanner.write(path, content) do
+    case FSScanner.write_if_changed(path, content) do
       :ok -> :ok
+      :unchanged -> :unchanged
       {:error, reason} -> Mix.raise("write failed #{path}: #{inspect(reason)}")
     end
   end
