@@ -5,6 +5,9 @@
 
 LANG extends Language Server Protocol (LSP) and Tree-sitter parsing beyond code to provide semantic understanding, intelligent completions, and analysis for ANY structured content format.
 
+> Development: see docs/DEVELOPMENT.md for local setup, Mix dev tasks, and folder layout.
+> Codex: see AGENTS.codex.md for concise codegen guardrails.
+
 ## 🚀 Features
 
 ### Universal Text Intelligence

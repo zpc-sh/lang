@@ -5,6 +5,8 @@
 
 This is a sophisticated web application built with Phoenix, Ash Framework, and native Rust NIFs for high-performance text analysis.
 
+Note for Codex contributors: see AGENTS.codex.md for concise codegen guardrails.
+
 ## LANG Architecture Overview
 
 - **Phoenix 1.8** web framework with LiveView for real-time UI
@@ -24,6 +26,18 @@ This is a sophisticated web application built with Phoenix, Ash Framework, and n
 - **CRITICAL: NEVER** start long-running processes like servers (`mix phx.server`, `npm run dev`, `python -m http.server`, etc.) or file watchers that don't terminate on their own
 - **ABSOLUTELY FORBIDDEN: `mix phx.server`** - This command runs indefinitely and will block the terminal. Use `mix run` for one-time operations instead
 - **NEVER** run commands that block indefinitely - always use timeouts or background jobs for long operations
+
+### Auth, Sessions, and Billing Guardrails (Do First)
+
+- Before implementing any auth/session/token/WS logic, verify AshAuthentication (and existing plugs) can’t handle it.
+  - Prefer: AshAuthentication pipelines, `AuthOnMount` in LiveViews, and `LangWeb.AuthHelpers` to read user/org.
+  - Place routes under correct pipelines (`:require_authenticated_user` / `:require_authenticated_api` / `:optional_auth`) and pass `current_scope` to `Layouts.app`.
+  - Do not roll custom session stores or cookies unless explicitly required and after confirming AshAuthentication limits.
+- Before implementing billing/limits in controllers/workers, check the billing pipeline first.
+  - Call `Lang.Billing.can_make_request?(organization_id)` and handle `{:error, :limit_exceeded}`.
+  - Track usage via `Lang.Events.track_event/1`. Do not add new counters outside the billing/events system.
+  - Stripe/Webhooks: only through the existing `LangWeb.WebhooksController` integration.
+- Ash-first rule: do not bypass Ash resources/changesets/queries with custom persistence or raw Ecto. If something seems missing, surface a change on the Ash resource.
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>` which wraps all inner content

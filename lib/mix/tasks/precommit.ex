@@ -63,6 +63,7 @@ defmodule Mix.Tasks.Precommit do
     issues_found = 0
     issues_found = issues_found + check_staged_files()
     issues_found = issues_found + check_build_artifacts()
+    issues_found = issues_found + check_bad_default_args()
     issues_found = issues_found + check_large_files()
     issues_found = issues_found + check_file_permissions()
 
@@ -78,10 +79,97 @@ defmodule Mix.Tasks.Precommit do
       issues_found = issues_found + check_credo()
     end
 
+    # Scan docs for prompt-injection patterns (non-blocking defaults to medium/high summary)
+    issues_found = issues_found + check_doc_injections()
+
     print_summary(issues_found)
 
     if issues_found > 0 do
       System.halt(1)
+    end
+  end
+
+  defp check_doc_injections do
+    info("🛡️  Scanning docs for prompt-injection patterns...")
+    paths = ["docs", "AGENTS.md", "AGENTS.codex.md", "CONTRIBUTING.md", "README.md", "priv/secret"]
+    findings = Lang.Dev.DocSanitizer.scan(paths)
+
+    {high, med, low} =
+      Enum.reduce(findings, {0, 0, 0}, fn f, {h, m, l} ->
+        case f.severity do
+          :high -> {h + 1, m, l}
+          :medium -> {h, m + 1, l}
+          :low -> {h, m, l + 1}
+        end
+      end)
+
+    if high + med + low == 0 do
+      info("✅ No suspicious patterns found")
+      0
+    else
+      Enum.each(findings, fn f ->
+        info("   #{f.file}:#{f.line} [#{f.severity}] #{f.type} :: #{String.trim(f.snippet)}")
+      end)
+      # For now, fail only on high severity to reduce noise
+      if high > 0 do
+        error("❌ High-severity patterns detected in docs (#{high})")
+        1
+      else
+        info("⚠️  Medium/low patterns detected (med=#{med}, low=#{low})")
+        0
+      end
+    end
+  rescue
+    _ -> 0
+  end
+
+  # Detect accidental single-backslash default args like "opts \ []" or "error \ nil"
+  # Correct Elixir syntax requires a double backslash: "opts \\ []"
+  defp check_bad_default_args do
+    info("🧯 Checking for invalid default-arg backslashes (\\ [] / \\ nil / \\ %{})...")
+    staged_elixir_files =
+      get_staged_files()
+      |> Enum.filter(&String.match?(&1, ~r/\.exs?$/))
+
+    patterns = [
+      "\\ []",   # empty list
+      "\\ %{",   # empty/any map
+      "\\ {}",   # empty tuple
+      "\\ ()",   # empty parens (rare, but catch)
+      "\\ nil"    # nil
+    ]
+
+    findings =
+      for file <- staged_elixir_files, File.exists?(file), reduce: [] do
+        acc ->
+          {:ok, content} = File.read(file)
+          lines = String.split(content, "\n", trim: false)
+
+          file_hits =
+            lines
+            |> Enum.with_index(1)
+            |> Enum.flat_map(fn {line, ln} ->
+              Enum.filter(patterns, &String.contains?(line, &1))
+              |> Enum.map(fn pat -> {ln, pat, String.trim_leading(String.trim_trailing(line))} end)
+            end)
+
+          if file_hits == [], do: acc, else: [{file, file_hits} | acc]
+      end
+
+    case findings do
+      [] ->
+        info("✅ No invalid default-arg backslashes found")
+        0
+
+      list ->
+        error("❌ Found invalid single backslashes in default args (should be \\ \\):")
+        Enum.each(list, fn {file, hits} ->
+          Enum.each(hits, fn {ln, pat, line} ->
+            error("   #{file}:#{ln}: contains '#{pat}' -> #{line}")
+          end)
+        end)
+        info("   Fix by using a double backslash (e.g., opts \\ []), or use multiple function heads.")
+        length(list)
     end
   end
 
@@ -339,19 +427,39 @@ defmodule Mix.Tasks.Precommit do
       # Check if credo is available
       case System.cmd("mix", ["help", "credo"], stderr_to_stdout: true) do
         {_, 0} ->
-          case System.cmd("mix", ["credo", "--strict"] ++ staged_elixir_files,
-                 stderr_to_stdout: true
-               ) do
-            {_, 0} ->
-              info("✅ Credo static analysis passed")
-              0
+          # 1) Run default Credo strict checks
+          issues =
+            case System.cmd("mix", ["credo", "--strict"] ++ staged_elixir_files,
+                   stderr_to_stdout: true
+                 ) do
+              {_, 0} -> 0
+              {output, _} ->
+                error("⚠️  Credo found some issues (default config):")
+                info(output)
+                1
+            end
 
-            {output, _} ->
-              error("⚠️  Credo found some issues:")
-              info(output)
-              error("   Consider fixing these issues before committing")
-              1
+          # 2) Run custom Credo checks from .credo.exs if present
+          issues =
+            if File.exists?(".credo.exs") do
+              case System.cmd("mix", ["credo", "--strict", "--config-file", ".credo.exs"] ++ staged_elixir_files,
+                     stderr_to_stdout: true
+                   ) do
+                {_, 0} -> issues
+                {output, _} ->
+                  error("⚠️  Credo found some issues (custom config):")
+                  info(output)
+                  issues + 1
+              end
+            else
+              issues
+            end
+
+          if issues == 0 do
+            info("✅ Credo static analysis passed")
           end
+
+          issues
 
         {_, _} ->
           info("ℹ️  Credo not available - skipping static analysis")

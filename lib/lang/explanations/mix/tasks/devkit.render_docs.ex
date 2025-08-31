@@ -17,6 +17,7 @@ defmodule Mix.Tasks.Devkit.RenderDocs do
   """
 
   alias Lang.Dev.{JSONLDHelper, ModelRegistry}
+  import Ash.Query
   alias Lang.Dev.DocRenderer
 
   @impl true
@@ -83,7 +84,7 @@ defmodule Mix.Tasks.Devkit.RenderDocs do
   end
 
   defp current_version_for(id) do
-    case ModelRegistry |> Ash.Query.filter(model_id == ^id) |> Ash.read() do
+    case ModelRegistry |> filter(model_id == ^id) |> Ash.read() do
       {:ok, [%{version: v} | _]} -> v
       _ -> nil
     end

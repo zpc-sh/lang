@@ -5,6 +5,8 @@
 
 This is a sophisticated web application built with Phoenix, Ash Framework, and native Rust NIFs for high-performance text analysis.
 
+Codex contributors: see AGENTS.codex.md for concise codegen guardrails.
+
 ## LANG Architecture Overview
 
 - **Phoenix 1.8** web framework with LiveView for real-time UI

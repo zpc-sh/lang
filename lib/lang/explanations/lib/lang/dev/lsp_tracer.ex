@@ -33,7 +33,10 @@ defmodule Lang.Dev.LSPTracer do
     end
   end
 
-  def record(client_id, dir, method, rpc_id, status, duration_ms, payload, error \ nil) do
+  def record(client_id, dir, method, rpc_id, status, duration_ms, payload), do:
+    record(client_id, dir, method, rpc_id, status, duration_ms, payload, nil)
+
+  def record(client_id, dir, method, rpc_id, status, duration_ms, payload, error) do
     preview = build_preview(payload)
     digest = payload_digest(payload)
     args = %{
@@ -50,7 +53,7 @@ defmodule Lang.Dev.LSPTracer do
     Lang.Dev.LSPTrace.log(args)
   end
 
-  def list_traces(client_id, opts \ %{}) do
+  def list_traces(client_id, opts \\ %{}) do
     method = Map.get(opts, "method") || Map.get(opts, :method)
     since = Map.get(opts, "since") || Map.get(opts, :since)
     limit = Map.get(opts, "limit") || Map.get(opts, :limit) || 200

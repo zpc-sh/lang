@@ -4,11 +4,21 @@ defmodule LangWeb.ProxySessionController do
   def connect(conn, %{"id" => id}) do
     opts = []
     actor = resolve_actor(conn)
-    if actor == nil and not Application.get_env(:lang, :dev_routes) do
+    if is_nil(actor) do
       conn |> send_resp(401, "unauthorized")
     else
-      state = %{id: id, actor: actor || %{user_id: "dev", org_id: "dev"}}
+      state = %{id: id, actor: actor}
       WebSockAdapter.upgrade(conn, LangWeb.WS.ProxySessionWS, state, opts)
+    end
+  end
+
+  defp resolve_actor(conn) do
+    user = LangWeb.AuthHelpers.current_user(conn)
+    org = LangWeb.AuthHelpers.current_org(conn)
+    if user && org do
+      %{user_id: user.id, org_id: org.id}
+    else
+      nil
     end
   end
 
@@ -28,4 +38,3 @@ defmodule LangWeb.ProxySessionController do
   end
 
 end
-

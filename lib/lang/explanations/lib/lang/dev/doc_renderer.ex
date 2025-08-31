@@ -109,7 +109,7 @@ defmodule Lang.Dev.DocRenderer do
   defp do_parse_frontmatter(markdown) do
     # Split at the second delimiter
     case String.split(markdown, "\n---\n", parts: 2) do
-      [front_block, rest] when String.starts_with?(front_block, "---\n") ->
+      [<<"---\n", _::binary>> = front_block, rest] ->
         yaml = String.replace_prefix(front_block, "---\n", "")
         fm =
           yaml

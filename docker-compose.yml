@@ -3,7 +3,7 @@
 
 services:
   db:
-    image: postgres:15
+    image: postgres:17-alpine
     container_name: lang-pg
     restart: unless-stopped
     ports:
@@ -37,4 +37,3 @@ services:
 volumes:
   lang_pgdata: {}
   lang_redisdata: {}
-

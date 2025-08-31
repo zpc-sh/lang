@@ -8,13 +8,13 @@ defmodule Lang.Dev.Ticket do
 
   @default_ttl 300 # 5 minutes
 
-  def mint(scope, claims, opts \ []) when is_binary(scope) and is_map(claims) do
-    ttl = Keyword.get(opts, :ttl, @default_ttl)
+  # Note: Phoenix.Token.sign/3 does not accept max_age. TTL is enforced on verify.
+  def mint(scope, claims, _opts \\ []) when is_binary(scope) and is_map(claims) do
     salt = salt_for(scope)
-    Phoenix.Token.sign(LangWeb.Endpoint, salt, claims, max_age: ttl)
+    Phoenix.Token.sign(LangWeb.Endpoint, salt, claims)
   end
 
-  def verify(scope, token, opts \ []) do
+  def verify(scope, token, opts \\ []) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
     salt = salt_for(scope)
     Phoenix.Token.verify(LangWeb.Endpoint, salt, token, max_age: ttl)
@@ -22,3 +22,4 @@ defmodule Lang.Dev.Ticket do
 
   defp salt_for(scope), do: "ticket:" <> scope
 end
+
