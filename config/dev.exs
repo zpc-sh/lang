@@ -134,6 +134,8 @@ config :lang, LangWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :lang, dev_routes: true
 
+config :lang, :fswatcher_logger, topic: "dev:fs:jsonld", level: :debug
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

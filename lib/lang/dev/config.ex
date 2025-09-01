@@ -14,7 +14,10 @@ defmodule Lang.Dev.Config do
 
   @spec docs_dir() :: String.t()
   def docs_dir do
-    :code.priv_dir(@app) |> to_string() |> Path.join(["docs", "rendered"]) |> Path.expand()
+    case Application.get_env(@app, :dev_docs_dir) do
+      dir when is_binary(dir) -> Path.expand(dir)
+      _ -> :code.priv_dir(@app) |> to_string() |> Path.join(["docs", "rendered"]) |> Path.expand()
+    end
   end
 
   @spec events_prefix() :: String.t()
@@ -35,4 +38,3 @@ defmodule Lang.Dev.Config do
   @spec event_emitter() :: module()
   def event_emitter, do: Application.get_env(@app, :dev_models_event_emitter, Lang.Events)
 end
-

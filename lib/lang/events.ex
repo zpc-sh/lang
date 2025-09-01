@@ -64,37 +64,18 @@ defmodule Lang.Events do
 
   defp determine_event_resource(attrs) do
     case Map.get(attrs, :event_type) do
-      event_type
-      when event_type in [
-             "user_login_success",
-             "user_login_failed",
-             "user_registered",
-             "user_logged_out",
-             "password_reset_requested",
-             "password_reset_completed",
-             "api_key_created",
-             "api_key_revoked"
-           ] ->
-        {:user_activity, Lang.Events.UserActivityEvent}
-
-      event_type
-      when event_type in [
-             "api_call_made",
-             "api_call_failed",
-             "rate_limit_exceeded",
-             "usage_limit_exceeded",
-             "billing_event"
-           ] ->
-        {:api_usage, Lang.Events.ApiUsageEvent}
-
-      nil ->
-        {:error, :missing_event_type}
-
-      unknown_type ->
-        # Default to user activity for unknown types
-        require Logger
-        Logger.info("Unknown event type '#{unknown_type}', defaulting to UserActivityEvent")
-        {:user_activity, Lang.Events.UserActivityEvent}
+      nil -> {:error, :missing_event_type}
+      type ->
+        case Lang.Events.TypeRegistry.resolve(type) do
+          {:ok, :user_activity} -> {:user_activity, Lang.Events.UserActivityEvent}
+          {:ok, :api_usage} -> {:api_usage, Lang.Events.ApiUsageEvent}
+          {:ok, :performance} -> {:api_usage, Lang.Events.ApiUsageEvent}
+          {:ok, :billing} -> {:api_usage, Lang.Events.ApiUsageEvent}
+          :unknown ->
+            require Logger
+            Logger.info("Unknown event type '#{type}', defaulting to UserActivityEvent")
+            {:user_activity, Lang.Events.UserActivityEvent}
+        end
     end
   end
 

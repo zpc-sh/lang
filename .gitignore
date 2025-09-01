@@ -134,3 +134,5 @@ deploy/secrets*.yml
 work/spec_requests/*/inbox/
 work/spec_requests/*/outbox/
 work/spec_requests/*/thread.md
+
+.claude

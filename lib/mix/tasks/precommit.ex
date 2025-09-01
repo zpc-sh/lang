@@ -93,6 +93,7 @@ defmodule Mix.Tasks.Precommit do
     # Advisory: warn on direct Billing calls (pipeline-first policy)
     _ = warn_direct_billing_calls()
     _ = warn_direct_events_calls()
+    Mix.Tasks.Dev.Events.Lint.run(["--fail"])
 
     print_summary(issues_found)
 

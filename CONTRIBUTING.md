@@ -748,3 +748,28 @@ mix phx.digest          # Generate static asset digests
 **🚀 You're now ready to build high-performance text intelligence applications with LANG!**
 
 <!-- usage-rules-end -->
+
+
+## Event Types Registry (Canonical)
+
+We maintain a single source of truth for event types in `Lang.Events.TypeRegistry`.
+This prevents drift and ensures docs + routing stay in sync.
+
+- Add a new event type (or prefix) via the helper task:
+
+  ```bash
+  # Exact type
+  mix dev.events.add performance_metrics_collected --category api_usage
+
+  # Prefix mapping (e.g., all mdld custom audit events)
+  mix dev.events.add mdld_custom_ --category user_activity --prefix
+  ```
+
+- Generate the canonical docs + lint the registry before committing:
+
+  ```bash
+  mix dev.events.sync
+  # writes docs/architecture/events.md and fails if an unknown type is found
+  ```
+
+- CI will verify both the registry and that `docs/architecture/events.md` is up to date.

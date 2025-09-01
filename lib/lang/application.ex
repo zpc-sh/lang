@@ -133,7 +133,16 @@ defmodule Lang.Application do
       priv = :code.priv_dir(:lang) |> to_string()
       jsonld_dir = Path.join([priv, "dev", "jsonld"]) |> Path.expand()
       watcher = {Lang.Dev.DevFSWatcher, %{name: :jsonld, path: jsonld_dir, topic: "dev:fs:jsonld", interval_ms: 2_000}}
-      children ++ [watcher]
+      logger = {Lang.Dev.FSWatcherLogger, %{topic: "dev:fs:jsonld"}}
+      # Auto-render JSON-LD changes to docs via Oban worker
+      renderer = {Lang.Dev.JSONLDRenderSubscriber, %{topic: "dev:fs:jsonld"}}
+
+      # Watch the docs output dir and auto-ingest back into JSON-LD on changes
+      docs_dir = Lang.Dev.Config.docs_dir()
+      docs_watcher = {Lang.Dev.DevFSWatcher, %{name: :docs, path: docs_dir, topic: "dev:fs:docs", interval_ms: 2_000}}
+      docs_ingestor = {Lang.Dev.DocsIngestSubscriber, %{topic: "dev:fs:docs"}}
+
+      children ++ [watcher, logger, renderer, docs_watcher, docs_ingestor]
     else
       children
     end

@@ -126,7 +126,6 @@ defmodule Lang.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:sobelow, "~> 0.8", only: [:dev, :test], runtime: false},
       {:bcrypt_elixir, "~> 3.0"},
-      {:tidewave, "~> 0.4", only: [:dev, :test]},
       {:jsonld_ex, "~> 0.4.0"},
       {:markdown_ld, "~> 0.4.0"},
       {:testcontainers, "~> 1.13", only: [:dev, :test]},
