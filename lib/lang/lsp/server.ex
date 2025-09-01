@@ -24,6 +24,7 @@ defmodule Lang.LSP.Server do
     :initialized,
     :root_uri,
     :capabilities,
+    :start_time,
     :shutdown_requested
   ]
 
@@ -58,6 +59,9 @@ defmodule Lang.LSP.Server do
       clients: %{},
       documents: %{},
       initialized: false,
+      root_uri: nil,
+      capabilities: nil,
+      start_time: System.system_time(:second),
       shutdown_requested: false
     }
 
@@ -361,6 +365,16 @@ defmodule Lang.LSP.Server do
 
   defp handle_lsp_request(client_id, message, state) do
     start_time = System.monotonic_time(:millisecond)
+    method = Map.get(message, "method")
+    id = Map.get(message, "id")
+    safe_params =
+      case Map.get(message, "params") do
+        %{} = p -> Map.take(p, Enum.take(Map.keys(p), 8))
+        _ -> nil
+      end
+
+    Logger.info("LSP request: method=#{inspect(method)} id=#{inspect(id)}")
+    debug_log(:request, %{method: method, id: id, params: safe_params})
 
     # Tag logs with client metadata if available
     case Map.get(state.clients || %{}, client_id) do
@@ -373,6 +387,31 @@ defmodule Lang.LSP.Server do
     # Route based on method
     response =
       case message do
+        %{"method" => "rpc.serverInfo", "id" => id} ->
+          info = %{
+            version: Application.spec(:lang, :vsn) |> to_string(),
+            mode: state.mode,
+            port: state.port,
+            uptime_s: System.system_time(:second) - (state.start_time || System.system_time(:second)),
+            connected_clients: map_size(state.clients),
+            active_documents: map_size(state.documents),
+            storage_adapter: (Application.get_env(:lang, :storage_adapter, Lang.Storage.LocalFS) |> to_string())
+          }
+
+          %{"jsonrpc" => "2.0", "id" => id, "result" => info}
+
+        %{"method" => "rpc.health", "id" => id} ->
+          checks = [
+            nif_fs: nif_check(Lang.Native.FSScanner),
+            nif_tree: nif_check(Lang.Native.TreeParser),
+            pubsub: if(Process.whereis(Lang.PubSub), do: {:ok, "started"}, else: {:warn, "not_started"}),
+            folder_url: folder_url_check(),
+            telemetry_sink: telemetry_sink_check()
+          ]
+          |> Enum.map(fn {name, res} -> %{name: name, status: elem(res, 0), reason: elem(res, 1)} end)
+
+          %{"jsonrpc" => "2.0", "id" => id, "result" => %{"checks" => checks}}
+
         # Identify notification to correlate logs per external client id
         %{"method" => "lang/tester/identify", "params" => params} ->
           cid = params["clientId"] || params["client_id"]
@@ -544,9 +583,13 @@ defmodule Lang.LSP.Server do
     if response do
       duration = System.monotonic_time(:millisecond) - start_time
 
+      Logger.info("LSP response: method=#{inspect(method)} id=#{inspect(id)} duration_ms=#{duration}")
+      debug_log(:response, %{method: method, id: id, duration_ms: duration, result: summarize_result(response)})
+
       PhoenixIntegration.report_metrics(:request, %{duration: duration}, %{
         method: message["method"]
       })
+      :telemetry.execute([:lang, :lsp, :server, :request], %{duration: duration}, %{method: method, id: id})
 
       # Update client stats and broadcast activity
       case {client_id, Map.get(message, "method")} do
@@ -572,6 +615,52 @@ defmodule Lang.LSP.Server do
     end
 
     state
+  end
+
+  defp summarize_result(%{"error" => err}), do: %{error: Map.take(err, ["code", "message"]) }
+  defp summarize_result(%{"result" => res}) when is_map(res), do: Map.take(res, Enum.take(Map.keys(res), 8))
+  defp summarize_result(%{"result" => other}) do
+    try do
+      %{result_type: inspect(Map.get(other, :__struct__))}
+    rescue
+      _ -> %{}
+    end
+  end
+  defp summarize_result(_), do: %{}
+
+  defp debug_log(tag, map) when tag in [:request, :response] and is_map(map) do
+    case System.get_env("LSP_DEBUG_LOG") do
+      nil -> :ok
+      path ->
+        ts = DateTime.utc_now() |> DateTime.to_iso8601()
+        line = Jason.encode!(%{ts: ts, tag: to_string(tag), data: map}) <> "\n"
+        try do
+          File.write!(path, line, [:append])
+        rescue
+          _ -> :ok
+        end
+    end
+  end
+
+  defp nif_check(mod) do
+    case Code.ensure_loaded(mod) do
+      {:module, _} -> {:ok, "loaded"}
+      {:error, reason} -> {:warn, to_string(reason)}
+    end
+  end
+
+  defp folder_url_check do
+    case System.get_env("FOLDER_URL") || System.get_env("LANG_DIRUP_URL") do
+      nil -> {:warn, "unset"}
+      url -> {:ok, url}
+    end
+  end
+
+  defp telemetry_sink_check do
+    case System.get_env("LSP_METRICS_LOG") do
+      nil -> {:warn, "unset"}
+      path -> {:ok, path}
+    end
   end
 
   defp update_client_stats(state, client_id, method) do

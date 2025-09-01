@@ -1,4 +1,4 @@
-defmodule Lang.Storage.Dirup do
+defmodule Lang.Storage.Folder do
   @moduledoc """
   Lightweight client for the Dirup storage service.
 
@@ -13,11 +13,11 @@ defmodule Lang.Storage.Dirup do
   @default_timeout 5_000
 
   defp base_url do
-    System.get_env("DIRUP_URL") || System.get_env("LANG_DIRUP_URL") || "http://127.0.0.1:7070"
+    System.get_env("FOLDER_URL") || System.get_env("LANG_DIRUP_URL") || "http://127.0.0.1:7070"
   end
 
   defp token do
-    System.get_env("DIRUP_TOKEN") || System.get_env("LANG_DIRUP_TOKEN")
+    System.get_env("FOLDER_TOKEN") || System.get_env("LANG_DIRUP_TOKEN")
   end
 
   defp req(opts \\ []) do

@@ -24,6 +24,12 @@ defmodule Mix.Tasks.Lsp.Smoke do
     # Ensure our application (and required deps) are started
     {:ok, _} = Application.ensure_all_started(:lang)
 
+    # Optional telemetry sink for metrics file
+    if path = System.get_env("LSP_METRICS_LOG") do
+      _ = Lang.LSP.TelemetryFileSink.attach(path)
+      Mix.shell().info("Telemetry sink attached → #{path}")
+    end
+
     # Start LSP server (TCP only) supervised under current VM
     {:ok, pid} = Lang.LSP.Server.start_link(mode: :tcp, port: port)
 

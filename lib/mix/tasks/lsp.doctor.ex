@@ -66,6 +66,9 @@ defmodule Mix.Tasks.Lsp.Doctor do
       end
     end
 
+    # Optional Folder checks when environment is primed
+    maybe_test_folder(host, port)
+
     Mix.shell().info("LSP Doctor: all checks passed")
   end
 
@@ -87,5 +90,38 @@ defmodule Mix.Tasks.Lsp.Doctor do
     Mix.shell().info("- If running in a container/VM, ensure port forwarding and firewall allow TCP to the port")
     Mix.shell().info("- Check logs: /tmp/lang_lsp.err (from harness) and app logs for startup errors")
   end
-end
 
+  defp maybe_test_folder(host, port) do
+    owner = System.get_env("FOLDER_OWNER")
+    repo = System.get_env("FOLDER_REPO")
+    reference = System.get_env("FOLDER_REFERENCE") || "latest"
+    team = System.get_env("FOLDER_TEAM_ID")
+    wid = System.get_env("FOLDER_WORKSPACE_ID")
+    url = System.get_env("FOLDER_URL")
+
+    if url do
+      Mix.shell().info("Folder checks: base=#{url}")
+
+      if owner && repo do
+        case API.call("folder/registry.getManifest", %{"owner" => owner, "repo" => repo, "reference" => reference}, host: host, port: port, timeout: 3_000) do
+          {:ok, _} -> Mix.shell().info("folder/registry.getManifest: OK")
+          {:error, reason} -> Mix.shell().error("folder/registry.getManifest FAILED: #{inspect(reason)}")
+        end
+      end
+
+      if owner && repo do
+        case API.call("folder/registry.getBlob", %{"owner" => owner, "repo" => repo, "digest" => System.get_env("FOLDER_DIGEST") || "sha256:INVALID"}, host: host, port: port, timeout: 3_000) do
+          {:ok, _} -> Mix.shell().info("folder/registry.getBlob: OK (or partial)")
+          {:error, reason} -> Mix.shell().error("folder/registry.getBlob FAILED: #{inspect(reason)}")
+        end
+      end
+
+      if team && wid do
+        case API.call("folder/fs.list", %{"teamId" => team, "workspaceId" => wid, "path" => "."}, host: host, port: port, timeout: 3_000) do
+          {:ok, _} -> Mix.shell().info("folder/fs.list: OK")
+          {:error, reason} -> Mix.shell().error("folder/fs.list FAILED: #{inspect(reason)}")
+        end
+      end
+    end
+  end
+end

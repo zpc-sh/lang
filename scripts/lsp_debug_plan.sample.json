@@ -1,0 +1,12 @@
+{
+  "calls": [
+    { "method": "rpc.ping", "params": {}, "expect": {"ok": true} },
+    { "method": "rpc.capabilities", "params": {}, "expect": {"ok": true, "has_keys": ["capabilities"]} },
+    { "method": "folder/registry.getManifest",
+      "params": {"owner": "$FOLDER_OWNER", "repo": "$FOLDER_REPO", "reference": "$FOLDER_REFERENCE"},
+      "expect": {"ok": true, "has_keys": ["manifestJson"]} },
+    { "method": "folder/fs.list",
+      "params": {"teamId": "$FOLDER_TEAM_ID", "workspaceId": "$FOLDER_WORKSPACE_ID", "path": "."},
+      "expect": {"ok": true, "has_keys": ["entries"]} }
+  ]
+}

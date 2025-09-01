@@ -51,7 +51,14 @@ defmodule Mix.Tasks.Dev.Events.Add do
 
     # Write back the events.exs file with only the extra section (registry merges it at runtime)
     content = render(extra)
-    Path(file).parent.mkdir(parents=True, exist_ok=True)
+    file
+    |> Path.dirname()
+    |> File.mkdir_p()
+    |> case do
+      :ok -> :ok
+      {:error, reason} -> Mix.raise("failed to create directory for #{file}: #{inspect(reason)}")
+    end
+
     File.write!(file, content)
     Mix.shell().info("Updated #{file} with #{if is_prefix, do: "prefix", else: "event"} '#{name}' => #{cat}")
   end
@@ -63,19 +70,28 @@ defmodule Mix.Tasks.Dev.Events.Add do
   defp parse_category(other), do: Mix.raise("unknown category: #{inspect(other)}")
 
   defp render(%{exact: exact, prefixes: prefixes}) do
-    exact_kv = Enum.map(exact, fn {k, v} -> "
-      "#{k}" => :#{v}" end) |> Enum.join(",")
-    prefixes_kv = Enum.map(prefixes, fn {k, v} -> "
-      "#{k}" => :#{v}" end) |> Enum.join(",")
+    exact_kv =
+      Enum.map(exact, fn {k, v} ->
+        ~s(\n      "#{k}" => :#{v})
+      end)
+      |> Enum.join(",")
+
+    prefixes_kv =
+      Enum.map(prefixes, fn {k, v} ->
+        ~s(\n      "#{k}" => :#{v})
+      end)
+      |> Enum.join(",")
     """
     import Config
 
     config :lang, :events,
       extra: %{
-        exact: {#{"#{exact_kv}
-    "}},
-        prefixes: {#{"#{prefixes_kv}
-    "}}
+        exact: %{
+#{exact_kv}
+    },
+        prefixes: %{
+#{prefixes_kv}
+    }
       }
     """
   end
@@ -85,10 +101,8 @@ defmodule Mix.Tasks.Dev.Events.Add do
     if File.exists?(cfg) do
       body = File.read!(cfg)
       unless String.contains?(body, ~s(import_config "events.exs")) do
-        File.write!(cfg, body <> "
-import_config "events.exs"
-")
-        Mix.shell().info("Appended import_config "events.exs" to config/config.exs")
+        File.write!(cfg, body <> "\nimport_config \"events.exs\"\n")
+        Mix.shell().info(~s(Appended import_config "events.exs" to config/config.exs))
       end
     end
   end

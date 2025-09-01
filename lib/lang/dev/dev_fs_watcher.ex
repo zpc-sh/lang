@@ -109,7 +109,11 @@ defmodule Lang.Dev.DevFSWatcher do
 
     name = Map.get(entry, "name") || Map.get(entry, :name)
     path = Map.get(entry, "path") || Map.get(entry, :path) || (if is_binary(name), do: Path.join(dir, name))
-    children = Map.get(entry, "children") || Map.get(entry, :children) || []
+    children =
+      case (Map.get(entry, "children") || Map.get(entry, :children) || []) do
+        l when is_list(l) -> l
+        _ -> []
+      end
 
     case type do
       "file" -> if is_binary(path), do: [path], else: if is_binary(name), do: [Path.join(dir, name)], else: []
@@ -134,6 +138,9 @@ defmodule Lang.Dev.DevFSWatcher do
         end
     end
   end
+
+  # Gracefully ignore unexpected node shapes
+  defp flatten_tree(_dir, _other), do: []
 
   defp fallback_list(dir, _reason) do
     try do

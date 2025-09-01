@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Dev.Fswatch.Watch do
     interval = opts[:interval] || 5
 
     preset = Application.get_env(:lang, :fswatcher_preset)
-    ts_preset = Application.get_env(:lang, :fswatcher_timestamp, False)
+    ts_preset = Application.get_env(:lang, :fswatcher_timestamp, false)
 
     format =
       cond do
@@ -45,11 +45,11 @@ defmodule Mix.Tasks.Dev.Fswatch.Watch do
         opts[:align] -> {:align, opts[:cols]}
         preset in [:json, "json"] -> :json
         preset in [:align, "align"] -> {:align, opts[:cols]}
-        True -> {:line, opts[:cols]}
+        true -> {:line, opts[:cols]}
       end
 
-    color? = not (opts[:no_color] || False)
-    ts? = opts[:ts] or ts_preset or False
+    color? = not (opts[:no_color] || false)
+    ts? = (opts[:ts] || ts_preset || false)
 
     {:ok, pid} = Task.start_link(fn -> loop(topics, kinds, seconds, interval, format, color?, ts?) end)
     ref = Process.monitor(pid)
@@ -108,7 +108,7 @@ defmodule Mix.Tasks.Dev.Fswatch.Watch do
           now2 = System.monotonic_time(:millisecond)
           if now2 >= next_summary do
             IO.puts("[fswatch] summary topics=#{Enum.join(topics, ",")} total=#{total} by_kind=#{inspect(counts)}")
-            loop_recv(topics, kinds, deadline, now2 + interval * 1_000, interval, counts, total)
+            loop_recv(topics, kinds, deadline, now2 + interval * 1_000, interval, counts, total, format, color?, ts?)
           else
             loop_recv(topics, kinds, deadline, next_summary, interval, counts, total, format, color?, ts?)
           end
@@ -131,15 +131,15 @@ defmodule Mix.Tasks.Dev.Fswatch.Watch do
   defp render(ev, kinds, {:align, cols}, color?, ts?) do
     cols = cols || 80
     begin = [Lang.Dev.FSWatch.MW.FilterKinds]
-    begin = begin + ([Lang.Dev.FSWatch.MW.Timestamp] if ts? else [])
-    begin = begin + [{Lang.Dev.FSWatch.MW.Align, [color: color?, path_width: cols]}]
+    begin = begin ++ (if ts?, do: [Lang.Dev.FSWatch.MW.Timestamp], else: [])
+    begin = begin ++ [{Lang.Dev.FSWatch.MW.Align, [color: color?, path_width: cols]}]
     Lang.Dev.FSWatch.Pipeline.run(ev, %{middlewares: begin, kinds: kinds, color: color?})
   end
 
   defp render(ev, kinds, {:line, _cols}, color?, ts?) do
     begin = [Lang.Dev.FSWatch.MW.FilterKinds]
-    begin = begin + ([Lang.Dev.FSWatch.MW.Timestamp] if ts? else [])
-    begin = begin + [{Lang.Dev.FSWatch.MW.FormatLine, [color: color?]}]
+    begin = begin ++ (if ts?, do: [Lang.Dev.FSWatch.MW.Timestamp], else: [])
+    begin = begin ++ [{Lang.Dev.FSWatch.MW.FormatLine, [color: color?]}]
     Lang.Dev.FSWatch.Pipeline.run(ev, %{middlewares: begin, kinds: kinds, color: color?})
   end
 

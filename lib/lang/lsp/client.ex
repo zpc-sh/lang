@@ -147,6 +147,22 @@ defmodule Lang.LSP.Client do
     end)
   end
 
+  @doc """
+  Send a one-off JSON-RPC notification (no response expected).
+
+  Establishes a short-lived connection, sends the notification, and closes.
+  """
+  @spec notify(String.t(), map(), keyword()) :: :ok | {:error, any()}
+  def notify(method, params \\ %{}, opts \\ []) do
+    case connect(opts) do
+      {:ok, %{socket: socket} = conn} ->
+        res = send_notification(socket, method, params)
+        disconnect(conn)
+        res
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Internal: JSON-RPC framing (Content-Length)
   # ---------------------------------------------------------------------------
@@ -223,6 +239,20 @@ defmodule Lang.LSP.Client do
       len = :erlang.iolist_size(json_io)
       header_io = ["Content-Length: ", Integer.to_string(len), "\r\n\r\n"]
       :gen_tcp.send(socket, [header_io, json_io])
+    end
+  end
+
+  defp send_notification(socket, method, params) do
+    payload = %{"jsonrpc" => "2.0", "method" => method}
+    payload = if params in [nil, %{}], do: payload, else: Map.put(payload, "params", params)
+
+    with {:ok, json_io} <- Jason.encode_to_iodata(payload) do
+      len = :erlang.iolist_size(json_io)
+      header_io = ["Content-Length: ", Integer.to_string(len), "\r\n\r\n"]
+      case :gen_tcp.send(socket, [header_io, json_io]) do
+        :ok -> :ok
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 

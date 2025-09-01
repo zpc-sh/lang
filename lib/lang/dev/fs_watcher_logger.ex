@@ -61,7 +61,7 @@ defmodule Lang.Dev.FSWatcherLogger do
     opt_cols = if is_map(opts), do: Map.get(opts, :cols), else: Keyword.get(opts, :cols)
     cfg_cols = if is_list(cfg), do: Keyword.get(cfg, :cols), else: nil
     cols_default = if preset in [:compact, "compact"], do: 80, else: 100
-    cols = opt_cols or cfg_cols or cols_default
+    cols = opt_cols || cfg_cols || cols_default
 
     opt_ts = if is_map(opts), do: Map.get(opts, :timestamp), else: Keyword.get(opts, :timestamp)
     cfg_ts = if is_list(cfg), do: Keyword.get(cfg, :timestamp), else: nil
