@@ -35,6 +35,8 @@ Introduction to Kyozo and its five core services.
 ## 🚀 Quick Links
 
 - [Get Started in 5 Minutes](/docs/onboarding/developer-guide.md#quick-start)
+- [LSP Connect Quickstart](/docs/LSP_CONNECT_QUICKSTART.md)
+- [LSP KG Build Streaming](/docs/LSP_KG_BUILD_STREAMING.md)
 - [API Authentication](/docs/api/api-standardization.md#authentication--authorization)
 - [View Architecture](/docs/architecture/diagrams.md)
 - [Integration Examples](/docs/integration/integration-guides.md)

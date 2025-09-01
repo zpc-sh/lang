@@ -42,6 +42,7 @@ defmodule Lang.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:usage_rules, "~> 0.1", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       # Phoenix & Web
       {:phoenix, "~> 1.8.0"},
@@ -129,6 +130,7 @@ defmodule Lang.MixProject do
       {:jsonld_ex, "~> 0.4.0"},
       {:markdown_ld, "~> 0.4.0"},
       {:testcontainers, "~> 1.13", only: [:dev, :test]},
+      {:jose, "~> 1.11"},
       # Performance profiling and optimization
       {:ash_profiler, "~> 0.1.0", only: [:dev, :test]},
       # SAT solver for Spark/Ash DSL verification without adding a NIF
@@ -222,6 +224,9 @@ defmodule Lang.MixProject do
       "assets.deploy": [
         "tailwind lang --minify",
         "esbuild lang --minify",
+        # ensure static dir exists and copy assets/static (including .well-known) to priv/static
+        "cmd -- mkdir -p priv/static",
+        "cmd -- sh -lc 'cp -R assets/static/. priv/static'",
         "phx.digest"
       ],
 
@@ -258,7 +263,15 @@ defmodule Lang.MixProject do
         "ecto.create",
         "ecto.migrate",
         "lsp.pipeline"
-      ]
+      ],
+
+      # OpenAPI helpers
+      "openapi.mcp": ["mcp.spec"],
+      "openapi.mcp.dump": ["mcp.spec.dump"],
+      "openapi.all": ["openapi.all"],
+      openapi: ["openapi.mcp", "openapi.all"],
+      # Spec hub convenience alias (validates and indexes by default via spec.hub.sync)
+      "spec.hub.refresh": ["spec.hub.sync"]
     ]
   end
 end

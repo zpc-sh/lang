@@ -22,21 +22,31 @@ defmodule MarkdownLD.Hash do
   """
   def dataset_hash(term) do
     # TODO: try canonical N-Quads when a URDNA2015 canonicalizer is wired
-    json = encode_stable(term)
+    normalized = normalize(term)
+    json = Jason.encode_to_iodata!(normalized)
     hash = :crypto.hash(:sha256, json) |> Base.encode16(case: :lower)
     {:ok, %{algorithm: "sha256", form: "stable-json", hash: hash, quad_count: 0}}
   end
 
-  defp encode_stable(term) when is_map(term) do
+  # Normalize into a JSON-encodable structure with stable key ordering.
+  # Do NOT pre-encode substructures; only encode once at the top.
+  defp normalize(term) when is_map(term) do
     term
     |> Enum.map(fn {k, v} -> {to_string(k), v} end)
     |> Enum.sort_by(fn {k, _} -> k end)
-    |> Enum.into(%{}, fn {k, v} -> {k, encode_stable(v)} end)
-    |> Jason.encode_to_iodata!()
+    |> Enum.into(%{}, fn {k, v} -> {k, normalize(v)} end)
   end
 
-  defp encode_stable(list) when is_list(list),
-    do: Jason.encode_to_iodata!(Enum.map(list, &encode_stable/1))
+  defp normalize(list) when is_list(list), do: Enum.map(list, &normalize/1)
 
-  defp encode_stable(other), do: Jason.encode_to_iodata!(other)
+  defp normalize(other) do
+    case other do
+      a when is_atom(a) and a not in [true, false, nil] -> to_string(a)
+      %DateTime{} = dt -> DateTime.to_iso8601(dt)
+      %NaiveDateTime{} = ndt -> NaiveDateTime.to_iso8601(ndt)
+      %Date{} = d -> Date.to_iso8601(d)
+      %Time{} = t -> Time.to_iso8601(t)
+      _ -> other
+    end
+  end
 end

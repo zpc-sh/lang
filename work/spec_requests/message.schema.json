@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/spec-request-message.schema.json",
+  "title": "Spec Request Message",
+  "type": "object",
+  "required": ["id", "from", "type", "body", "relates_to", "status", "created_at"],
+  "properties": {
+    "id": {"type": "string"},
+    "from": {
+      "type": "object",
+      "required": ["project", "agent"],
+      "properties": {"project": {"type": "string"}, "agent": {"type": "string"}}
+    },
+    "type": {"type": "string", "enum": ["comment", "question", "proposal", "decision"]},
+    "ref": {
+      "type": "object",
+      "properties": {"path": {"type": "string"}, "json_pointer": {"type": "string"}}
+    },
+    "body": {"type": "string"},
+    "attachments": {"type": "array", "items": {"type": "string"}},
+    "relates_to": {
+      "type": "object",
+      "required": ["request_id"],
+      "properties": {"request_id": {"type": "string"}, "parent_msg_id": {"type": "string"}}
+    },
+    "status": {"type": "string", "enum": ["open", "resolved", "superseded"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"}
+  }
+}
+

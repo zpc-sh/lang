@@ -27,6 +27,12 @@ Note for Codex contributors: see AGENTS.codex.md for concise codegen guardrails.
 - **ABSOLUTELY FORBIDDEN: `mix phx.server`** - This command runs indefinitely and will block the terminal. Use `mix run` for one-time operations instead
 - **NEVER** run commands that block indefinitely - always use timeouts or background jobs for long operations
 
+### Usage Rules (Keep Context Small)
+
+- We sync package usage rules into `./rules` to avoid bloating agent prompts.
+- See `rules/USAGE_RULES.md` for links to rules; do not inline large rule sets into AGENTS docs.
+- To update: `mix dev.usage_rules.sync --all` (also runs in `mix dev.rollup` when available).
+
 ### Auth, Sessions, and Billing Guardrails (Do First)
 
 - Before implementing any auth/session/token/WS logic, verify AshAuthentication (and existing plugs) can’t handle it.
@@ -130,6 +136,7 @@ custom classes must fully style the input
 ## Mix guidelines
 
 - Read the docs and options before using tasks (by using `mix help task_name`)
+- After editing Elixir files, run `mix compile` to catch errors immediately (do not defer compile to later steps)
 - To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`
 - `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason
 - **NEVER** run `mix phx.server` or other long-running commands that don't terminate - use `mix run` for one-time operations instead

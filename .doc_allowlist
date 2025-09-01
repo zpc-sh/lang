@@ -1,0 +1,9 @@
+# Glob patterns for markdown allowed outside ./docs
+AGENTS.md
+AGENTS.codex.md
+CONTRIBUTING.md
+README.md
+work/**
+priv/secret/**
+docs/**
+

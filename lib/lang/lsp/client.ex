@@ -44,19 +44,24 @@ defmodule Lang.LSP.Client do
     client_id = Keyword.get(opts, :client_id, generate_client_id())
     root_path = Keyword.get(opts, :root_path, System.cwd!())
 
-    with {:ok, socket} <-
-           :gen_tcp.connect(
-             host,
-             port,
-             [:binary, packet: :raw, active: false, nodelay: true],
-             timeout
-           ),
-         {:ok, _result} <- initialize_lsp(socket, client_id, root_path, timeout),
-         :ok <- send_initialized_notification(socket) do
-      {:ok, %{socket: socket, client_id: client_id, initialized: true}}
-    else
-      {:error, reason} -> {:error, reason}
-    end
+    :telemetry.span([:lang, :lsp, :client, :connect], %{host: host, port: port}, fn ->
+      result =
+        with {:ok, socket} <-
+               :gen_tcp.connect(
+                 host,
+                 port,
+                 [:binary, packet: :raw, active: false, nodelay: true],
+                 timeout
+               ),
+             {:ok, _result} <- initialize_lsp(socket, client_id, root_path, timeout),
+             :ok <- send_initialized_notification(socket) do
+          {:ok, %{socket: socket, client_id: client_id, initialized: true}}
+        else
+          {:error, reason} -> {:error, reason}
+        end
+
+      {result, %{client_id: client_id}}
+    end)
   end
 
   @doc """
@@ -136,7 +141,10 @@ defmodule Lang.LSP.Client do
   """
   @spec ping(keyword()) :: rpc_response()
   def ping(opts \\ []) do
-    request("rpc.ping", %{timestamp: DateTime.utc_now() |> DateTime.to_iso8601()}, opts)
+    :telemetry.span([:lang, :lsp, :client, :ping], %{}, fn ->
+      res = request("rpc.ping", %{timestamp: DateTime.utc_now() |> DateTime.to_iso8601()}, opts)
+      {res, %{} }
+    end)
   end
 
   # ---------------------------------------------------------------------------
@@ -174,11 +182,16 @@ defmodule Lang.LSP.Client do
       }
     }
 
-    with :ok <- send_jsonrpc(socket, id, "initialize", init_params),
-         {:ok, result} <- recv_jsonrpc(socket, timeout) do
-      Logger.info("LSP client #{client_id} initialized successfully")
-      {:ok, result}
-    end
+    :telemetry.span([:lang, :lsp, :client, :initialize], %{client_id: client_id}, fn ->
+      result =
+        with :ok <- send_jsonrpc(socket, id, "initialize", init_params),
+             {:ok, result} <- recv_jsonrpc(socket, timeout) do
+          Logger.info("LSP client #{client_id} initialized successfully")
+          {:ok, result}
+        end
+
+      {result, %{}}
+    end)
   end
 
   # Send initialized notification (no response expected)

@@ -47,6 +47,19 @@ defmodule Lang.Events do
     end
   end
 
+  @doc """
+  Emit a dev model pipeline event via `Lang.Dev.ModelEvent.log/1`.
+  Accepts a map with at least `:event_type` and `:model_id`.
+  """
+  @spec emit_dev_model_event(map()) :: :ok | {:error, term()}
+  def emit_dev_model_event(%{event_type: _t, model_id: _id} = attrs) do
+    case Lang.Dev.ModelEvent.log(attrs) do
+      {:ok, _rec} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+  def emit_dev_model_event(other), do: {:error, {:invalid_event, other}}
+
   # Private functions
 
   defp determine_event_resource(attrs) do

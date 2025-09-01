@@ -7,6 +7,7 @@ LANG extends Language Server Protocol (LSP) and Tree-sitter parsing beyond code 
 
 > Development: see docs/DEVELOPMENT.md for local setup, Mix dev tasks, and folder layout.
 > Codex: see AGENTS.codex.md for concise codegen guardrails.
+> Claude: see AGENTS.claude.md for Claude-specific guardrails.
 
 ## 🚀 Features
 

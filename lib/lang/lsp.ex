@@ -17,5 +17,6 @@ defmodule Lang.LSP do
     resource(Lang.LSP.Events.MetricEvent)
     resource(Lang.LSP.Events.DiagnosticEvent)
     resource(Lang.LSP.Events.AnalysisStreamEvent)
+    resource(Lang.LSP.Events.GraphBuildEvent)
   end
 end

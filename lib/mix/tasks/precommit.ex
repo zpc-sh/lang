@@ -63,6 +63,8 @@ defmodule Mix.Tasks.Precommit do
     issues_found = 0
     issues_found = issues_found + check_staged_files()
     issues_found = issues_found + check_build_artifacts()
+    issues_found = issues_found + check_embedded_projects()
+    issues_found = issues_found + check_banned_namespaces()
     issues_found = issues_found + check_bad_default_args()
     issues_found = issues_found + check_large_files()
     issues_found = issues_found + check_file_permissions()
@@ -82,10 +84,77 @@ defmodule Mix.Tasks.Precommit do
     # Scan docs for prompt-injection patterns (non-blocking defaults to medium/high summary)
     issues_found = issues_found + check_doc_injections()
 
+    # Enforce docs placement and trusted frontmatter
+    issues_found = issues_found + check_docs_policy()
+
+    # Enforce tests live under ./test
+    issues_found = issues_found + check_tests_policy()
+
+    # Advisory: warn on direct Billing calls (pipeline-first policy)
+    _ = warn_direct_billing_calls()
+    _ = warn_direct_events_calls()
+
     print_summary(issues_found)
 
     if issues_found > 0 do
       System.halt(1)
+    end
+  end
+
+  # Prevent embedded projects or compiled artifacts inside ./lib
+  defp check_embedded_projects do
+    info("🧱 Checking for embedded projects inside lib/…")
+
+    bad_globs = [
+      "lib/lang/**/lib/**/*",
+      "lib/lang/**/mix/**/*",
+      "lib/lang/**/priv/**/*",
+      "lib/lang/**/test/**/*",
+      "lib/**/mix.exs",
+      "lib/**/*.beam",
+      # ban any reintroduction of the embedded project tree
+      "lib/lang/explanations/**",
+      "lib/lang/explanations/**/*"
+    ]
+
+    offenders =
+      bad_globs
+      |> Enum.flat_map(&Path.wildcard/1)
+      |> Enum.filter(&File.exists?/1)
+
+    if offenders == [] do
+      info("✅ No embedded projects or artifacts detected")
+      0
+    else
+      error("❌ Embedded project structure or compiled artifacts detected under lib/:")
+      offenders |> Enum.sort() |> Enum.each(&error("   " <> &1))
+      error("\nMove code into proper app modules (lib/lang, lib/lang_web, lib/mix) and keep build artifacts out of lib/.")
+      1
+    end
+  end
+
+  # Prevent accidental references to the old embedded namespace
+  defp check_banned_namespaces do
+    info("🚫 Checking for banned namespaces (Lang.Explanations.*)…")
+    files =
+      Path.wildcard("lib/**/*.{ex,exs}")
+      |> Enum.reject(&(&1 == "lib/mix/tasks/precommit.ex"))
+    offenders =
+      files
+      |> Enum.flat_map(fn path ->
+        case File.read(path) do
+          {:ok, content} -> if String.contains?(content, "Lang.Explanations.") do [path] else [] end
+          _ -> []
+        end
+      end)
+
+    if offenders == [] do
+      info("✅ No banned namespace references found")
+      0
+    else
+      error("❌ Found references to deprecated namespace Lang.Explanations.*:")
+      offenders |> Enum.sort() |> Enum.each(&error("   " <> &1))
+      1
     end
   end
 
@@ -121,6 +190,92 @@ defmodule Mix.Tasks.Precommit do
     end
   rescue
     _ -> 0
+  end
+
+  defp check_docs_policy do
+    info("📚 Enforcing docs policy (placement + trusted frontmatter)...")
+    outside = Lang.Dev.DocPolicy.untrusted_markdown_outside_docs()
+    missing = Lang.Dev.DocPolicy.check_trusted_frontmatter()
+
+    cond do
+      outside != [] ->
+        error("❌ Markdown outside ./docs and not allowlisted:")
+        Enum.each(outside, &error("   " <> &1))
+        1
+      missing != [] ->
+        error("❌ Trusted docs missing `trusted: true` frontmatter:")
+        Enum.each(missing, fn {p, _} -> error("   " <> p) end)
+        1
+      true ->
+        info("✅ Docs policy OK")
+        0
+    end
+  rescue
+    _ -> 0
+  end
+
+  defp check_tests_policy do
+    info("🧪 Enforcing tests policy (tests under ./test only)...")
+    try do
+      Mix.Tasks.Dev.TestsPolicy.run([])
+      0
+    rescue
+      _ -> 1
+    end
+  end
+
+  # Advisory only (does not fail precommit)
+  defp warn_direct_billing_calls do
+    files = Path.wildcard("lib/**/*.ex")
+    offenders =
+      files
+      |> Enum.reject(&String.contains?(&1, "/billing"))
+      |> Enum.flat_map(fn path ->
+        case File.read(path) do
+          {:ok, content} ->
+            if String.contains?(content, "Lang.Billing.") do
+              [{path, :direct_call}]
+            else
+              []
+            end
+          _ -> []
+        end
+      end)
+
+    if offenders != [] do
+      info("ℹ️  Billing pipeline reminder (advisory):")
+      info("   Avoid direct Lang.Billing.* calls in feature code.")
+      info("   Prefer publishing usage messages to the Billing pipeline (Ash/Oban).\n")
+      Enum.each(offenders, fn {p, _} -> info("   → #{p}") end)
+      info("   (This is a non-blocking reminder; update as you refactor.)\n")
+    end
+    :ok
+  end
+
+  defp warn_direct_events_calls do
+    files = Path.wildcard("lib/**/*.ex")
+    offenders =
+      files
+      |> Enum.reject(&String.contains?(&1, "/events"))
+      |> Enum.flat_map(fn path ->
+        case File.read(path) do
+          {:ok, content} ->
+            if String.contains?(content, "Lang.Events.") do
+              [{path, :direct_call}]
+            else
+              []
+            end
+          _ -> []
+        end
+      end)
+
+    if offenders != [] do
+      info("ℹ️  Events modeling reminder (advisory):")
+      info("   Prefer modeling events as Ash resources (Ash.Notifier.PubSub) and use Lang.Events.track_event/1.")
+      Enum.each(offenders, fn {p, _} -> info("   → #{p}") end)
+      info("   (This is a non-blocking reminder; update as you refactor.)\n")
+    end
+    :ok
   end
 
   # Detect accidental single-backslash default args like "opts \ []" or "error \ nil"

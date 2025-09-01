@@ -1,5 +1,6 @@
 alias Nullity.CDFM.Adapters.Store.Ash, as: SpecStore
 alias Lang.Workspace.Workspace
+require Ash.Query
 
 # Helper function to ensure repo is started
 ensure_repo_started = fn ->
@@ -66,7 +67,7 @@ end
 ensure_default_workspace = fn ->
   IO.puts("Ensuring default workspace ...")
 
-  case Workspace |> Ash.Query.filter(project_id: "default") |> Ash.read() do
+  case Workspace |> Ash.Query.filter(project_id == "default") |> Ash.read() do
     {:ok, []} ->
       case Workspace
            |> Ash.Changeset.for_create(:create, %{

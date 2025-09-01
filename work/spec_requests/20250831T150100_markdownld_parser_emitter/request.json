@@ -1,0 +1,19 @@
+{
+  "project": "markdown_ld",
+  "title": "Markdown‑LD parse/emit/validate with deterministic round‑trip",
+  "motivation": "Extract and round‑trip JSON‑LD from Markdown with stable ordering and optional anchoring.",
+  "api": {
+    "parse": "MarkdownLD.parse(markdown_or_path, opts) :: {:ok, [%{doc: map(), location: %{file: binary, line: non_neg_integer}, meta: map()}]} | {:error, term}",
+    "emit": "MarkdownLD.emit(docs, opts) :: {:ok, iodata} | {:error, term}",
+    "validate": "MarkdownLD.validate(docs, opts) :: {:ok, result} | {:error, %{errors: list}}"
+  },
+  "errors": ["{:invalid_frontmatter, reason}", "{:invalid_fenced_block, line}", "{:validation_failed, errors}"],
+  "determinism": ["Stable key/block ordering", "Anchors from headings (opt-in)", "Offline context loader"],
+  "telemetry": [["markdown_ld","parse"],["markdown_ld","emit"],["markdown_ld","validate"]],
+  "tests": ["round‑trip stability", "hashing via JSONLD.hash/2", "schema validation hooks"],
+  "acceptance": ["parse extracts frontmatter and fenced jsonld", "emit preserves stable order"],
+  "attachments": ["work/markdown_ld_spec_proposals.md"],
+  "contacts": {"author": "codex", "reviewers": ["codex"]},
+  "meta": {"priority": "high", "version": "v1"}
+}
+

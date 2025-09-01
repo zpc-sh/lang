@@ -1,0 +1,38 @@
+{
+  "@context": {
+    "SpecRequest": "https://example.org/spec#SpecRequest",
+    "SpecMessage": "https://example.org/spec#SpecMessage",
+    "SpecPatch": "https://example.org/spec#SpecPatch",
+    "SpecAck": "https://example.org/spec#SpecAck",
+
+    "project": "https://example.org/spec#project",
+    "title": "http://purl.org/dc/terms/title",
+    "motivation": "http://purl.org/dc/terms/description",
+    "api": "https://example.org/spec#api",
+    "errors": "https://example.org/spec#errors",
+    "determinism": "https://example.org/spec#determinism",
+    "telemetry": "https://example.org/spec#telemetry",
+    "tests": "https://example.org/spec#tests",
+    "acceptance": "https://example.org/spec#acceptance",
+    "attachments": "https://example.org/spec#attachments",
+    "status": "https://example.org/spec#status",
+    "statuses": "https://example.org/spec#statuses",
+
+    "from": "https://example.org/spec#from",
+    "type": "@type",
+    "ref": "https://example.org/spec#ref",
+    "body": "https://example.org/spec#body",
+    "relatesTo": {"@id": "https://example.org/spec#relatesTo", "@type": "@id"},
+    "createdAt": {"@id": "http://purl.org/dc/terms/created", "@type": "http://www.w3.org/2001/XMLSchema#dateTime"},
+    "updatedAt": {"@id": "http://purl.org/dc/terms/modified", "@type": "http://www.w3.org/2001/XMLSchema#dateTime"},
+
+    "owner": "https://example.org/spec#owner",
+    "contact": "https://example.org/spec#contact",
+    "eta": {"@id": "https://example.org/spec#eta", "@type": "http://www.w3.org/2001/XMLSchema#dateTime"},
+
+    "file": "https://example.org/spec#file",
+    "basePointer": "https://example.org/spec#basePointer",
+    "ops": "https://example.org/spec#ops"
+  }
+}
+

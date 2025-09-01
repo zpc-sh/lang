@@ -1,0 +1,50 @@
+name: LSP Connect Smoke
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lsp-smoke:
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+      SKIP_NIFS: "1" # keep smoke light; harness does not require NIFs
+      LSP_PORT: "4001"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Elixir/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.15.7'
+          otp-version: '26.2'
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Get deps
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile
+
+      - name: Start LSP harness (background) and run doctor
+        shell: bash
+        run: |
+          set -euo pipefail
+          LSP_DURATION_SECONDS=120 ./scripts/lsp_harness.sh &
+          H_PID=$!
+          # Give the harness time to boot and open the port (it also waits itself)
+          sleep 3
+          mix lsp.doctor --port ${LSP_PORT}
+          # Stop harness script (it will clean up BEAM)
+          kill ${H_PID} || true
+

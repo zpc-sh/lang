@@ -196,9 +196,11 @@ defmodule Lang.LSP.Dispatch do
     opts = [max_depth: Lang.JSONLD.get(params, "max_depth", 10)]
 
     result =
-      case Lang.Native.FSScanner.scan(path, opts) do
-        {:ok, res} -> {:ok, res}
-        {:error, reason} -> {:error, reason}
+      with :ok <- allow_by_rate_limit("fs.scan") do
+        case Lang.Native.FSScanner.scan(path, opts) do
+          {:ok, res} -> {:ok, res}
+          {:error, reason} -> {:error, reason}
+        end
       end
 
     wrap_result(id, result)
@@ -209,7 +211,10 @@ defmodule Lang.LSP.Dispatch do
     path = Lang.JSONLD.get(params, "path") || Lang.JSONLD.get(params, "root")
     query = Lang.JSONLD.get(params, "query") || Lang.JSONLD.get(params, "pattern")
     opts = [max_results: Lang.JSONLD.get(params, "max_results", 100)]
-    result = Lang.Native.FSScanner.search(path, query, opts)
+    result =
+      with :ok <- allow_by_rate_limit("fs.search") do
+        Lang.Native.FSScanner.search(path, query, opts)
+      end
     wrap_result(id, result)
   end
 
@@ -224,7 +229,10 @@ defmodule Lang.LSP.Dispatch do
       max_depth: Lang.JSONLD.get(params, "max_depth", 15)
     ]
 
-    result = Lang.Native.FSScanner.search_code(path, lang, pat, opts)
+    result =
+      with :ok <- allow_by_rate_limit("fs.search_code") do
+        Lang.Native.FSScanner.search_code(path, lang, pat, opts)
+      end
     wrap_result(id, result)
   end
 
@@ -315,6 +323,23 @@ defmodule Lang.LSP.Dispatch do
 
   defp wrap_result(id, {:error, reason}),
     do: %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
+
+  # ----------------------------------------------------------------------------
+  # Rate limit helper (best-effort; defaults to allow)
+  # ----------------------------------------------------------------------------
+  defp allow_by_rate_limit(action) do
+    try do
+      case Lang.Security.RateLimiter.check(nil, action) do
+        :ok -> :ok
+        {:error, :rate_limited} -> {:error, {:rate_limited, action}}
+        other -> other
+      end
+    rescue
+      _ -> :ok
+    catch
+      _, _ -> :ok
+    end
+  end
 
   # ----------------------------------------------------------------------------
   # Storage handlers (Dirup-backed)
@@ -624,12 +649,133 @@ defmodule Lang.LSP.Dispatch do
 
   defp graph_build(%{"id" => id, "params" => raw_params}) do
     params = maybe_json_map(raw_params)
-    project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+
+    # Back-compat path: direct nodes/edges write
     nodes = Lang.JSONLD.get_list(params, "nodes")
     edges = Lang.JSONLD.get_list(params, "edges")
-    graph = %{nodes: nodes, edges: edges, updated_at: DateTime.utc_now()}
-    :ok = Lang.InMemory.Store.put(:graphs, project_id, graph)
-    wrap_result(id, {:ok, %{project_id: project_id, nodes: length(nodes), edges: length(edges)}})
+
+    result =
+      cond do
+        nodes != [] or edges != [] ->
+          project_id = Lang.JSONLD.get(params, "project_id") || Lang.JSONLD.get(params, "project")
+          graph = %{nodes: nodes, edges: edges, updated_at: DateTime.utc_now()}
+          :ok = Lang.InMemory.Store.put(:graphs, project_id, graph)
+          {:ok, %{project_id: project_id, nodes: length(nodes), edges: length(edges)}}
+
+        docs = Lang.JSONLD.get_list(params, "documents") ->
+          # Build knowledge graph from documents [{format, content}]
+          opts = Lang.JSONLD.get(params, "options", %{})
+
+          if truthy?(Lang.JSONLD.get(params, "stream")) do
+            stream_id = "kg_" <> Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
+            topic = "lsp:kg_build:" <> stream_id
+
+            Task.Supervisor.start_child(Lang.LSP.TaskSupervisor, fn ->
+              total = length(docs)
+              emit_kg(stream_id, :start, 0, total, 0.0, %{message: "starting"})
+
+              ld_acc =
+                docs
+                |> Enum.with_index(1)
+                |> Enum.reduce([], fn {doc, idx}, acc ->
+                  emit_kg(stream_id, :extract, idx, total, idx / max(total, 1), %{doc_index: idx})
+                  case normalize_doc(doc) do
+                    %{format: fmt, content: content} ->
+                      case Kyozo.Lang.UniversalParser.LinkedDataExtractor.extract_from_content(content, fmt) do
+                        {:ok, ld} -> [ld | acc]
+                        {:error, reason} ->
+                          emit_kg(stream_id, :error, idx, total, idx / max(total, 1), %{error: inspect(reason)})
+                          acc
+                      end
+                  end
+                end)
+                |> Enum.reverse()
+
+              case Kyozo.Lang.UniversalParser.KnowledgeGraph.build_from_linked_data(ld_acc, Map.to_list(opts)) do
+                {:ok, graph} ->
+                  emit_kg(stream_id, :build, total, total, 1.0, %{stats: graph[:stats] || %{}})
+                  emit_kg(stream_id, :done, total, total, 1.0, %{graph: graph}, complete: true)
+                {:error, reason} ->
+                  emit_kg(stream_id, :error, total, total, 1.0, %{error: inspect(reason)}, complete: true)
+              end
+            end)
+
+            {:ok, %{stream_id: stream_id, topic: topic}}
+          else
+            ld_list =
+              docs
+              |> Enum.map(&normalize_doc/1)
+              |> Enum.map(fn
+                %{format: fmt, content: content} ->
+                  case Kyozo.Lang.UniversalParser.LinkedDataExtractor.extract_from_content(content, fmt) do
+                    {:ok, ld} -> {:ok, ld}
+                    {:error, reason} -> {:error, reason}
+                  end
+              end)
+              |> collect_ok()
+
+            case ld_list do
+              {:ok, linked_data} ->
+                case Kyozo.Lang.UniversalParser.KnowledgeGraph.build_from_linked_data(linked_data, Map.to_list(opts)) do
+                  {:ok, graph} -> {:ok, graph}
+                  other -> other
+                end
+
+              {:error, reason} -> {:error, reason}
+            end
+          end
+
+        true ->
+          {:error, -32602, "Missing required parameters: nodes/edges or documents"}
+      end
+
+    wrap_result(id, result)
+  end
+
+  defp normalize_doc(%{"format" => fmt, "content" => content}), do: %{format: normalize_fmt(fmt), content: to_string(content)}
+  defp normalize_doc(%{format: fmt, content: content}), do: %{format: normalize_fmt(fmt), content: to_string(content)}
+  defp normalize_doc(other) when is_binary(other), do: %{format: :markdown_ld, content: other}
+  defp normalize_doc(_), do: %{format: :markdown_ld, content: ""}
+
+  defp normalize_fmt(fmt) when is_atom(fmt), do: fmt
+  defp normalize_fmt(fmt) when is_binary(fmt) do
+    case String.downcase(fmt) do
+      "jsonld" -> :jsonld
+      "markdown_ld" -> :markdown_ld
+      "markdown" -> :markdown_ld
+      "json" -> :jsonld
+      other -> String.to_atom(other)
+    end
+  end
+
+  defp collect_ok(list) do
+    {oks, errs} = Enum.split_with(list, &match?({:ok, _}, &1))
+    if errs == [], do: {:ok, Enum.map(oks, fn {:ok, v} -> v end)}, else: hd(errs)
+  end
+
+  defp emit_kg(stream_id, phase, idx, total, progress, payload, opts \\ []) do
+    params = %{
+      stream_id: stream_id,
+      phase: phase,
+      index: idx,
+      total: total,
+      progress: progress,
+      complete: Keyword.get(opts, :complete, false),
+      payload: payload
+    }
+
+    _ = Ash.create(Lang.LSP.Events.GraphBuildEvent, params, action: :emit)
+  end
+
+  defp truthy?(val) do
+    case val do
+      true -> true
+      1 -> true
+      "1" -> true
+      "true" -> true
+      "on" -> true
+      _ -> false
+    end
   end
 
   defp graph_update(%{"id" => id, "params" => raw_params}) do

@@ -46,6 +46,8 @@ defmodule LangWeb.LspStatusLive do
      |> assign(:code_stats, nil)
      |> assign(:code_items, [])
      |> assign(:active_tab, "scan")
+     |> assign(:kg_loading?, false)
+     |> assign(:kg_error, nil)
      |> stream(:files, [])
      |> stream(:search_results, [])
      |> stream(:code_results, [])}
@@ -73,6 +75,56 @@ defmodule LangWeb.LspStatusLive do
       end
 
     {:noreply, assign(socket, :loading?, false)}
+  end
+
+  @impl true
+  def handle_event("kg_build_demo", _params, socket) do
+    socket = assign(socket, :kg_loading?, true)
+
+    Task.Supervisor.start_child(Lang.LSP.TaskSupervisor, fn ->
+      # Minimal JSON-LD person example
+      jsonld = ~s({"@context":"https://schema.org/","@type":"Person","name":"Ada"})
+      # Minimal Markdown‑LD org example
+      mdld = """
+      <span data-lang-entity="Organization" data-lang-uri="https://example.org/acme">ACME</span>
+      employs <span data-lang-entity="Person" data-lang-uri="https://example.org/ada">Ada</span>.
+      """ |> String.trim()
+
+      params = %{
+        "stream" => true,
+        "documents" => [
+          %{"format" => "jsonld", "content" => jsonld},
+          %{"format" => "markdown_ld", "content" => mdld}
+        ]
+      }
+      res = API.call("lang.graph.build", params)
+      send(self(), {:kg_build_demo_result, res})
+    end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:kg_build_demo_result, {:ok, result}}, socket) do
+    id = result["stream_id"] || result[:stream_id]
+
+    socket =
+      if is_binary(id) and id != "" do
+        socket
+        |> assign(:kg_loading?, false)
+        |> assign(:kg_error, nil)
+        |> push_navigate(to: "/lsp/kg_build/" <> id)
+      else
+        assign(socket, :kg_loading?, false)
+        |> assign(:kg_error, "Missing stream_id from response")
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:kg_build_demo_result, {:error, reason}}, socket) do
+    {:noreply, socket |> assign(:kg_loading?, false) |> assign(:kg_error, inspect(reason))}
   end
 
   # -- code form change (update presets and optionally apply selected preset) --
@@ -289,11 +341,21 @@ defmodule LangWeb.LspStatusLive do
       <div id="lsp-status" class="container mx-auto px-4 py-6">
         <div class="flex items-center justify-between mb-4">
           <h1 class="text-2xl font-semibold">LSP Connectivity</h1>
-          <.button id="ping-btn" phx-click="ping" disabled={@loading?}>
-            <.icon name="hero-arrow-path" class={["size-4 mr-2", @loading? && "animate-spin"]} />
-            {(@loading? && "Pinging...") || "Ping LSP"}
-          </.button>
+          <div class="flex items-center gap-2">
+            <.link navigate={~p"/lsp/kg_build"} class="btn btn-sm btn-outline">
+              <.icon name="hero-share" class="size-4 mr-1" /> KG Build Viewer
+            </.link>
+            <.button id="kg-demo-btn" phx-click="kg_build_demo" disabled={@kg_loading?} class="btn btn-sm">
+              <.icon name="hero-rocket-launch" class={["size-4 mr-2", @kg_loading? && "animate-spin"]} />
+              {(@kg_loading? && "Starting…") || "Start Demo Build"}
+            </.button>
+            <.button id="ping-btn" phx-click="ping" disabled={@loading?}>
+              <.icon name="hero-arrow-path" class={["size-4 mr-2", @loading? && "animate-spin"]} />
+              {(@loading? && "Pinging...") || "Ping LSP"}
+            </.button>
+          </div>
         </div>
+        <div :if={@kg_error} class="text-sm text-red-500 mb-2">KG build error: {@kg_error}</div>
 
         <div class="card bg-base-100 shadow p-4">
           <div class="text-sm opacity-70">Last ping:</div>

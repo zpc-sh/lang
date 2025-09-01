@@ -1,0 +1,119 @@
+defmodule Lang.Proxy.WSUpstream do
+  @moduledoc """
+  Upstream WebSocket proxy using Mint.WebSocket.
+  Bridges bytes between an upstream WS endpoint and the session WebSocket.
+  """
+
+  use GenServer
+  require Logger
+  alias Mint.HTTP
+  alias Mint.WebSocket
+
+  @type state :: %{
+          ws: pid(),
+          url: String.t(),
+          conn: HTTP.t() | nil,
+          ref: HTTP.request_ref() | nil,
+          socket: WebSocket.t() | nil
+        }
+
+  def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
+
+  @impl true
+  def init(opts) {
+    ws = Keyword.fetch!(opts, :ws)
+    url = Keyword.fetch!(opts, :url)
+
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host, port: port, path: path, query: query} when scheme in ["ws", "wss"] and is_binary(host) ->
+        pathq = (path or "/") <> (query and ("?" <> query) or "")
+        transport = (scheme == "wss") and :https or :http
+        case HTTP.connect(transport, host, port or default_port(transport), []) do
+          {:ok, conn} ->
+            case WebSocket.new() do
+              {:ok, wsock, req_headers} ->
+                headers = [{"host", host} | req_headers]
+                {:ok, conn, ref} = WebSocket.upgrade(conn, pathq, headers)
+                state = %{ws: ws, url: url, conn: conn, ref: ref, socket: wsock}
+                {:ok, state}
+              {:error, reason} ->
+                send(ws, {:proxy_stdout, "[ws] init error: #{inspect(reason)}\r\n"})
+                {:stop, reason, %{ws: ws, url: url, conn: conn, ref: nil, socket: nil}}
+            end
+          {:error, reason} ->
+            send(ws, {:proxy_stdout, "[ws] connect error: #{inspect(reason)}\r\n"})
+            {:stop, reason, %{ws: ws, url: url, conn: nil, ref: nil, socket: nil}}
+        end
+      _ ->
+        send(ws, {:proxy_stdout, "[ws] invalid url: #{url}\r\n"})
+        {:stop, :invalid_url, %{ws: ws, url: url, conn: nil, ref: nil, socket: nil}}
+    end
+  end
+
+  @impl true
+  def handle_info(message, %{conn: conn} = state) do
+    case HTTP.stream(conn, message) do
+      {:ok, conn, responses} ->
+        handle_responses(responses, %{state | conn: conn})
+      {:error, conn, reason, _responses} ->
+        send(state.ws, {:proxy_stdout, "[ws] stream error: #{inspect(reason)}\r\n"})
+        send(state.ws, {:proxy_exit, 1})
+        {:stop, reason, %{state | conn: conn}}
+      :unknown ->
+        {:noreply, state}
+    end
+  end
+
+  defp handle_responses(responses, state) do
+    Enum.reduce(responses, {:noreply, state}, fn resp, {_acc_tag, st} ->
+      do_handle_response(resp, st)
+    end)
+  end
+
+  defp do_handle_response({:status, _ref, 101}, state), do: {:noreply, state}
+  defp do_handle_response({:headers, _ref, headers}, %{socket: wsock, conn: conn} = state) do
+    case WebSocket.handshake(conn, wsock, headers) do
+      {:ok, conn, wsock} ->
+        send(state.ws, {:proxy_stdout, "[ws] connected #{state.url}\r\n"})
+        {:noreply, %{state | conn: conn, socket: wsock}}
+      {:error, reason} ->
+        send(state.ws, {:proxy_stdout, "[ws] handshake failed: #{inspect(reason)}\r\n"})
+        send(state.ws, {:proxy_exit, 1})
+        {:stop, reason, state}
+    end
+  end
+  defp do_handle_response({:data, _ref, data}, %{socket: wsock} = state) do
+    case WebSocket.decode(wsock, data) do
+      {:ok, wsock, frames} ->
+        Enum.each(frames, fn frame ->
+          case frame do
+            {:text, data} -> send(state.ws, {:proxy_stdout, data})
+            {:binary, data} -> send(state.ws, {:proxy_stdout, data})
+            _ -> :ok
+          end
+        end)
+        {:noreply, %{state | socket: wsock}}
+      {:error, reason} ->
+        send(state.ws, {:proxy_stdout, "[ws] decode error: #{inspect(reason)}\r\n"})
+        {:stop, reason, state}
+    end
+  end
+  defp do_handle_response({:done, _ref}, state), do: {:noreply, state}
+  defp do_handle_response(_other, state), do: {:noreply, state}
+
+  @impl true
+  def handle_cast({:stdin, data}, %{socket: wsock, conn: conn, ref: ref} = state) when is_binary(data) and not is_nil(wsock) do
+    {:ok, wsock, frames} = WebSocket.encode(wsock, [{:text, data}])
+    {:ok, conn} = HTTP.stream_request_body(conn, ref, frames)
+    {:noreply, %{state | socket: wsock, conn: conn}}
+  end
+  def handle_cast(_other, state), do: {:noreply, state}
+
+  @impl true
+  def terminate(_reason, %{conn: conn}) when not is_nil(conn), do: HTTP.close(conn)
+  def terminate(_reason, _state), do: :ok
+
+  defp default_port(:https), do: 443
+  defp default_port(:http), do: 80
+end
+

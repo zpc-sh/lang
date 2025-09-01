@@ -105,7 +105,7 @@ defmodule Lang.Security.SessionPolicy do
     cfg = Application.get_env(:lang, :explain_gate, enabled: false, min_score: 0.85)
     if Keyword.get(cfg, :enabled, false) do
       min = Keyword.get(cfg, :min_score, 0.85)
-      case Lang.Explanations.Core.evaluate_connect(user, org, attrs) do
+      case Lang.Security.ExplainGate.evaluate_connect(user, org, attrs) do
         {:ok, %{verdict: :allow, score: s}} when is_number(s) and s >= min -> :ok
         {:ok, %{verdict: v, score: s}} -> {:error, {:explain_denied, %{verdict: v, score: s}}}
         {:error, reason} -> {:error, {:explain_error, reason}}

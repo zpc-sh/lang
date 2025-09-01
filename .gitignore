@@ -121,12 +121,16 @@ stripe_*
 *.bench
 
 # Profiling data
-*.profdeploy/secrets*.yml
+*.prof
+
+# Deployment secrets (example allowed)
+deploy/secrets*.yml
 !deploy/secrets*.example
+
+# Aider and helper files
 .aider*
-native/*/Cargo.lock
-native/lang_perf/Cargo.lock
-native/tree_parser/Cargo.lock
-native/*/Cargo.lock
-native/lang_perf/Cargo.lock
-native/tree_parser/Cargo.lock
+
+# Spec handoff (ephemeral)
+work/spec_requests/*/inbox/
+work/spec_requests/*/outbox/
+work/spec_requests/*/thread.md

@@ -69,6 +69,7 @@ defmodule LangWeb.Router do
   scope "/ws", LangWeb do
     pipe_through :api
     get "/sessions/attach", SessionWsController, :attach
+    get "/lsp", LspWsController, :attach
   end
 
   # API connect route for agents (Bearer auth)
@@ -115,6 +116,8 @@ defmodule LangWeb.Router do
       live "/proxy/intent", ProxyIntentLive, :index
       live "/proxy/session", ProxySessionLive, :index
       live "/lsp/status", LspStatusLive, :index
+      live "/lsp/kg_build", KGBuildIndexLive, :index
+      live "/lsp/kg_build/:stream_id", KGBuildLive, :show
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
       live "/billing", BillingLive, :index
@@ -177,6 +180,10 @@ defmodule LangWeb.Router do
     post "/text/markdown-ld", TextController, :markdown_ld
     post "/text/analyze", TextController, :analyze
 
+    # LSP connect + preflight (agent-first)
+    post "/lsp/connect", LspController, :connect
+    post "/lsp/preflight", LspController, :preflight
+
     # MCP (Model Context Protocol) Broker endpoints - Secure wrapper for MCP servers
     post "/mcp/connect", McpController, :connect
     # Backwards-compatible status route
@@ -218,6 +225,12 @@ defmodule LangWeb.Router do
     post "/stripe", WebhooksController, :stripe
   end
 
+  # Well-known dynamic endpoints (e.g., JWKS)
+  scope "/.well-known", LangWeb do
+    pipe_through :api
+    get "/jwks.json", WellKnownController, :jwks
+  end
+
   # Internal diagnostics webhook (HMAC-signed)
   scope "/internal", LangWeb.Internal do
     pipe_through :api
@@ -239,6 +252,7 @@ defmodule LangWeb.Router do
 
     # Additional dev pages not in DevKit (avoid double-wrapping /dev)
     live "/dev/lsp", LangWeb.LspEditor.LspEditorLive, :index
+    live "/dev/lsp/kg_build/:stream_id", LangWeb.KGBuildLive, :show
     live "/dev/agents", LangWeb.AgentsLive, :index
     live "/dev/proxy/terminal", LangWeb.ProxyTerminalLive, :index
     live "/dev/examples", LangWeb.DevJsonldExamplesLive, :index
