@@ -384,6 +384,38 @@ defmodule Lang.LSP.Server do
       _ -> :ok
     end
 
+    # Per-client rate limiting for requests (skip notifications)
+    case {id, method} do
+      {id_val, meth} when not is_nil(id_val) and is_binary(meth) ->
+        limiter_key =
+          case Map.get(state.clients || %{}, client_id) do
+            %{label: label} when is_binary(label) -> label
+            _ -> to_string(client_id)
+          end
+
+        case Lang.Security.RedisLimiter.allow?(limiter_key, meth) do
+          :ok -> :ok
+          {:error, :rate_limited} ->
+            resp = %{
+              "jsonrpc" => "2.0",
+              "id" => id,
+              "error" => %{"code" => -32001, "message" => "Rate limit exceeded", "data" => %{client: limiter_key, method: meth}}
+            }
+
+            case state.mode do
+              :tcp ->
+                client = Map.get(state.clients, client_id)
+                if client, do: send_json_rpc(client.socket, resp)
+              :stdio -> send_json_rpc(:stdio, resp)
+            end
+
+            PhoenixIntegration.broadcast_client_event(:rate_limited, %{client_id: client_id, method: meth})
+            # Early return: don't process further
+            state
+        end
+      _ -> :ok
+    end
+
     # Route based on method
     response =
       case message do
@@ -415,20 +447,26 @@ defmodule Lang.LSP.Server do
         # Identify notification to correlate logs per external client id
         %{"method" => "lang/tester/identify", "params" => params} ->
           cid = params["clientId"] || params["client_id"]
-          token = params["token"]
+          _token = params["token"]
 
           Logger.metadata(client_id: cid || client_id)
           Logger.info("LSP identify received#{if cid, do: ": #{cid}", else: ""}")
 
-          clients =
+          {clients, label_set?} =
             case Map.get(state.clients, client_id) do
-              nil -> state.clients
-              meta -> Map.put(state.clients, client_id, Map.put(meta, :label, cid))
+              nil -> {state.clients, false}
+              meta ->
+                if is_valid_client_id?(cid) do
+                  {Map.put(state.clients, client_id, Map.put(meta, :label, cid)), true}
+                else
+                  Logger.warn("Invalid Client_ID provided; ignoring label for #{inspect(client_id)}")
+                  {state.clients, false}
+                end
             end
 
           PhoenixIntegration.broadcast_client_event(:activity, %{
             client_id: client_id,
-            label: cid,
+            label: (label_set? && cid) || nil,
             activity: :identify
           })
 
@@ -560,6 +598,9 @@ defmodule Lang.LSP.Server do
         %{"method" => "textDocument/formatting", "id" => id, "params" => params} ->
           handle_formatting(id, params, state)
 
+        %{"method" => "textDocument/rename", "id" => id, "params" => params} ->
+          handle_rename(id, params, state)
+
         %{"method" => "workspace/symbol", "id" => id, "params" => params} ->
           handle_workspace_symbol(id, params, state)
 
@@ -662,6 +703,12 @@ defmodule Lang.LSP.Server do
       path -> {:ok, path}
     end
   end
+
+  # Accepts letters, digits, dash/underscore/colon, up to 64 chars
+  defp is_valid_client_id?(cid) when is_binary(cid) do
+    byte_size(cid) <= 64 and String.match?(cid, ~r/^[A-Za-z0-9:_-]+$/)
+  end
+  defp is_valid_client_id?(_), do: false
 
   defp update_client_stats(state, client_id, method) do
     {_, state} =
@@ -837,7 +884,9 @@ defmodule Lang.LSP.Server do
 
       document ->
         # Get context at position
-        context = get_completion_context(document.text, position)
+        context =
+          get_completion_context(document.text, position)
+          |> Map.merge(%{trigger_kind: 1})
 
         # Route to completion handler
         completions =
@@ -845,7 +894,7 @@ defmodule Lang.LSP.Server do
                  uri,
                  document.text,
                  position,
-                 %{trigger_kind: 1},
+                 context,
                  %{language: document.language_id}
                ) do
             {:ok, items} -> items
@@ -899,56 +948,12 @@ defmodule Lang.LSP.Server do
     end
   end
 
-  defp handle_definition(id, %{"textDocument" => %{"uri" => uri}, "position" => position}, state) do
-    case Map.get(state.documents, uri) do
-      nil ->
-        error_response(id, :document_not_found)
-
-      document ->
-        # Use AI to find definition
-        word = get_word_at_position(document.text, position)
-
-        locations =
-          case Lang.TextIntelligence.SymbolAnalyzer.find_definition(word, uri, state.root_uri) do
-            {:ok, definitions} ->
-              Enum.map(definitions, &format_location/1)
-
-            {:error, _reason} ->
-              []
-          end
-
-        %{
-          "jsonrpc" => "2.0",
-          "id" => id,
-          "result" => locations
-        }
-    end
+  defp handle_definition(id, params, state) do
+    Lang.LSP.Handlers.Definition.handle(id, params, state)
   end
 
-  defp handle_references(id, %{"textDocument" => %{"uri" => uri}, "position" => position}, state) do
-    case Map.get(state.documents, uri) do
-      nil ->
-        error_response(id, :document_not_found)
-
-      document ->
-        word = get_word_at_position(document.text, position)
-
-        # Find all references
-        references =
-          case Lang.TextIntelligence.SymbolAnalyzer.find_references(word, state.root_uri) do
-            {:ok, refs} ->
-              Enum.map(refs, &format_location/1)
-
-            {:error, _reason} ->
-              []
-          end
-
-        %{
-          "jsonrpc" => "2.0",
-          "id" => id,
-          "result" => references
-        }
-    end
+  defp handle_references(id, params, state) do
+    Lang.LSP.Handlers.References.handle(id, params, state)
   end
 
   defp handle_document_symbol(id, %{"textDocument" => %{"uri" => uri}}, state) do
@@ -1185,12 +1190,10 @@ defmodule Lang.LSP.Server do
 
   defp add_keyword_tokens(acc, line, ln, keywords) do
     Enum.reduce(keywords, acc, fn kw, a ->
-      re = ~r/(^|[^A-Za-z0-9_])#{Regex.escape(kw)}(?![A-Za-z0-9_])/u
+      re = ~r/\b#{Regex.escape(kw)}\b/u
 
-      Enum.reduce(Regex.scan(re, line, return: :index), a, fn
-        [{pos, _len}, {wpos, wlen}], a2 -> a2 ++ [{ln, wpos, wlen, "keyword", []}]
-        # safety
-        [{pos, len}], a2 -> a2
+      Enum.reduce(Regex.scan(re, line, return: :index), a, fn [{pos, len}], a2 ->
+        a2 ++ [{ln, pos, len, "keyword", []}]
       end)
     end)
   end
@@ -1376,40 +1379,12 @@ defmodule Lang.LSP.Server do
     end
   end
 
-  defp handle_formatting(id, %{"textDocument" => %{"uri" => uri}}, state) do
-    case Map.get(state.documents, uri) do
-      nil ->
-        error_response(id, :document_not_found)
+  defp handle_formatting(id, params, state) do
+    Lang.LSP.Handlers.Formatting.handle(id, params, state)
+  end
 
-      document ->
-        # Format document
-        edits =
-          case Lang.TextIntelligence.Formatter.format(document.text, document.language_id) do
-            {:ok, formatted_text} ->
-              if formatted_text != document.text do
-                [
-                  %{
-                    "range" => %{
-                      "start" => %{"line" => 0, "character" => 0},
-                      "end" => get_document_end(document.text)
-                    },
-                    "newText" => formatted_text
-                  }
-                ]
-              else
-                []
-              end
-
-            {:error, _reason} ->
-              []
-          end
-
-        %{
-          "jsonrpc" => "2.0",
-          "id" => id,
-          "result" => edits
-        }
-    end
+  defp handle_rename(id, params, state) do
+    Lang.LSP.Handlers.Rename.handle(id, params, state)
   end
 
   defp handle_workspace_symbol(id, %{"query" => query}, state) do

@@ -6,6 +6,19 @@ defmodule Lang.Agent.Coordinator do
   alias Lang.Events.Agent, as: AgentEvents
   alias Lang.InMemory.Store
 
+  @doc """
+  Coordinates a task across multiple agents using a specified strategy.
+
+  ## Parameters
+    - `agent_ids`: A list of agent IDs to coordinate.
+    - `task`: A map describing the task to be performed.
+    - `strategy`: The coordination strategy to use. Can be `:fanout`, `:first_success`, or `:map_reduce`. Defaults to `:fanout`.
+
+  ## Strategies
+    - `:fanout`: Delegates the task to all agents in parallel and merges the results.
+    - `:first_success`: Delegates the task to agents sequentially until one succeeds.
+    - `:map_reduce`: Delegates the task to all agents in parallel and then reduces the results.
+  """
   def coordinate(agent_ids, task, strategy \\ :fanout) do
     # Prefer certain agents based on task characteristics (e.g., prefer "codex" for compute-heavy)
     agent_ids = prefer_agents(agent_ids, task)
@@ -14,12 +27,12 @@ defmodule Lang.Agent.Coordinator do
       :fanout ->
         delegate_fun = Map.get(task, :delegate_fun, &Lifecycle.delegate/2)
 
-        results =
+        results = 
           agent_ids
           |> Task.async_stream(fn id -> {id, delegate_fun.(id, task)} end, timeout: 30_000)
           |> Enum.map(&unwrap_result/1)
 
-        merged =
+        merged = 
           merge_results(Enum.map(results, fn {id, res} -> %{agent_id: id, result: res} end))
 
         AgentEvents.track_coordination("coordinator", agent_ids, task, %{strategy: strategy})
@@ -30,7 +43,7 @@ defmodule Lang.Agent.Coordinator do
         delegate_fun = Map.get(task, :delegate_fun, &Lifecycle.delegate/2)
         {results, winner} = try_until_success(agent_ids, task, delegate_fun)
 
-        merged =
+        merged = 
           merge_results(Enum.map(results, fn {id, res} -> %{agent_id: id, result: res} end))
 
         AgentEvents.track_coordination("coordinator", agent_ids, task, %{
@@ -45,14 +58,14 @@ defmodule Lang.Agent.Coordinator do
         delegate_fun = Map.get(task, :delegate_fun, &Lifecycle.delegate/2)
         reduce_fun = Map.get(task, :reduce_fun)
 
-        results =
+        results = 
           agent_ids
           |> Task.async_stream(fn id -> {id, delegate_fun.(id, task)} end, timeout: 30_000)
           |> Enum.map(&unwrap_result/1)
 
         base = map_reduce_merge(results)
 
-        merged =
+        merged = 
           case reduce_fun do
             fun when is_function(fun, 1) -> Map.put(base, :reduced, fun.(base[:merged_payloads]))
             _ -> base
@@ -64,17 +77,23 @@ defmodule Lang.Agent.Coordinator do
     end
   end
 
+  @doc """
+  Merges the results from multiple agent executions.
+  """
   def merge_results(results) when is_list(results) do
     successes = Enum.filter(results, &match?(%{result: {:ok, _}}, &1))
     errors = Enum.filter(results, &match?(%{result: {:error, _}}, &1))
 
-    %{
+    %{ 
       total: length(results),
       success: length(successes),
       errors: length(errors)
     }
   end
 
+  @doc """
+  Saves a summary of the coordination task.
+  """
   # Persistence of summaries (in-memory)
   def save_summary(agent_ids, task, summary) do
     # Try DB persistence first
@@ -88,6 +107,9 @@ defmodule Lang.Agent.Coordinator do
     end
   end
 
+  @doc """
+  Gets the summary of a coordination task.
+  """
   def get_summary(agent_ids, task) do
     key = coordination_key(agent_ids, task)
     Store.get(:agent_coordination, key)

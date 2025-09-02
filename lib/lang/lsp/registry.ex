@@ -1,6 +1,7 @@
 defmodule Lang.LSP.Registry do
   @moduledoc "Generated method registry (do not edit manually)"
   @registry %{
+    "lang.think.explain_intent" => {Lang.Think.ExplainIntent, :handle, 2},
     "lang.workspace/symbol" => {nil, :handle, 2},
     "lang.mcp.connection.status" => {nil, :handle, 2},
     "lang.lang.graph.build" => {nil, :handle, 2},

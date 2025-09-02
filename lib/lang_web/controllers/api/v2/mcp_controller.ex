@@ -25,6 +25,7 @@ defmodule LangWeb.Api.V2.McpController do
   alias LangWeb.Router.Helpers, as: Routes
 
   alias Lang.MCP.{Broker, StreamBridge, Security}
+  alias Lang.ML.AnomalyDetector
   alias Lang.Events
   alias LangWeb.AuthHelpers
   alias LangWeb.ApiError
@@ -65,6 +66,7 @@ defmodule LangWeb.Api.V2.McpController do
     with {:ok, request} <- validate_connect_request(params),
          {:ok, user_id} <- get_authenticated_user_id(conn),
          :ok <- check_rate_limit(user_id, "mcp_connect"),
+         :ok <- check_anomaly_detection(request, user_id, request["session_id"]),
          {:ok, connection_id} <- create_mcp_connection(request, user_id, auth_session_id),
          {:ok, stream_id} <- create_streaming_bridge(connection_id, user_id, request) do
       # Log successful connection
@@ -557,6 +559,23 @@ defmodule LangWeb.Api.V2.McpController do
 
   defp verify_connection_access(%{user_id: user_id}, user_id), do: :ok
   defp verify_connection_access(_status, _user_id), do: {:error, :access_denied}
+
+  defp check_anomaly_detection(request, user_id, session_id) do
+    case AnomalyDetector.analyze_request(request, user_id, session_id) do
+      :normal -> :ok
+      {:anomaly, score, details} ->
+        Logger.warning("Anomalous MCP request detected",
+          user_id: user_id,
+          session_id: session_id,
+          score: score,
+          details: details
+        )
+
+        # For now, just log but allow the request
+        # In production, you might want to block or require approval
+        :ok
+    end
+  end
 
   @doc """
   List active MCP connections for the authenticated user.

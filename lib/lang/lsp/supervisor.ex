@@ -12,8 +12,14 @@ defmodule Lang.LSP.Supervisor do
   @impl true
   def init(_init_arg) do
     children = [
-      # LSP Server
+      # LSP Server - Main TCP listener
       {Lang.LSP.Server, port: lsp_port()},
+
+      # Manages the pool of connection workers
+      Lang.LSP.ConnectionManager,
+
+      # Supervises individual connection worker processes
+      Lang.LSP.ConnectionSupervisor,
 
       # Connection pool for handling multiple LSP clients
       {Registry, keys: :unique, name: Lang.LSP.Registry},

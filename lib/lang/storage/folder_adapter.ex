@@ -82,14 +82,22 @@ defmodule Lang.Storage.FolderAdapter do
     end
   end
 
-  @impl true
-  def search(_root, _pattern, _opts \\ []), do: {:error, :not_implemented}
+  def search(root, pattern, opts \\ []) do
+    Lang.Native.FSScanner.search(root, pattern, opts)
+  end
 
   @impl true
-  def search_code(_root, _lang, _query, _opts \\ []), do: {:error, :not_implemented}
+  def search_code(root, lang, query, opts \\ []) do
+    Lang.Native.FSScanner.search_code(root, lang, query, opts)
+  end
 
   @impl true
-  def scan(_root, _opts \\ []), do: {:error, :not_implemented}
+  def scan(root, opts \\ []) do
+    case Lang.Native.FSScanner.scan(root, opts) do
+      {:ok, res} -> {:ok, res}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @impl true
   def write(_root, _path, _content, _mode \\ :replace), do: {:error, :not_implemented}

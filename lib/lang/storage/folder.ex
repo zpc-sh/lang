@@ -1,10 +1,10 @@
 defmodule Lang.Storage.Folder do
   @moduledoc """
-  Lightweight client for the Dirup storage service.
+  Lightweight client for the Folder storage service.
 
   Notes
   - Uses Req for HTTP per project guidelines.
-  - Endpoints are inferred; adjust with env overrides if Dirup differs.
+  - Endpoints are inferred; adjust with env overrides if Folder differs.
   - Keep calls short-lived; queue long jobs in Oban upstream if needed.
   """
 
@@ -13,11 +13,11 @@ defmodule Lang.Storage.Folder do
   @default_timeout 5_000
 
   defp base_url do
-    System.get_env("FOLDER_URL") || System.get_env("LANG_DIRUP_URL") || "http://127.0.0.1:7070"
+    System.get_env("FOLDER_URL") || System.get_env("LANG_FOLDER_URL") || "http://127.0.0.1:7070"
   end
 
   defp token do
-    System.get_env("FOLDER_TOKEN") || System.get_env("LANG_DIRUP_TOKEN")
+    System.get_env("FOLDER_TOKEN") || System.get_env("LANG_FOLDER_TOKEN")
   end
 
   defp req(opts \\ []) do
@@ -82,7 +82,7 @@ defmodule Lang.Storage.Folder do
   # Patterns API
   # ---------------------------------------------------------------------------
   @doc """
-  Store patterns in Dirup.
+  Store patterns in Folder.
   Accepts a list of pattern maps. Returns stored IDs or details.
   """
   def store_patterns(patterns) when is_list(patterns) do
@@ -91,7 +91,7 @@ defmodule Lang.Storage.Folder do
   end
 
   @doc """
-  Retrieve patterns by IDs from Dirup.
+  Retrieve patterns by IDs from Folder.
   """
   def get_patterns(ids) when is_list(ids) do
     Req.post(req(), url: "/patterns/get", json: %{pattern_ids: ids})
@@ -113,7 +113,7 @@ defmodule Lang.Storage.Folder do
   # User Context API
   # ---------------------------------------------------------------------------
   @doc """
-  Update user context document in Dirup.
+  Update user context document in Folder.
   """
   def update_user_context(user_id, context) when is_binary(user_id) and is_map(context) do
     Req.put(req(), url: "/users/#{URI.encode(user_id)}/context", json: context)
@@ -121,7 +121,7 @@ defmodule Lang.Storage.Folder do
   end
 
   @doc """
-  Get user context from Dirup.
+  Get user context from Folder.
   """
   def get_user_context(user_id) when is_binary(user_id) do
     Req.get(req(), url: "/users/#{URI.encode(user_id)}/context")

@@ -25,6 +25,18 @@ defmodule LangWeb.Router do
     plug LangWeb.Plugs.AuthPlug, :load_from_session
   end
 
+  # Browser JSON pipeline with Admin-only guard
+  pipeline :browser_json_admin do
+    plug :accepts, ["html", "json"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {LangWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug LangWeb.Plugs.AuthPlug, :load_from_session
+    plug LangWeb.Plugs.AdminOnlyPlug
+  end
+
   pipeline :api do
     plug :accepts, ["json", "jsonld", "mdld"]
     plug LangWeb.Plugs.JSONLDNegotiationPlug
@@ -117,19 +129,32 @@ defmodule LangWeb.Router do
       live "/proxy/session", ProxySessionLive, :index
       live "/lsp/status", LspStatusLive, :index
       live "/lsp/kg_build", KGBuildIndexLive, :index
+      live "/security", SecurityDashboardLive, :index
       live "/lsp/kg_build/:stream_id", KGBuildLive, :show
       live "/api-portal", ApiPortalLive, :index
       live "/settings", SettingsLive, :index
       live "/billing", BillingLive, :index
       live "/billing/usage", BillingUsageLive, :index
+      live "/agents/swarms", SwarmsLive, :index
+      live "/agents/swarms/:swarm_id", SwarmShowLive, :show
       live "/fs/watch", FSWatchLive, :index
       live "/audits/sessions", SessionAuditLive, :index
 
       # Markdown-LD Session Connect (browser-authenticated JSON endpoint)
       # Use a browser_json pipeline to accept JSON requests
+      pipeline :admin_api do
+        plug :accepts, ["json"]
+        plug LangWeb.Plugs.AdminOnlyPlug
+      end
+
+      # Markdown-LD Session Connect (browser-authenticated JSON endpoint)
+      # Use a browser_json pipeline to accept JSON requests
       scope "/api", LangWeb do
-        pipe_through [:browser_json]
+        pipe_through [:browser_json, :admin_api]
         post "/sessions/:id/connect", SessionConnectController, :connect
+        get "/exports/:id", ExportsController, :download
+        get "/exports/bundle", ExportsController, :bundle
+        get "/exports/sign", ExportsController, :sign
       end
     end
   end
@@ -195,6 +220,19 @@ defmodule LangWeb.Router do
     get "/mcp/connections", McpController, :list_active
     # Billing usage for MCP
     get "/mcp/billing/usage", MCPBillingController, :usage
+
+    # Advanced MCP Proxy Patterns with SSE Transport
+    post "/mcp/sse/connect", McpSseController, :connect
+    post "/mcp/sse/heartbeat/:connection_id", McpSseController, :heartbeat
+    get "/mcp/sse/stats", McpSseController, :stats
+
+    # OAuth Integration for External MCP Servers
+    post "/mcp/oauth/initiate", McpOAuthController, :initiate_oauth_flow
+    get "/mcp/oauth/callback", McpOAuthController, :oauth_callback
+    post "/mcp/oauth/connect", McpOAuthController, :connect_with_oauth
+    get "/mcp/oauth/status/:server_type", McpOAuthController, :oauth_status
+    delete "/mcp/oauth/revoke/:server_type", McpOAuthController, :revoke_oauth_consent
+    get "/mcp/oauth/servers", McpOAuthController, :list_oauth_servers
     # Billing usage endpoints
     get "/billing/aggregates", BillingUsageController, :aggregates
     get "/billing/summary", BillingUsageController, :summary
@@ -215,6 +253,16 @@ defmodule LangWeb.Router do
 
     # Spatial JSON:API (AshJsonApi) - read-only maps
     forward "/spatial", AshJsonApi.Router, domains: [Lang.Spatial]
+
+    # Agent JSON:API (AshJsonApi) - expose swarm read endpoints
+    forward "/agent", AshJsonApi.Router, domains: [Lang.Agent]
+  end
+
+  # Public signed download routes (signature required, no session)
+  scope "/dl", LangWeb do
+    pipe_through :api
+    get "/exports/:id", ExportsController, :signed_download
+    get "/exports/bundle", ExportsController, :signed_bundle
   end
 
 
@@ -251,7 +299,8 @@ defmodule LangWeb.Router do
     codex_devkit_routes(scope: "/dev", web_module: LangWeb)
 
     # Additional dev pages not in DevKit (avoid double-wrapping /dev)
-    live "/dev/lsp", LangWeb.LspEditor.LspEditorLive, :index
+      live "/dev/lsp", LangWeb.LspEditor.LspEditorLive, :index
+      live "/dev/lsp/harness", LangWeb.LSPHarnessLive, :index
     live "/dev/lsp/kg_build/:stream_id", LangWeb.KGBuildLive, :show
     live "/dev/agents", LangWeb.AgentsLive, :index
     live "/dev/proxy/terminal", LangWeb.ProxyTerminalLive, :index

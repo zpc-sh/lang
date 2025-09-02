@@ -2,7 +2,7 @@ defmodule Lang.Storage.PatternEntity do
   @moduledoc """
   Ash ETS-backed resource for storing agent patterns locally.
 
-  This serves as a local fallback when external storage (Dirup) is disabled.
+  This serves as a local fallback when external storage (Folder) is disabled.
   """
 
   use Ash.Resource,

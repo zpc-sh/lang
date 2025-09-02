@@ -112,6 +112,7 @@ defmodule Lang.MixProject do
       {:mint, "~> 1.0"},
       {:mint_web_socket, "~> 1.0"},
 
+
       # Payment Processing
       {:stripity_stripe, "~> 3.0"},
       {:money, "~> 1.12"},
@@ -126,7 +127,7 @@ defmodule Lang.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:sobelow, "~> 0.8", only: [:dev, :test], runtime: false},
       {:bcrypt_elixir, "~> 3.0"},
-      {:jsonld_ex, "~> 0.4.0"},
+      {:jsonld_ex, "== 0.4.0"},
       {:markdown_ld, "~> 0.4.0"},
       {:testcontainers, "~> 1.13", only: [:dev, :test]},
       {:jose, "~> 1.11"},

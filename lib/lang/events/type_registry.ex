@@ -81,7 +81,16 @@ defmodule Lang.Events.TypeRegistry do
       "billing_event" => :api_usage,
       "mcp_connection_charge" => :api_usage,
       "lsp_ticket_minted" => :api_usage,
-      "performance_metrics_collected" => :api_usage
+      "performance_metrics_collected" => :api_usage,
+
+      # MCP connection events
+      "mcp_connection_created" => :api_usage,
+      "mcp_connection_destroyed" => :api_usage,
+      "mcp_client_connected" => :user_activity,
+      "mcp_client_disconnected" => :user_activity,
+      "mcp_stream_created" => :user_activity,
+      "mcp_stream_completed" => :user_activity,
+      "mcp_stream_error" => :user_activity
     }
   end
 

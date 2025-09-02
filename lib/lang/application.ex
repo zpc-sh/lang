@@ -64,6 +64,15 @@ defmodule Lang.Application do
         optional_child({Lang.LSP.Supervisor, []}),
         optional_child({Lang.LSP.ClientPool, []}),
 
+        # Security Layer - Start early for protection
+        optional_child({Lang.Monitoring.SecurityMonitor, []}),
+        optional_child({Lang.MCP.SessionManager, []}),
+        optional_child({Lang.MCP.SecurityBridge, []}),
+        optional_child({Lang.LSP.SecurityHarness, []}),
+        optional_child({Lang.Security.ThreatIntelligence, []}),
+        optional_child({Lang.Security.PolicyEngine, []}),
+        optional_child({Lang.Security.Orchestrator, []}),
+
         # MCP Broker Security Layer
         optional_child(
           {DynamicSupervisor, strategy: :one_for_one, name: Lang.MCP.ServerSupervisor}
@@ -71,6 +80,10 @@ defmodule Lang.Application do
         optional_child(Lang.MCP.Broker),
         optional_child(Lang.MCP.Pool),
         optional_child(Lang.MCP.StreamBridge),
+
+        # Advanced MCP Proxy Patterns
+        optional_child(Lang.MCP.AdvancedProxy),
+        optional_child(Lang.MCP.OAuthIntegration),
 
         # Web endpoint
         optional_child(LangWeb.Endpoint)

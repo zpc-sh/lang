@@ -96,6 +96,10 @@ defmodule Lang.LSP.Dispatch do
       "lang.agent.delegate" -> agent_delegate(msg)
       "lang.agent.coordinate" -> agent_coordinate(msg)
       "lang.agent.merge_results" -> agent_merge_results(msg)
+      "lang.agent.swarm_create" -> agent_swarm_create(msg)
+      "lang_agent_swarm_create" -> agent_swarm_create(msg)
+      "lang.agent.swarm_get" -> agent_swarm_get(msg)
+      "lang_agent_swarm_get" -> agent_swarm_get(msg)
       "lang.agent.terminate" -> agent_terminate(msg)
       "lang.agent.get_status" -> agent_get_status(msg)
       "lang.agent.scan" -> agent_scan(msg)
@@ -138,6 +142,11 @@ defmodule Lang.LSP.Dispatch do
       "lang.analyze.document" -> analyze_document(msg)
       "lang.analyze.batch" -> analyze_batch(msg)
       "lang.analyze.stream" -> analyze_stream(msg)
+      # ML operations
+      "lang.ml.anomaly.stats" -> ml_anomaly_stats(msg)
+      "lang.ml.usage.predict" -> ml_usage_predict(msg)
+      "lang.ml.anomaly.train" -> ml_anomaly_train(msg)
+      "lang.ml.code_quality_predict" -> ml_code_quality_predict(msg)
       # Parser operations
       "lang.parser.parse" -> parser_parse(msg)
       "lang.parser.parse_batch" -> parser_parse_batch(msg)
@@ -342,17 +351,17 @@ defmodule Lang.LSP.Dispatch do
   end
 
   # ----------------------------------------------------------------------------
-  # Storage handlers (Dirup-backed)
+  # Storage handlers (Folder-backed)
   # ----------------------------------------------------------------------------
   defp storage_connect(%{"id" => id}) do
     if dirup_enabled?(),
-      do: wrap_result(id, Lang.Storage.Dirup.get_status()),
+      do: wrap_result(id, Lang.Storage.Folder.get_status()),
       else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp storage_get_status(%{"id" => id}) do
     if dirup_enabled?(),
-      do: wrap_result(id, Lang.Storage.Dirup.get_status()),
+      do: wrap_result(id, Lang.Storage.Folder.get_status()),
       else: wrap_result(id, {:error, :dirup_disabled})
   end
 
@@ -360,7 +369,7 @@ defmodule Lang.LSP.Dispatch do
     params = maybe_json_map(raw)
 
     if dirup_enabled?(),
-      do: wrap_result(id, Lang.Storage.Dirup.create_scratch(params)),
+      do: wrap_result(id, Lang.Storage.Folder.create_scratch(params)),
       else: wrap_result(id, {:error, :dirup_disabled})
   end
 
@@ -372,7 +381,7 @@ defmodule Lang.LSP.Dispatch do
       do:
         wrap_result(
           id,
-          (scratch_id && Lang.Storage.Dirup.get_scratch(scratch_id)) || {:error, :missing_id}
+          (scratch_id && Lang.Storage.Folder.get_scratch(scratch_id)) || {:error, :missing_id}
         ),
       else: wrap_result(id, {:error, :dirup_disabled})
   end
@@ -386,7 +395,7 @@ defmodule Lang.LSP.Dispatch do
       wrap_result(
         id,
         if scratch_id do
-          Lang.Storage.Dirup.update_scratch(scratch_id, attrs)
+          Lang.Storage.Folder.update_scratch(scratch_id, attrs)
         else
           {:error, :missing_id}
         end
@@ -400,7 +409,7 @@ defmodule Lang.LSP.Dispatch do
     params = maybe_json_map(raw)
 
     if dirup_enabled?(),
-      do: wrap_result(id, Lang.Storage.Dirup.cleanup_scratch(params)),
+      do: wrap_result(id, Lang.Storage.Folder.cleanup_scratch(params)),
       else: wrap_result(id, {:error, :dirup_disabled})
   end
 
@@ -412,7 +421,7 @@ defmodule Lang.LSP.Dispatch do
       do:
         wrap_result(
           id,
-          (project_id && Lang.Storage.Dirup.get_project_context(project_id)) ||
+          (project_id && Lang.Storage.Folder.get_project_context(project_id)) ||
             {:error, :missing_project_id}
         ),
       else: wrap_result(id, {:error, :dirup_disabled})
@@ -420,12 +429,12 @@ defmodule Lang.LSP.Dispatch do
 
   defp storage_validate_auth(%{"id" => id}) do
     if dirup_enabled?(),
-      do: wrap_result(id, Lang.Storage.Dirup.validate_auth()),
+      do: wrap_result(id, Lang.Storage.Folder.validate_auth()),
       else: wrap_result(id, {:error, :dirup_disabled})
   end
 
   defp dirup_enabled? do
-    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_FOLDER_ENABLED") || "0"
     String.downcase(val) in ["1", "true", "yes", "on"]
   end
 
@@ -459,7 +468,7 @@ defmodule Lang.LSP.Dispatch do
        }) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.update_user_context(user_id, context)
+        Lang.Storage.Folder.update_user_context(user_id, context)
       else
         :ok = Lang.InMemory.Store.put(:user_contexts, user_id, context)
         {:ok, %{updated: true, user_id: user_id}}
@@ -471,7 +480,7 @@ defmodule Lang.LSP.Dispatch do
   defp storage_get_user_context(%{"id" => id, "params" => %{"user_id" => user_id}}) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.get_user_context(user_id)
+        Lang.Storage.Folder.get_user_context(user_id)
       else
         ctx = Lang.InMemory.Store.get(:user_contexts, user_id, %{})
         {:ok, %{user_id: user_id, context: ctx}}
@@ -483,7 +492,7 @@ defmodule Lang.LSP.Dispatch do
   defp storage_store_patterns(%{"id" => id, "params" => %{"patterns" => patterns}}) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.store_patterns(patterns)
+        Lang.Storage.Folder.store_patterns(patterns)
       else
         with {:ok, recs} <- Lang.Storage.PatternStore.store_many(patterns) do
           {:ok, %{stored: length(recs), pattern_ids: Enum.map(recs, & &1.id)}}
@@ -496,7 +505,7 @@ defmodule Lang.LSP.Dispatch do
   defp storage_get_patterns(%{"id" => id, "params" => %{"pattern_ids" => pattern_ids}}) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.get_patterns(pattern_ids)
+        Lang.Storage.Folder.get_patterns(pattern_ids)
       else
         with {:ok, recs} <- Lang.Storage.PatternStore.get_many(pattern_ids) do
           {:ok,
@@ -1055,7 +1064,9 @@ defmodule Lang.LSP.Dispatch do
   defp mcp_connection_create(%{"id" => id, "params" => raw_params}) do
     params = maybe_json_map(raw_params)
     url = Lang.JSONLD.get(params, "url") || Lang.JSONLD.get(params, "endpoint")
-    auth = Lang.JSONLD.get(params, "auth", %{})
+    auth =
+      Lang.JSONLD.get(params, "auth", %{})
+      |> Map.put_new("client_id", Lang.JSONLD.get(params, "client_id") || Lang.JSONLD.get(params, "clientId"))
 
     case Lang.MCP.ConnectionManager.create_connection(url, auth) do
       {:ok, conn_id} ->
@@ -1089,6 +1100,134 @@ defmodule Lang.LSP.Dispatch do
 
       {:error, reason} ->
         wrap_result(id, {:error, reason})
+    end
+  end
+
+  # ----------------------------------------------------------------------------
+  # Agent Swarm operations
+  # ----------------------------------------------------------------------------
+  defp agent_swarm_create(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+
+    goals = Lang.JSONLD.get(params, "goals", [])
+    agent_count = Lang.JSONLD.get(params, "agent_count", 0)
+    coord = Lang.JSONLD.get(params, "coordinator_id")
+
+    cond do
+      not is_list(goals) or goals == [] ->
+        wrap_result(id, {:error, %{code: -32602, message: "goals must be a non-empty list"}})
+
+      not is_integer(agent_count) or agent_count <= 0 or agent_count > 32 ->
+        wrap_result(id, {:error, %{code: -32602, message: "agent_count must be 1..32"}})
+
+      true ->
+        swarm_id = "swarm_" <> Base.encode16(:crypto.strong_rand_bytes(6), case: :lower)
+        agent_ids =
+          for i <- 1..agent_count do
+            suffix = Integer.to_string(i)
+            base = Base.encode16(:crypto.strong_rand_bytes(3), case: :lower)
+            "agent_" <> base <> "_" <> suffix
+          end
+
+        Lang.Events.track_event(%{
+          event_type: "agent_swarm_created",
+          metadata: %{
+            swarm_id: swarm_id,
+            coordinator_id: coord,
+            goals: goals,
+            agent_count: agent_count
+          }
+        })
+
+        # Persist a Swarm record (best-effort Ash)
+        _ =
+          try do
+            Ash.create(Lang.Agent.Swarm, %{
+              swarm_id: swarm_id,
+              goals: goals,
+              agent_ids: agent_ids,
+              coordinator_id: coord,
+              status: :created
+            })
+          rescue
+            _ -> :ok
+          end
+
+        # Best-effort background provisioning via Oban (if available)
+        _ =
+          case Code.ensure_loaded?(Oban) do
+            true ->
+              args = %{
+                "swarm_id" => swarm_id,
+                "agent_ids" => agent_ids,
+                "goals" => goals,
+                "coordinator_id" => coord
+              }
+
+              job = %{args: args}
+
+              try do
+                Oban.insert(Lang.Repo, Oban.Job.new(job, queue: :orchestration, worker: Lang.Workers.AgentSwarmWorker))
+              rescue
+                _ -> :ok
+              end
+
+            false ->
+              :ok
+          end
+
+        wrap_result(id, {:ok, %{swarm_id: swarm_id, agent_ids: agent_ids, status: "created"}})
+    end
+  end
+
+  defp agent_swarm_get(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    swarm_id = Lang.JSONLD.get(params, "swarm_id") || Lang.JSONLD.get(params, "id")
+
+    cond do
+      not is_binary(swarm_id) or swarm_id == "" ->
+        wrap_result(id, {:error, %{code: -32602, message: "swarm_id is required"}})
+
+      true ->
+        try do
+          query =
+            Lang.Agent.Swarm
+            |> Ash.Query.for_read(:by_swarm_id, %{swarm_id: swarm_id})
+            |> Ash.Query.load(:agents)
+
+          case Ash.read(query) do
+            {:ok, [swarm]} ->
+              agents = Enum.map(swarm.agents || [], fn a ->
+                %{
+                  id: a.id,
+                  name: a.name,
+                  state: a.state,
+                  capabilities: a.capabilities,
+                  session_id: a.session_id
+                }
+              end)
+
+              result = %{
+                swarm_id: swarm.swarm_id,
+                status: swarm.status,
+                goals: swarm.goals,
+                agent_ids: swarm.agent_ids,
+                coordinator_id: swarm.coordinator_id,
+                agents: agents,
+                metadata: swarm.metadata
+              }
+
+              wrap_result(id, {:ok, result})
+
+            {:ok, []} ->
+              wrap_result(id, {:error, %{code: -32004, message: "swarm not found"}})
+
+            {:error, reason} ->
+              wrap_result(id, {:error, %{code: -32000, message: "read error", data: inspect(reason)}})
+          end
+        rescue
+          e -> wrap_result(id, {:error, %{code: -32000, message: Exception.message(e)}})
+        end
     end
   end
 
@@ -2171,4 +2310,36 @@ defmodule Lang.LSP.Dispatch do
         %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
     end
   end
+
+  # ----------------------------------------------------------------------------
+  # ML operations handlers
+  # ----------------------------------------------------------------------------
+  defp ml_code_quality_predict(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    result = Lang.LSP.Handlers.MLCodeQuality.handle(%{"params" => params}, %{})
+    wrap_ml_result(id, result)
+  end
+
+  defp ml_anomaly_stats(%{"id" => id, "params" => _params}) do
+    result = Lang.LSP.ML.handle("lang.ml.anomaly.stats", %{}, %{})
+    wrap_ml_result(id, result)
+  end
+
+  defp ml_usage_predict(%{"id" => id, "params" => raw_params}) do
+    params = maybe_json_map(raw_params)
+    user_id = Lang.JSONLD.get(params, "user_id")
+    time_window = Lang.JSONLD.get(params, "time_window", "hour")
+
+    result = Lang.LSP.ML.handle("lang.ml.usage.predict", %{"user_id" => user_id, "time_window" => time_window}, %{})
+    wrap_ml_result(id, result)
+  end
+
+  defp ml_anomaly_train(%{"id" => id, "params" => _params}) do
+    result = Lang.LSP.ML.handle("lang.ml.anomaly.train", %{}, %{})
+    wrap_ml_result(id, result)
+  end
+
+  defp wrap_ml_result(id, {:ok, data}), do: %{"jsonrpc" => "2.0", "id" => id, "result" => data}
+  defp wrap_ml_result(id, {:error, code, message, data, _session}),
+    do: %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: code, message: message, data: data}}
 end

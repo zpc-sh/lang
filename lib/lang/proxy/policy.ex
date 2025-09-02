@@ -24,6 +24,9 @@ defmodule Lang.Proxy.Policy do
           optional(:params) => map()
         }
 
+  @doc """
+  Authorizes a proxy request based on the configured policies.
+  """
   @spec authorize(env(), map()) :: :ok | {:error, {:policy_denied, binary()}}
   def authorize(env, assigns) when is_map(env) and is_map(assigns) do
     org_id = assigns[:current_org] && assigns.current_org.id

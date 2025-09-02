@@ -69,6 +69,13 @@ defmodule Lang.Accounts.Organization do
       public?(true)
     end
 
+    # Organization feature flags / entitlements
+    attribute :features, :map do
+      default(%{})
+      public?(true)
+      description("Per-organization feature flags, e.g., %{signed_exports: true}")
+    end
+
     timestamps()
   end
 
@@ -112,7 +119,7 @@ defmodule Lang.Accounts.Organization do
 
     update :update do
       primary?(true)
-      accept([:name, :slug, :contact_email, :billing_email, :website, :description, :max_users])
+      accept([:name, :slug, :contact_email, :billing_email, :website, :description, :max_users, :features])
     end
 
     update :update_billing do

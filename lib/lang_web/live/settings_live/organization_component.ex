@@ -183,6 +183,30 @@ defmodule LangWeb.SettingsLive.OrganizationComponent do
                 </span>
               </button>
             </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700">Signed Exports</label>
+                <p class="text-sm text-gray-500">Allow generation of signed download links (Pro+)</p>
+              </div>
+              <button
+                type="button"
+                class={[
+                  "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                  if(feature_enabled?(@organization, :signed_exports), do: "bg-blue-600", else: "bg-gray-200")
+                ]}
+                role="switch"
+                aria-checked={feature_enabled?(@organization, :signed_exports)}
+                phx-click="toggle_signed_exports"
+                phx-target={@myself}
+              >
+                <span class={[
+                  "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                  if(feature_enabled?(@organization, :signed_exports), do: "translate-x-5", else: "translate-x-0")
+                ]}>
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       <% else %>
@@ -330,6 +354,34 @@ defmodule LangWeb.SettingsLive.OrganizationComponent do
     end
   end
 
+  @impl true
+  def handle_event("toggle_signed_exports", _params, socket) do
+    org = socket.assigns.organization
+    features = org.features || %{}
+    current = feature_enabled?(org, :signed_exports)
+    new_features = Map.put(features, "signed_exports", !current)
+
+    case Organization.update(org, %{features: new_features}) do
+      {:ok, updated_org} ->
+        Events.track_event(%{
+          event_type: "organization_feature_toggled",
+          user_id: socket.assigns.user.id,
+          organization_id: updated_org.id,
+          metadata: %{feature: :signed_exports, enabled: !current, ip_address: get_connect_ip(socket)}
+        })
+
+        send(self(), {:organization_updated, updated_org})
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Signed exports #{if !current, do: "enabled", else: "disabled"}.")
+         |> assign(:organization, updated_org)}
+
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Failed to update feature setting.")}
+    end
+  end
+
   defp create_form(organization, params \\ %{}) do
     AshPhoenix.Form.for_action(organization, :update, params)
   end
@@ -385,5 +437,10 @@ defmodule LangWeb.SettingsLive.OrganizationComponent do
       %{address: {a, b, c, d}} -> "#{a}.#{b}.#{c}.#{d}"
       _ -> "unknown"
     end
+  end
+
+  defp feature_enabled?(org, key) do
+    feats = org.features || %{}
+    Map.get(feats, key) || Map.get(feats, to_string(key)) || false
   end
 end

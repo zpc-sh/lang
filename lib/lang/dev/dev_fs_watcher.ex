@@ -116,8 +116,18 @@ defmodule Lang.Dev.DevFSWatcher do
       end
 
     case type do
-      "file" -> if is_binary(path), do: [path], else: if is_binary(name), do: [Path.join(dir, name)], else: []
-      :file -> if is_binary(path), do: [path], else: if is_binary(name), do: [Path.join(dir, name)], else: []
+      "file" ->
+        cond do
+          is_binary(path) -> [path]
+          is_binary(name) -> [Path.join(dir, name)]
+          true -> []
+        end
+      :file ->
+        cond do
+          is_binary(path) -> [path]
+          is_binary(name) -> [Path.join(dir, name)]
+          true -> []
+        end
       "dir" -> flatten_tree(path || Path.join(dir, to_string(name)), children)
       :dir -> flatten_tree(path || Path.join(dir, to_string(name)), children)
       :directory -> flatten_tree(path || Path.join(dir, to_string(name)), children)

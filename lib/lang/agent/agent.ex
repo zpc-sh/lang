@@ -106,6 +106,11 @@ defmodule Lang.Agent.Agent do
   end
 
   relationships do
+    belongs_to :swarm, Lang.Agent.Swarm do
+      description("Owning swarm if agent was provisioned as part of a swarm")
+      allow_nil?(true)
+      public?(true)
+    end
     belongs_to :parent_agent, __MODULE__ do
       source_attribute(:parent_agent_id)
       destination_attribute(:id)
@@ -144,6 +149,12 @@ defmodule Lang.Agent.Agent do
       prepare(build(filter: expr(session_id == ^arg(:session_id))))
     end
 
+    read :by_swarm do
+      description("List agents belonging to a swarm")
+      argument(:swarm_id, :uuid, allow_nil?: false)
+      prepare(build(filter: expr(swarm_id == ^arg(:swarm_id))))
+    end
+
     create :spawn do
       description("Spawn a new agent with capabilities and constraints")
 
@@ -153,6 +164,7 @@ defmodule Lang.Agent.Agent do
       argument(:spawned_by, :string, default: "system")
       argument(:sandbox_config, :map, default: %{})
       argument(:metadata, :map, default: %{})
+      argument(:swarm_id, :uuid)
 
       change(fn changeset, _context ->
         capabilities = Ash.Changeset.get_argument(changeset, :capabilities)
@@ -189,6 +201,10 @@ defmodule Lang.Agent.Agent do
         |> Ash.Changeset.change_attribute(
           :metadata,
           metadata_arg
+        )
+        |> Ash.Changeset.change_attribute(
+          :swarm_id,
+          Ash.Changeset.get_argument(changeset, :swarm_id)
         )
         |> Ash.Changeset.change_attribute(:state, :active)
       end)

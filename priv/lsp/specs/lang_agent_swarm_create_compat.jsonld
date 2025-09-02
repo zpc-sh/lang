@@ -1,0 +1,30 @@
+{
+  "@context": {
+    "lsp": "https://lsp.dev/schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lsp:lang_agent_swarm_create",
+  "@type": "lsp:Method",
+  "lsp:method": "lang_agent_swarm_create",
+  "lsp:params": {
+    "@type": "lsp:Params",
+    "lsp:properties": [
+      { "lsp:name": "goals", "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } }, "lsp:required": true },
+      { "lsp:name": "agent_count", "lsp:type": "xsd:integer", "lsp:required": true },
+      { "lsp:name": "coordinator_id", "lsp:type": "xsd:string", "lsp:required": false }
+    ]
+  },
+  "lsp:result": {
+    "@type": "lsp:Result",
+    "lsp:type": {
+      "@type": "lsp:Object",
+      "lsp:properties": [
+        { "lsp:name": "swarm_id", "lsp:type": "xsd:string" },
+        { "lsp:name": "agent_ids", "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } } },
+        { "lsp:name": "status", "lsp:type": "xsd:string" }
+      ]
+    }
+  },
+  "lsp:description": "Compatibility alias for underscore method name"
+}
+

@@ -21,6 +21,9 @@ defmodule Lang.Proxy.Pipeline do
 
   @type hop :: %{required(:service) => String.t() | atom(), required(:method) => String.t(), optional(:params) => map()}
 
+  @doc """
+  Runs a proxy pipeline, executing a sequence of hops.
+  """
   @spec run(Envelope.t(), map()) :: {:ok, [map()]} | {:error, integer(), String.t(), map()}
   def run(%Envelope{params: %{"route" => route} = params} = _env, assigns) when is_list(route) do
     pipeline_id = params["pipeline_id"] || gen_id()

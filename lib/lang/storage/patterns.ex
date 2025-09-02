@@ -16,7 +16,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.UpdateConfidence do
 
       result =
         if dirup_enabled?() do
-          Lang.Storage.Dirup.update_pattern_confidence(id, confidence)
+          Lang.Storage.Folder.update_pattern_confidence(id, confidence)
         else
           Lang.Storage.PatternStore.update_confidence(id, confidence)
         end
@@ -37,7 +37,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.UpdateConfidence do
   end
 
   defp dirup_enabled? do
-    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    val = System.get_env("FOLDER_ENABLED") || System.get_env("LANG_FOLDER_ENABLED") || "0"
     String.downcase(val) in ["1", "true", "yes", "on"]
   end
 end
@@ -54,7 +54,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.StorePatterns do
   def handle(%{"patterns" => patterns} = _params, _ctx) when is_list(patterns) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.store_patterns(patterns)
+        Lang.Storage.Folder.store_patterns(patterns)
       else
         with {:ok, recs} <- Lang.Storage.PatternStore.store_many(patterns) do
           {:ok, %{stored: length(recs), pattern_ids: Enum.map(recs, & &1.id)}}
@@ -67,7 +67,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.StorePatterns do
   def handle(_params, _ctx), do: {:error, -32602, "Missing required parameters: patterns"}
 
   defp dirup_enabled? do
-    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    val = System.get_env("FOLDER_ENABLED") || System.get_env("LANG_FOLDER_ENABLED") || "0"
     String.downcase(val) in ["1", "true", "yes", "on"]
   end
 end
@@ -84,7 +84,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.GetPatterns do
   def handle(%{"pattern_ids" => ids} = _params, _ctx) when is_list(ids) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.get_patterns(ids)
+        Lang.Storage.Folder.get_patterns(ids)
       else
         with {:ok, recs} <- Lang.Storage.PatternStore.get_many(ids) do
           {:ok,
@@ -103,7 +103,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.GetPatterns do
   def handle(_params, _ctx), do: {:error, -32602, "Missing required parameters: pattern_ids"}
 
   defp dirup_enabled? do
-    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    val = System.get_env("FOLDER_ENABLED") || System.get_env("LANG_FOLDER_ENABLED") || "0"
     String.downcase(val) in ["1", "true", "yes", "on"]
   end
 end

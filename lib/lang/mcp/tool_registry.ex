@@ -13,7 +13,8 @@ defmodule Lang.MCP.ToolRegistry do
           description: String.t()
         }
 
-  @tools %{
+  defp spec_tools do
+    %{
     # Tokens
     "lang.tokens.estimate" => %{
       group: "tokens",
@@ -40,15 +41,78 @@ defmodule Lang.MCP.ToolRegistry do
       lsp_method: "lang.analyze.document",
       map_args: nil,
       description: "Analyze a single document"
+    },
+    # ML Operations
+    "lang.ml.anomaly.stats" => %{
+      group: "ml",
+      lsp_method: "lang.ml.anomaly.stats",
+      map_args: nil,
+      description: "Get ML anomaly detection statistics"
+    },
+    "lang.ml.usage.predict" => %{
+      group: "ml",
+      lsp_method: "lang.ml.usage.predict",
+      map_args: fn args -> %{"user_id" => args["user_id"], "time_window" => args["time_window"] || "hour"} end,
+      description: "Predict MCP usage for a user"
+    },
+    "lang.ml.anomaly.train" => %{
+      group: "ml",
+      lsp_method: "lang.ml.anomaly.train",
+      map_args: nil,
+      description: "Trigger ML model training for anomaly detection"
     }
-  }
+    }
+  end
 
   @spec list() :: [{String.t(), tool_spec()}]
-  def list, do: Enum.to_list(@tools)
+  def list do
+    Map.to_list(tools())
+  end
+
+  defp tools, do: spec_tools()
+
+  defp runtime_tools do
+    %{
+      "filesystem" => %{
+        "scan" => %{
+          "description" => "Scan a directory",
+          "function" => &Lang.Native.FSScanner.scan/2,
+          "schema" => %{
+            "type" => "object",
+            "properties" => %{
+              "path" => %{"type" => "string"},
+              "max_depth" => %{"type" => "integer"}
+            },
+            "required" => ["path"]
+          }
+        },
+        "read" => %{
+          "description" => "Read a file",
+          "function" => fn path -> File.read(path) end,
+          "schema" => %{
+            "type" => "object",
+            "properties" => %{"path" => %{"type" => "string"}},
+            "required" => ["path"]
+          }
+        }
+      },
+      "shell" => %{
+        "execute" => %{
+          "description" => "Execute a shell command",
+          "function" => fn cmd -> System.cmd(cmd, []) end,
+          "schema" => %{
+            "type" => "object",
+            "properties" => %{"command" => %{"type" => "string"}},
+            "required" => ["command"]
+          }
+        }
+      }
+    }
+  end
 
   @spec get(String.t()) :: {:ok, tool_spec()} | :error
   def get(name) when is_binary(name) do
-    case Map.fetch(@tools, name) do
+    case Map.fetch(tools(), name) do
       {:ok, spec} -> {:ok, spec}
       :error -> :error
     end
@@ -60,7 +124,7 @@ defmodule Lang.MCP.ToolRegistry do
   """
   @spec grouped() :: list(map())
   def grouped do
-    @tools
+    tools()
     |> Enum.group_by(fn {name, spec} -> spec.group || infer_group(name) end)
     |> Enum.map(fn {group, entries} ->
       %{

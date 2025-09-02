@@ -17,6 +17,9 @@ defmodule Lang.Proxy.Heuristics do
 
   @type category :: :text | :lsp | :mcp | :ssh | :fs | :ai | :other
 
+  @doc """
+  Ensures the ETS table for proxy activity exists.
+  """
   def ensure_table do
     case :ets.info(@table) do
       :undefined -> :ets.new(@table, [:named_table, :public, read_concurrency: true])

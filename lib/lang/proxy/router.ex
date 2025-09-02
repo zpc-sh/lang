@@ -16,6 +16,9 @@ defmodule Lang.Proxy.Router do
 
   @type result :: {:ok, any()} | {:error, integer(), String.t(), map()}
 
+  @doc """
+  Dispatches AI service requests with cost tracking.
+  """
   @spec dispatch(Envelope.t()) :: result()
   def dispatch(%Envelope{service: :ai, method: "lang.chat.send_with_cost_tracking", params: params, opts: opts}) do
     cost_opts = Map.get(params, "cost_options") || %{}
@@ -64,6 +67,9 @@ defmodule Lang.Proxy.Router do
     end
   end
 
+  @doc """
+  Dispatches general AI service requests.
+  """
   def dispatch(%Envelope{service: :ai, method: method, params: params, opts: opts}) do
     case AIRouter.route_request(method, params, normalize_opts(opts)) do
       {:ok, res} -> {:ok, res}
@@ -72,6 +78,9 @@ defmodule Lang.Proxy.Router do
     end
   end
 
+  @doc """
+  Dispatches LSP service requests.
+  """
   def dispatch(%Envelope{service: :lsp, method: method, params: params, opts: opts}) do
     case LSPRouter.dispatch(method, params, normalize_opts(opts)) do
       {:ok, res} -> {:ok, res}
@@ -80,6 +89,9 @@ defmodule Lang.Proxy.Router do
     end
   end
 
+  @doc """
+  Dispatches proxy pipeline requests.
+  """
   def dispatch(%Envelope{service: :proxy, method: "pipeline.run", params: params} = env) do
     assigns = Map.get(env, :meta, %{})
     case Pipeline.run(%Envelope{env | params: params}, assigns) do
@@ -88,6 +100,9 @@ defmodule Lang.Proxy.Router do
     end
   end
 
+  @doc """
+  Dispatches Telnet service requests.
+  """
   def dispatch(%Envelope{service: :telnet, method: "telnet.script", params: params}) do
     with {:ok, host} <- fetch_str(params, "host"),
          {:ok, port} <- fetch_int(params, "port"),
@@ -104,6 +119,9 @@ defmodule Lang.Proxy.Router do
     end
   end
 
+  @doc """
+  Handles requests for unimplemented services.
+  """
   def dispatch(%Envelope{service: svc}) do
     {:error, -32601, "Service not implemented", %{service: svc}}
   end
@@ -165,4 +183,91 @@ defmodule Lang.Proxy.Router do
       other -> {:error, -32602, "invalid params", %{reason: inspect(other)}}
     end
   end
+
+  # MCP service for Multi-Connection Protocol bridging
+  def dispatch(%Envelope{service: :mcp, method: method, params: params, opts: opts}) do
+    client_id = get_client_id(opts)
+
+    case validate_client_id(client_id) do
+      {:ok, validated_client_id} ->
+        dispatch_mcp_method(method, params, Map.put(opts, :client_id, validated_client_id))
+
+      {:error, reason} ->
+        {:error, -32040, "Invalid client ID", %{reason: reason}}
+    end
+  end
+
+  defp dispatch_mcp_method("connection.create", params, opts) do
+    case Lang.MCP.ConnectionManager.create_connection(params, opts) do
+      {:ok, connection} ->
+        Lang.Events.track_event(%{
+          event_type: "mcp_connection_created",
+          user_id: Map.get(opts, :user_id),
+          metadata: %{
+            connection_id: connection.connection_id,
+            client_id: Map.get(opts, :client_id)
+          }
+        })
+        {:ok, connection}
+
+      {:error, reason} ->
+        {:error, -32041, "MCP connection creation failed", %{reason: inspect(reason)}}
+    end
+  end
+
+  defp dispatch_mcp_method("connection.destroy", params, opts) do
+    connection_id = Map.get(params, "connection_id")
+
+    case Lang.MCP.ConnectionManager.destroy_connection(connection_id, opts) do
+      {:ok, result} ->
+        Lang.Events.track_event(%{
+          event_type: "mcp_connection_destroyed",
+          user_id: Map.get(opts, :user_id),
+          metadata: %{
+            connection_id: connection_id,
+            client_id: Map.get(opts, :client_id)
+          }
+        })
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, -32042, "MCP connection destruction failed", %{reason: inspect(reason)}}
+    end
+  end
+
+  defp dispatch_mcp_method("connection.status", params, opts) do
+    connection_id = Map.get(params, "connection_id")
+
+    case Lang.MCP.ConnectionManager.get_connection_status(connection_id, opts) do
+      {:ok, status} ->
+        {:ok, status}
+
+      {:error, reason} ->
+        {:error, -32043, "MCP connection status query failed", %{reason: inspect(reason)}}
+    end
+  end
+
+  defp dispatch_mcp_method(method, _params, _opts) do
+    {:error, -32601, "MCP method not implemented", %{method: method}}
+  end
+
+  defp get_client_id(opts) do
+    # Extract Client_ID from various possible sources
+    cond do
+      is_list(opts) ->
+        Keyword.get(opts, :client_id)
+      
+      is_map(opts) ->
+        Map.get(opts, "client_id") || Map.get(opts, :client_id)
+      
+      true -> nil
+    end
+  end
+
+  defp validate_client_id(nil), do: {:error, "Client_ID required"}
+  defp validate_client_id(client_id) when is_binary(client_id) and byte_size(client_id) > 0 do
+    # Basic validation - could be enhanced with JWT verification or other auth
+    {:ok, client_id}
+  end
+  defp validate_client_id(_), do: {:error, "Invalid Client_ID format"}
 end

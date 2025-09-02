@@ -11,6 +11,12 @@ defmodule Lang.Storage do
   alias Lang.Billing.Service, as: Billing
   alias Lang.Events
 
+  use Ash.Domain
+
+  resources do
+    resource(Lang.Storage.PatternEntity)
+  end
+
   @type ctx :: %{required(:organization_id) => String.t(), optional(:user_id) => String.t(), optional(:session_id) => String.t(), optional(:root) => String.t()}
 
   defp adapter do
@@ -32,7 +38,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def list(ctx, path, opts \\ []) when is_map(ctx) do
+  def list(ctx, path, opts \\ [])
+  def list(ctx, path, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_list", %{path: path}),
          {:ok, res} <- adapter().list(root_from(ctx), path, opts) do
       {:ok, res}
@@ -51,7 +58,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def read(ctx, path, opts \\ []) when is_map(ctx) do
+  def read(ctx, path, opts \ [])
+  def read(ctx, path, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_read", %{path: path, max_lines: Keyword.get(opts, :max_lines)}),
          {:ok, res} <- adapter().read(root_from(ctx), path, opts) do
       {:ok, res}
@@ -60,7 +68,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def preview(ctx, path, max_lines \\ 200) when is_map(ctx) do
+  def preview(ctx, path, max_lines \ 200)
+  def preview(ctx, path, max_lines) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_preview", %{path: path, max_lines: max_lines}),
          {:ok, res} <- adapter().preview(root_from(ctx), path, max_lines) do
       {:ok, res}
@@ -69,7 +78,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def search(ctx, pattern, opts \\ []) when is_map(ctx) do
+  def search(ctx, pattern, opts \ [])
+  def search(ctx, pattern, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_search", %{pattern: pattern, max: Keyword.get(opts, :max_results)}),
          {:ok, res} <- adapter().search(root_from(ctx), pattern, opts) do
       {:ok, res}
@@ -78,7 +88,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def search_code(ctx, language, query, opts \\ []) when is_map(ctx) do
+  def search_code(ctx, language, query, opts \ [])
+  def search_code(ctx, language, query, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_search_code", %{language: language}),
          {:ok, res} <- adapter().search_code(root_from(ctx), language, query, opts) do
       {:ok, res}
@@ -87,7 +98,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def scan(ctx, opts \\ []) when is_map(ctx) do
+  def scan(ctx, opts \ [])
+  def scan(ctx, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_scan", %{depth: Keyword.get(opts, :max_depth)}),
          {:ok, res} <- adapter().scan(root_from(ctx), opts) do
       {:ok, res}
@@ -96,7 +108,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def write(ctx, path, content, mode \\ :replace) when is_map(ctx) do
+  def write(ctx, path, content, mode \ :replace)
+  def write(ctx, path, content, mode) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_write", %{path: path, mode: mode}),
          :ok <- adapter().write(root_from(ctx), path, content, mode) do
       {:ok, %{ok: true}}
@@ -114,7 +127,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def delete(ctx, path, recursive? \\ false) when is_map(ctx) do
+  def delete(ctx, path, recursive? \ false)
+  def delete(ctx, path, recursive?) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_delete", %{path: path, recursive: recursive?}),
          :ok <- adapter().delete(root_from(ctx), path, recursive?) do
       {:ok, %{ok: true}}
@@ -124,7 +138,8 @@ defmodule Lang.Storage do
   end
 
   # Registry conveniences (Folder adapter only)
-  def registry_manifest(ctx, owner, repo, reference, opts \\ []) when is_map(ctx) do
+  def registry_manifest(ctx, owner, repo, reference, opts \ [])
+  def registry_manifest(ctx, owner, repo, reference, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_registry_manifest", %{owner: owner, repo: repo}),
          mod when is_atom(mod) <- adapter() do
       if function_exported?(mod, :registry_get_manifest, 4) do
@@ -137,7 +152,8 @@ defmodule Lang.Storage do
     end
   end
 
-  def registry_blob(ctx, owner, repo, digest, opts \\ []) when is_map(ctx) do
+  def registry_blob(ctx, owner, repo, digest, opts \ [])
+  def registry_blob(ctx, owner, repo, digest, opts) when is_map(ctx) do
     with :ok <- bill!(ctx, "folder_registry_blob", %{owner: owner, repo: repo}),
          mod when is_atom(mod) <- adapter() do
       if function_exported?(mod, :registry_get_blob, 4) do

@@ -4,8 +4,11 @@ defmodule Lang.Agent.Behavioral do
   alias Lang.Agent.BehavioralSample
   alias Lang.Events.Agent, as: AgentEvents
 
+  @doc """
+  Establishes a behavioral baseline for an agent.
+  """
   def baseline(agent_id, baseline_data \\ %{}, context \\ %{}) do
-    with {:ok, _sample} <-
+    with {:ok, _sample} <- 
            BehavioralSample
            |> Ash.Changeset.for_create(:record_baseline, %{
              agent_id: agent_id,
@@ -18,6 +21,9 @@ defmodule Lang.Agent.Behavioral do
     end
   end
 
+  @doc """
+  Records a behavioral anomaly for an agent.
+  """
   def record_anomaly_sample(agent_id, anomaly_data, severity \\ :medium) do
     BehavioralSample
     |> Ash.Changeset.for_create(:record_anomaly, %{

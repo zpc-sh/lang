@@ -12,6 +12,7 @@ defmodule Lang.Agent do
     resource(Lang.Agent.Agent)
     resource(Lang.Agent.BehavioralSample)
     resource(Lang.Agent.CoordinationSummary)
+    resource(Lang.Agent.Swarm)
   end
 
   authorization do

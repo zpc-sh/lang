@@ -83,17 +83,27 @@ defmodule Lang.MCP.StreamBridge do
 
   Establishes a secure streaming bridge between an MCP connection and
   a user session with proper isolation and access control.
+
+  Requires Client_ID for security enforcement.
   """
   @spec create_stream(connection_id(), user_id(), session_id(), map()) ::
           {:ok, stream_id()} | {:error, term()}
   def create_stream(connection_id, user_id, session_id, opts \\ %{}) do
-    GenServer.call(__MODULE__, {
-      :create_stream,
-      connection_id,
-      user_id,
-      session_id,
-      opts
-    })
+    client_id = Map.get(opts, "client_id") || Map.get(opts, :client_id)
+
+    case validate_client_id_for_stream(client_id, user_id, connection_id) do
+      {:ok, validated_client_id} ->
+        GenServer.call(__MODULE__, {
+          :create_stream,
+          connection_id,
+          user_id,
+          session_id,
+          Map.put(opts, :validated_client_id, validated_client_id)
+        })
+
+      {:error, reason} ->
+        {:error, {:client_id_invalid, reason}}
+    end
   end
 
   @doc """
@@ -665,5 +675,99 @@ defmodule Lang.MCP.StreamBridge do
 
   defp generate_stream_id do
     "mcp_stream_" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+  end
+
+  # Client_ID validation for secure MCP forwarding
+  defp validate_client_id_for_stream(client_id, user_id, connection_id) do
+    cond do
+      is_nil(client_id) or client_id == "" ->
+        {:error, "Client_ID required for MCP stream creation"}
+
+      not is_binary(client_id) ->
+        {:error, "Client_ID must be a string"}
+
+      not String.match?(client_id, ~r/^[a-zA-Z0-9_-]{10,64}$/) ->
+        {:error, "Client_ID format invalid (must be 10-64 alphanumeric characters with dashes/underscores)"}
+
+      true ->
+        # Additional validation: check if client has access to this connection
+        case validate_client_connection_access(client_id, user_id, connection_id) do
+          :ok -> {:ok, client_id}
+          {:error, reason} -> {:error, "Client access denied: #{reason}"}
+        end
+    end
+  end
+
+  defp validate_client_connection_access(client_id, user_id, connection_id) do
+    # Check if the connection belongs to the user
+    case Lang.MCP.ConnectionManager.get_connection_record(connection_id) do
+      {:ok, connection} ->
+        # Verify the connection's user_id matches
+        if connection.user_id == user_id do
+          # Additional check: verify client_id is authorized for this user/connection
+          # This could involve checking JWT claims, API keys, or other auth mechanisms
+          case check_client_authorization(client_id, user_id, connection_id) do
+            :ok -> :ok
+            {:error, reason} -> {:error, reason}
+          end
+        else
+          {:error, "Connection does not belong to user"}
+        end
+
+      {:error, :not_found} ->
+        {:error, "Connection not found"}
+
+      {:error, _reason} ->
+        {:error, "Unable to verify connection access"}
+    end
+  end
+
+  defp check_client_authorization(client_id, user_id, connection_id) do
+    # This is where you would implement your authorization logic
+    # For example:
+    # - Verify JWT token claims
+    # - Check API key permissions
+    # - Validate OAuth scopes
+    # - Check rate limits for the client
+
+    # For now, we'll do basic checks
+    cond do
+      # Check if client_id is associated with the user
+      not client_belongs_to_user?(client_id, user_id) ->
+        {:error, "Client_ID not authorized for this user"}
+
+      # Check if client has permission for MCP operations
+      not client_has_mcp_permission?(client_id) ->
+        {:error, "Client_ID lacks MCP permissions"}
+
+      # Check rate limiting
+      client_rate_limited?(client_id) ->
+        {:error, "Client_ID rate limited"}
+
+      true ->
+        :ok
+    end
+  end
+
+  # Placeholder functions - implement based on your auth system
+  defp client_belongs_to_user?(client_id, user_id) do
+    # Check if client_id is registered for this user
+    # This could query a database or check a cache
+    # For now, we'll accept any client_id that starts with the user_id
+    String.starts_with?(client_id, user_id <> "_") or client_id == user_id
+  end
+
+  defp client_has_mcp_permission?(client_id) do
+    # Check if client has MCP permissions
+    # This could check scopes, roles, or permissions in your auth system
+    # For now, we'll assume all clients have permission
+    true
+  end
+
+  defp client_rate_limited?(client_id) do
+    # Check if client is rate limited
+    # This could check Redis counters or other rate limiting mechanisms
+    # For now, we'll assume no rate limiting
+    false
   end
 end

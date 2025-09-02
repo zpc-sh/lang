@@ -5,12 +5,12 @@ defmodule Lang.StorageHandlersFallbackTest do
   alias Elixir.Lang.LSP.Lang.Lang.Storage.{UpdateUserContext, GetUserContext}
 
   setup do
-    # Ensure Dirup is disabled for fallback tests
-    prev = System.get_env("DIRUP_ENABLED")
-    System.put_env("DIRUP_ENABLED", "0")
+    # Ensure Folder is disabled for fallback tests
+    prev = System.get_env("FOLDER_ENABLED")
+    System.put_env("FOLDER_ENABLED", "0")
 
     on_exit(fn ->
-      if prev, do: System.put_env("DIRUP_ENABLED", prev), else: System.delete_env("DIRUP_ENABLED")
+      if prev, do: System.put_env("FOLDER_ENABLED", prev), else: System.delete_env("FOLDER_ENABLED")
     end)
 
     :ok

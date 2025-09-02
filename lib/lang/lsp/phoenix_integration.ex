@@ -172,6 +172,56 @@ defmodule Lang.LSP.PhoenixIntegration do
   end
 
   @doc """
+  Broadcasts a security event to subscribed clients.
+  """
+  def broadcast_security_event(event_type, event_data) do
+    message = %{
+      type: event_type,
+      data: sanitize_for_broadcast(event_data),
+      timestamp: DateTime.utc_now()
+    }
+    
+    PubSub.broadcast(@pubsub, "security_events", {:security_event, message})
+  end
+  
+  @doc """
+  Broadcasts a security alert to admin clients.
+  """
+  def broadcast_security_alert(alert) do
+    sanitized_alert = sanitize_alert_for_broadcast(alert)
+    
+    PubSub.broadcast(@pubsub, "security_alerts", {:security_alert, sanitized_alert})
+  end
+  
+  @doc """
+  Subscribes the current process to security events.
+  """
+  def subscribe_to_security_events do
+    PubSub.subscribe(@pubsub, "security_events")
+  end
+  
+  @doc """
+  Subscribes the current process to security alerts.
+  """
+  def subscribe_to_security_alerts do
+    PubSub.subscribe(@pubsub, "security_alerts")
+  end
+  
+  @doc """
+  Gets real-time security dashboard data for LiveView.
+  """
+  def get_dashboard_data do
+    case Process.whereis(Lang.Monitoring.SecurityMonitor) do
+      nil -> %{metrics: %{}, alerts: []}
+      pid when is_pid(pid) ->
+        %{
+          metrics: Lang.Monitoring.SecurityMonitor.get_metrics(),
+          alerts: Lang.Monitoring.SecurityMonitor.get_recent_alerts(10)
+        }
+    end
+  end
+
+  @doc """
   Setup telemetry handlers for LSP metrics.
   """
   def setup_telemetry do
@@ -179,7 +229,10 @@ defmodule Lang.LSP.PhoenixIntegration do
       [:lang, :lsp, :request],
       [:lang, :lsp, :response],
       [:lang, :lsp, :connection],
-      [:lang, :lsp, :error]
+      [:lang, :lsp, :error],
+      [:lang, :lsp, :security],
+      [:lang, :mcp, :session],
+      [:lang, :security, :alert]
     ]
 
     :telemetry.attach_many(
@@ -218,6 +271,66 @@ defmodule Lang.LSP.PhoenixIntegration do
       method: metadata.method
     )
   end
+
+  defp handle_telemetry_event([:lang, :lsp, :security, event_type], measurements, metadata, _config) do
+    Logger.info("LSP Security Event",
+      type: event_type,
+      measurements: measurements,
+      metadata: metadata
+    )
+  end
+
+  defp handle_telemetry_event([:lang, :mcp, :session, event_type], measurements, metadata, _config) do
+    Logger.info("MCP Session Event",
+      type: event_type,
+      measurements: measurements,
+      metadata: metadata
+    )
+  end
+
+  defp handle_telemetry_event([:lang, :security, :alert], measurements, metadata, _config) do
+    Logger.warn("Security Alert",
+      measurements: measurements,
+      metadata: metadata
+    )
+  end
+
+  ## Security Event Sanitization
+  
+  defp sanitize_for_broadcast(event_data) do
+    event_data
+    |> Map.drop([:raw_request, :internal_state, :credentials])
+    |> sanitize_client_info()
+  end
+  
+  defp sanitize_client_info(data) when is_map(data) do
+    case data do
+      %{client_id: client_id} = data when is_binary(client_id) ->
+        masked_id = mask_client_id(client_id)
+        %{data | client_id: masked_id}
+      
+      _ -> data
+    end
+  end
+  
+  defp sanitize_alert_for_broadcast(alert) do
+    sanitized_metadata = case alert.metadata do
+      %{client_id: client_id} = metadata when is_binary(client_id) ->
+        %{metadata | client_id: mask_client_id(client_id)}
+      
+      metadata -> metadata
+    end
+    
+    %{alert | metadata: sanitized_metadata}
+  end
+  
+  defp mask_client_id(client_id) when is_binary(client_id) and byte_size(client_id) > 8 do
+    prefix = String.slice(client_id, 0, 4)
+    suffix = String.slice(client_id, -4, 4)
+    "#{prefix}****#{suffix}"
+  end
+  
+  defp mask_client_id(_client_id), do: "****"
 
   defp extract_format_from_uri(uri) do
     case Path.extname(uri) do

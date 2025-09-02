@@ -1,5 +1,5 @@
 defmodule Elixir.Lang.LSP.Lang.Lang.Storage.UpdateUserContext do
-  @moduledoc "Update user context in storage (Dirup-backed with fallback)"
+  @moduledoc "Update user context in storage (Folder-backed with fallback)"
   @behaviour Lang.LSP.Handler
   @lsp_method "lang.lang.storage.update_user_context"
 
@@ -11,7 +11,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.UpdateUserContext do
       when is_binary(user_id) and is_map(context) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.update_user_context(user_id, context)
+        Lang.Storage.Folder.update_user_context(user_id, context)
       else
         :ok = Lang.InMemory.Store.put(:user_contexts, user_id, context)
         {:ok, %{updated: true, user_id: user_id}}
@@ -23,7 +23,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.UpdateUserContext do
   def handle(_params, _ctx), do: {:error, -32602, "Missing required parameters: user_id, context"}
 
   defp dirup_enabled? do
-    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    val = System.get_env("FOLDER_ENABLED") || System.get_env("LANG_FOLDER_ENABLED") || "0"
     String.downcase(val) in ["1", "true", "yes", "on"]
   end
 end
@@ -40,7 +40,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.GetUserContext do
   def handle(%{"user_id" => user_id}, _ctx) when is_binary(user_id) do
     result =
       if dirup_enabled?() do
-        Lang.Storage.Dirup.get_user_context(user_id)
+        Lang.Storage.Folder.get_user_context(user_id)
       else
         ctx = Lang.InMemory.Store.get(:user_contexts, user_id, %{})
         {:ok, %{user_id: user_id, context: ctx}}
@@ -52,7 +52,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Storage.GetUserContext do
   def handle(_params, _ctx), do: {:error, -32602, "Missing required parameters: user_id"}
 
   defp dirup_enabled? do
-    val = System.get_env("DIRUP_ENABLED") || System.get_env("LANG_DIRUP_ENABLED") || "0"
+    val = System.get_env("FOLDER_ENABLED") || System.get_env("LANG_FOLDER_ENABLED") || "0"
     String.downcase(val) in ["1", "true", "yes", "on"]
   end
 end
