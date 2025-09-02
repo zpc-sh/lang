@@ -301,6 +301,7 @@ defmodule LangWeb.Router do
     # Additional dev pages not in DevKit (avoid double-wrapping /dev)
       live "/dev/lsp", LangWeb.LspEditor.LspEditorLive, :index
       live "/dev/lsp/harness", LangWeb.LSPHarnessLive, :index
+      live "/dev/lsp/debug", LangWeb.Dev.LspDebugLive, :index
     live "/dev/lsp/kg_build/:stream_id", LangWeb.KGBuildLive, :show
     live "/dev/agents", LangWeb.AgentsLive, :index
     live "/dev/proxy/terminal", LangWeb.ProxyTerminalLive, :index

@@ -1,0 +1,29 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.self_reflect",
+  "@type": "lang:Function",
+  "name": "lang.agent.self_reflect",
+  "category": "agent",
+  "description": "Allows an agent to reflect on its own outputs and suggest improvements.",
+  "params": {
+    "type": "object",
+    "properties": {
+      "agent_id": {"type": "string"},
+      "previous_output": {},
+      "criteria": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["previous_output"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "reflection": {"type": "string"},
+      "improvements": {"type": "array", "items": {"type": "string"}},
+      "score": {"type": "number"}
+    }
+  }
+}
+

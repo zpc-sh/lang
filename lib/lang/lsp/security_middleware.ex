@@ -39,9 +39,11 @@ defmodule Lang.LSP.SecurityMiddleware do
   def process_request(request, opts \\ %{}) do
     client_id = get_client_id(request, opts)
     method = Map.get(request, "method")
-    
+    params = Map.get(request, "params", %{})
+
     with {:ok, validated_client} <- validate_client_id(client_id, method),
          {:ok, _} <- check_rate_limit(validated_client, method),
+         :ok <- reject_prompt_injection(method, params),
          {:ok, sanitized_params} <- validate_and_sanitize_params(method, request),
          {:ok, _} <- check_method_authorization(validated_client, method),
          {:ok, context} <- build_client_context(validated_client, method, request) do
@@ -54,6 +56,13 @@ defmodule Lang.LSP.SecurityMiddleware do
       {:error, reason} = error ->
         log_security_event(:request_blocked, %{client_id: client_id, method: method}, %{reason: reason})
         error
+    end
+  end
+
+  defp reject_prompt_injection(method, params) do
+    case Lang.LSP.SecurityValidator.prompt_injection?(method, params) do
+      {true, details} -> {:error, {:prompt_injection, details}}
+      false -> :ok
     end
   end
   

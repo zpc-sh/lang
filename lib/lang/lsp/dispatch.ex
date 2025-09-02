@@ -56,7 +56,7 @@ defmodule Lang.LSP.Dispatch do
       "lang.think.find_similar" -> think(:find_similar, msg)
       "lang.think.trace_flow" -> think(:trace_flow, msg)
       "lang.think.generate_tests" -> think(:generate_tests, msg)
-      "lang.think.review_code" -> think(:review_code, msg)
+      "lang.think.review_code" -> think_review_code(msg)
       "lang.think.estimate_complexity" -> think(:estimate_complexity, msg)
       "lang.spatial.map" -> spatial_map(msg)
       "lang.spatial.traverse" -> spatial_traverse(msg)
@@ -81,6 +81,12 @@ defmodule Lang.LSP.Dispatch do
       "lang.tokens.filter" -> tokens(:filter, msg)
       "lang.tokens.stream" -> tokens(:stream, msg)
       "lang.tokens.cache_strategy" -> tokens(:cache_strategy, msg)
+      # New lightweight methods
+      "lang.agent.self_reflect" -> agent_self_reflect(msg)
+      "lang.prompt.optimize" -> prompt_optimize(msg)
+      "lang.multi_modal.analyze" -> multi_modal_analyze(msg)
+      "lang.agent.knowledge_share" -> agent_knowledge_share(msg)
+      "lang.ml.rag_query" -> ml_rag_query(msg)
       "lang.query.natural" -> query(:natural, msg)
       "lang.query.impact" -> query(:impact, msg)
       "lang.query.dependency" -> query(:dependency, msg)
@@ -107,12 +113,14 @@ defmodule Lang.LSP.Dispatch do
       "lang.agent.detect_rogue" -> agent_detect_rogue(msg)
       "lang.agent.quarantine" -> agent_quarantine(msg)
       "lang.agent.behavior_baseline" -> agent_behavior_baseline(msg)
+      "lang_wake_qwen" -> wake_qwen(msg)
       "lang.agent.anomaly_score" -> agent_anomaly_score(msg)
       "lang.agent.trust_level" -> agent_trust_level(msg)
       "lang.agent.audit_trail" -> agent_audit_trail(msg)
       "lang.agent.track_usage" -> agent_track_usage(msg)
       "lang.agent.limit_resources" -> agent_limit_resources(msg)
       "lang.agent.monitor_performance" -> agent_monitor_performance(msg)
+      "lang.agent.auto_attach" -> agent_auto_attach(msg)
       "lang.metrics.tokens" -> metrics_tokens(msg)
       # Filesystem operations
       "lang.fs.scan" -> fs_scan(msg)
@@ -188,6 +196,8 @@ defmodule Lang.LSP.Dispatch do
       "rpc.initialize" -> rpc_initialize(msg)
       "rpc.shutdown" -> rpc_shutdown(msg)
       "rpc.capabilities" -> rpc_capabilities(msg)
+      # Session/lease management
+      "lang.session.heartbeat" -> session_heartbeat(msg)
       "rpc.ping" -> rpc_ping(msg)
       m when m in @not_impl_methods -> not_implemented(msg)
       _ -> nil
@@ -195,6 +205,87 @@ defmodule Lang.LSP.Dispatch do
   end
 
   def process(_), do: nil
+
+  # ----------------------------------------------------------------------------
+  # Session / Lease
+  # ----------------------------------------------------------------------------
+  defp session_heartbeat(%{"id" => id, "params" => params}) do
+    # Stateless ack; the per-connection instance renews lease upon seeing this method
+    now = DateTime.utc_now() |> DateTime.to_iso8601()
+    %{"jsonrpc" => "2.0", "id" => id, "result" => %{ok: true, at: now}}
+  end
+
+  # ----------------------------------------------------------------------------
+  # New lightweight handlers (safe stubs)
+  # ----------------------------------------------------------------------------
+  defp agent_self_reflect(%{"id" => id, "params" => params}) do
+    prev = Map.get(params, "previous_output")
+    criteria = List.wrap(Map.get(params, "criteria", [])) |> Enum.map(&to_string/1)
+
+    reflection =
+      cond do
+        is_binary(prev) and prev != "" ->
+          "Reflected on output. Suggestions focus on clarity, correctness, and adherence to criteria."
+        true ->
+          "No previous output provided; nothing to reflect."
+      end
+
+    improvements =
+      (if is_binary(prev) and String.length(prev) > 0, do: ["tighten wording", "add examples"], else: []) ++
+        (if Enum.any?(criteria), do: ["address criteria: " <> Enum.join(criteria, ", ")], else: [])
+
+    score = if improvements == [], do: 0.9, else: 0.6
+    wrap_result(id, {:ok, %{reflection: reflection, improvements: improvements, score: score}})
+  end
+
+  defp prompt_optimize(%{"id" => id, "params" => params}) do
+    original = to_string(Map.get(params, "original_prompt", ""))
+    examples = List.wrap(Map.get(params, "examples", []))
+
+    optimized =
+      original
+      |> String.trim()
+      |> String.replace(~r/\s+/, " ")
+      |> then(fn s -> if examples != [], do: s <> "\n\nFollow the patterns shown in examples.", else: s end)
+
+    est = if String.length(optimized) < max(String.length(original), 1), do: 0.2, else: 0.05
+    wrap_result(id, {:ok, %{optimized_prompt: optimized, estimated_improvement: est}})
+  end
+
+  defp multi_modal_analyze(%{"id" => id, "params" => params}) do
+    text = to_string(Map.get(params, "text", ""))
+    image_url = to_string(Map.get(params, "image_url", ""))
+    query = to_string(Map.get(params, "query", ""))
+
+    analysis = %{
+      summary: "Combined text/image analysis stub",
+      text_tokens: String.split(text) |> length(),
+      image_seen?: image_url != "",
+      query: query
+    }
+    wrap_result(id, {:ok, %{analysis: analysis, entities: []}})
+  end
+
+  defp agent_knowledge_share(%{"id" => id, "params" => params}) do
+    from_id = to_string(Map.get(params, "from_agent_id", ""))
+    to_ids = List.wrap(Map.get(params, "to_agent_ids", [])) |> Enum.map(&to_string/1)
+    _knowledge = Map.get(params, "knowledge")
+
+    # Stub: acknowledge share without broadcasting over PubSub
+    acks = Enum.map(to_ids, fn tid -> %{agent_id: tid, status: "accepted"} end)
+    wrap_result(id, {:ok, %{shared: to_ids != [], acknowledgments: acks}})
+  end
+
+  defp ml_rag_query(%{"id" => id, "params" => params}) do
+    query = to_string(Map.get(params, "query", ""))
+    _kb = to_string(Map.get(params, "knowledge_base_id", ""))
+    top_k = Map.get(params, "top_k", 3)
+
+    # Stub: no retrieval; just echo query and empty docs
+    docs = []
+    response = if query == "", do: "", else: "No matching docs; generating response based on query only."
+    wrap_result(id, {:ok, %{retrieved_docs: Enum.take(docs, top_k), generated_response: response}})
+  end
 
   # ----------------------------------------------------------------------------
   # Minimal FS handlers (stubs route to native NIFs when possible)
@@ -431,6 +522,29 @@ defmodule Lang.LSP.Dispatch do
     if dirup_enabled?(),
       do: wrap_result(id, Lang.Storage.Folder.validate_auth()),
       else: wrap_result(id, {:error, :dirup_disabled})
+  end
+
+  # ----------------------------------------------------------------------------
+  # Agent helpers
+  # ----------------------------------------------------------------------------
+  defp agent_auto_attach(%{"id" => id, "params" => params}) do
+    label = Map.get(params || %{}, "label")
+    cid_hint =
+      "cid_" <>
+        (:crypto.hash(:sha256, (label || "agent") <> "|" <> Integer.to_string(System.unique_integer([:positive])))
+         |> Base.encode16(case: :lower)
+         |> binary_part(0, 12))
+
+    result = %{
+      identifyNotification: %{"method" => "lang/tester/identify", "params" => %{"clientId" => cid_hint}},
+      recommendedCalls: [
+        "rpc.capabilities",
+        "rpc.serverInfo",
+        "rpc.health"
+      ]
+    }
+
+    %{"jsonrpc" => "2.0", "id" => id, "result" => result}
   end
 
   defp dirup_enabled? do
@@ -1375,6 +1489,133 @@ defmodule Lang.LSP.Dispatch do
     end
   end
 
+  # Fast-path review_code: provide immediate lightweight feedback when possible
+  # Falls back to generic think/3 enqueuing when realtime not requested or no inline code provided
+  defp think_review_code(%{"id" => id, "params" => params} = msg) do
+    code = Map.get(params || %{}, "code")
+
+    cond do
+      truthy?(Map.get(params || %{}, "stream")) and (is_binary(code) and code != "") ->
+      stream_id = "review_" <> Integer.to_string(:erlang.unique_integer([:positive]))
+        owner_cid = Map.get(params || %{}, "current_cid") || "anon"
+        topic = "lsp:review:" <> to_string(owner_cid) <> ":" <> stream_id
+
+        Task.Supervisor.start_child(Lang.LSP.TaskSupervisor, fn ->
+          started_at = System.monotonic_time(:millisecond)
+          emit_review_chunk(topic, :start, "Starting fast review for snippet (#{byte_size(code)} bytes)")
+
+          {:ok, ast_or_err} =
+            case :elixir.string_to_quoted(code) do
+              {:ok, _ast} = ok -> emit_review_chunk(topic, :syntax, "Syntax OK"); ok
+              {:error, {line, err, token}} ->
+                emit_review_chunk(topic, :syntax_error, "Syntax error at line #{line}: #{Exception.format(:error, err, []) |> String.trim()} #{inspect(token)}")
+                {:ok, :error}
+            end
+
+          checks = [
+            {String.contains?(code, "IO.inspect"), "Warning: Found IO.inspect — remove before production"},
+            {Regex.match?(~r/\bFile\./, code), "Use Lang.Native.FSScanner for filesystem ops"},
+            {Regex.match?(~r/\bSystem\.(cmd)\b|:os\.cmd/, code), "Avoid shelling out; prefer safe adapters"},
+            {Regex.match?(~r/String\.to_atom\(/, code), "Do not use String.to_atom on user input"},
+            {Regex.match?(~r/\bTask\.async\(/, code) and not Regex.match?(~r/Task\.async_stream\(/, code), "Prefer Task.async_stream with back-pressure"}
+          ]
+
+          Enum.each(checks, fn
+            {true, msg} -> emit_review_chunk(topic, :issue, msg)
+            _ -> :ok
+          end)
+
+          dt = System.monotonic_time(:millisecond) - started_at
+          :telemetry.execute([:lang, :lsp, :review_code, :fastpath], %{duration: dt}, %{mode: :stream, size: byte_size(code)})
+            Phoenix.PubSub.broadcast(Lang.PubSub, topic, {:review_code, :completed, %{duration_ms: dt}})
+        end)
+
+        %{"jsonrpc" => "2.0", "id" => id, "result" => %{stream_id: stream_id, topic: topic, status: "streaming", mode: "fast", owner_cid: owner_cid}}
+
+      realtime_request?(params) or (is_binary(code) and code != "") ->
+        t0 = System.monotonic_time(:millisecond)
+        review_text = quick_review_text(code)
+        dt = System.monotonic_time(:millisecond) - t0
+        _ = record_lsp_measurement("lang.think.review_code", params, %{review: String.slice(review_text, 0, 120)}, dt, nil)
+        :telemetry.execute([:lang, :lsp, :review_code, :fastpath], %{duration: dt}, %{mode: :immediate, size: (is_binary(code) && byte_size(code)) || 0})
+        %{"jsonrpc" => "2.0", "id" => id, "result" => %{review: review_text, mode: "fast"}}
+
+      true ->
+        think(:review_code, msg)
+    end
+  end
+
+  defp quick_review_text(nil), do: "No code provided for review."
+  defp quick_review_text(code) when is_binary(code) do
+    base =
+      case :elixir.string_to_quoted(code) do
+        {:ok, _ast} -> []
+        {:error, {line, err, token}} ->
+          [
+            "Syntax error at line #{line}: #{Exception.format(:error, err, []) |> String.trim()} #{inspect(token)}"
+          ]
+      end
+
+    issues =
+      []
+      |> add_issue_if(String.contains?(code, "IO.inspect"),
+        "Warning: Found IO.inspect — remove before production"
+      )
+      |> add_issue_if(Regex.match?(~r/\bFile\./, code),
+        "Use Lang.Native.FSScanner for filesystem ops (project guideline)"
+      )
+      |> add_issue_if(Regex.match?(~r/\bSystem\.(cmd)\b|:os\.cmd/, code),
+        "Avoid shelling out; prefer safe adapters"
+      )
+      |> add_issue_if(Regex.match?(~r/String\.to_atom\(/, code),
+        "Do not use String.to_atom on user input"
+      )
+      |> add_issue_if(Regex.match?(~r/\bTask\.async\(/, code) and not Regex.match?(~r/Task\.async_stream\(/, code),
+        "Prefer Task.async_stream with back-pressure"
+      )
+      |> add_issue_if(String.length(code) > 20_000,
+        "Large snippet detected — consider streaming or summarizing input"
+      )
+
+    text =
+      case base ++ issues do
+        [] -> "Code parsed successfully. No obvious issues found."
+        list -> Enum.join(list, "\n")
+      end
+
+    String.slice(text, 0, 8000)
+  end
+
+  defp add_issue_if(acc, true, msg), do: acc ++ [msg]
+  defp add_issue_if(acc, false, _msg), do: acc
+
+  defp record_lsp_measurement(method, request, response_preview, duration_ms, error) do
+    # Best-effort Ash logging; must never crash the server/handler
+    try do
+      params = %{
+        client_id: Map.get(request || %{}, "client_id") || "unknown",
+        method: method,
+        request: request || %{},
+        response: response_preview || %{},
+        duration_ms: duration_ms,
+        error: error && to_string(error)
+      }
+
+      case Code.ensure_loaded?(Lang.LspDomain) and Code.ensure_loaded?(Lang.LspMeasurementEvent) do
+        true ->
+          _ = Ash.create(Lang.LspMeasurementEvent, params, action: :create)
+          :ok
+        false -> :ok
+      end
+    rescue
+      _ -> :ok
+    end
+  end
+
+  defp emit_review_chunk(topic, phase, text) do
+    Phoenix.PubSub.broadcast(Lang.PubSub, topic, {:review_code, phase, %{text: text}})
+  end
+
   defp spatial_map(%{"id" => id, "params" => params}) do
     project_id = Map.get(params, "project_id")
     path = Map.get(params, "path")
@@ -1922,6 +2163,34 @@ defmodule Lang.LSP.Dispatch do
 
       {:error, reason} ->
         %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
+    end
+  end
+
+  defp wake_qwen(%{"id" => id, "params" => params}) do
+    message = Map.get(params, "message", "Wake up, Qwen!")
+    
+    # Use our custom handler
+    request = %Lang.LSP.Protocol.Types.Request{
+      id: id,
+      method: "lang_wake_qwen",
+      params: params,
+      client_id: Map.get(params, "client_id", "lsp_dispatch")
+    }
+    
+    case Lang.LSP.Handlers.LangWakeQwen.handle_request(request, nil) do
+      {:reply, response, _} ->
+        %{
+          "jsonrpc" => "2.0",
+          "id" => id,
+          "result" => response.result
+        }
+        
+      {:error, reason} ->
+        %{
+          "jsonrpc" => "2.0",
+          "id" => id,
+          "error" => %{code: -32000, message: inspect(reason)}
+        }
     end
   end
 

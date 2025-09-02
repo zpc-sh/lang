@@ -60,9 +60,9 @@ defmodule Lang.Application do
         optional_child(Lang.Orchestration.ClaudeAgent),
         optional_child(Lang.Orchestration.OpenAIAgent),
 
-        # LSP Server Supervisor (keep late so deps are ready)
-        optional_child({Lang.LSP.Supervisor, []}),
-        optional_child({Lang.LSP.ClientPool, []}),
+        # LSP Server Supervisor (keep late so deps are ready); disable in test
+        (if lsp_enabled?(), do: optional_child({Lang.LSP.Supervisor, []}), else: nil),
+        (if lsp_enabled?(), do: optional_child({Lang.LSP.ClientPool, []}), else: nil),
 
         # Security Layer - Start early for protection
         optional_child({Lang.Monitoring.SecurityMonitor, []}),
@@ -140,6 +140,13 @@ defmodule Lang.Application do
   end
 
   defp optional_child(other), do: other
+
+  defp lsp_enabled? do
+    case Application.get_env(:lang, :lsp_enabled) do
+      nil -> if Code.ensure_loaded?(Mix), do: Mix.env() != :test, else: true
+      val -> val == true
+    end
+  end
 
   defp maybe_add_dev_watchers(children) do
     if Application.get_env(:lang, :dev_routes, false) do

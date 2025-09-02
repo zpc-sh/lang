@@ -152,7 +152,8 @@ defmodule Lang.LSP.StaticAnalyzer do
   """
   @spec analyze_file(String.t()) :: {:ok, analysis_result()} | {:error, String.t()}
   def analyze_file(file_path) do
-    with {:ok, content} <- File.read(file_path) do
+    with {:ok, lines} <- Lang.Native.FSScanner.preview(file_path, max_lines: 1_000_000) do
+      content = Enum.join(List.wrap(lines), "\n")
       analysis = %{
         security_issues: analyze_security_issues(file_path, content),
         quality_issues: analyze_quality_issues(file_path, content),
@@ -241,12 +242,17 @@ defmodule Lang.LSP.StaticAnalyzer do
   # Private functions
   
   defp get_elixir_files(root_path) do
-    case File.ls(root_path) do
-      {:ok, _} ->
-        files = Path.wildcard(Path.join([root_path, "**", "*.ex"]))
+    # Use native FS scanner for performance and policy compliance
+    case Lang.Native.FSScanner.scan(root_path, max_depth: 64) do
+      {:ok, %{tree: tree}} ->
+        files =
+          tree
+          |> collect_paths([], root_path)
+          |> Enum.filter(&String.ends_with?(&1, ".ex"))
+
         {:ok, files}
       {:error, reason} ->
-        {:error, "Cannot read directory: #{reason}"}
+        {:error, "Cannot read directory: #{inspect(reason)}"}
     end
   end
   
@@ -556,5 +562,22 @@ defmodule Lang.LSP.StaticAnalyzer do
       end)
       |> Enum.join("\n")
     end
+  end
+
+  # Traverse FSScanner tree to collect file paths
+  defp collect_paths(%{} = node, acc, _root) do
+    entries = Map.get(node, :entries) || Map.get(node, "entries") || []
+
+    Enum.reduce(entries, acc, fn entry, a ->
+      etype = Map.get(entry, :type) || Map.get(entry, "type")
+      epath = Map.get(entry, :path) || Map.get(entry, "path")
+      case etype do
+        :file -> [epath | a]
+        "file" -> [epath | a]
+        :dir -> collect_paths(entry, a, epath)
+        "dir" -> collect_paths(entry, a, epath)
+        _ -> a
+      end
+    end)
   end
 end

@@ -1,6 +1,13 @@
 defmodule LangWeb.LspWebSocket do
   @behaviour WebSock
 
+  defp proxy_mode? do
+    case Application.get_env(:lang, :lsp_ws_proxy) do
+      true -> true
+      _ -> false
+    end
+  end
+
   defp upstream() do
     cfg = Application.get_env(:lang, :lsp_upstream, host: "127.0.0.1", port: 4001)
     host = Keyword.get(cfg, :host, "127.0.0.1")
@@ -16,16 +23,31 @@ defmodule LangWeb.LspWebSocket do
     end
   end
 
-  # Initialize TCP connection to internal LSP and buffer
+  # Initialize connection: proxy mode (in-process instance) or upstream TCP
   def init(state) do
-    {host, port} = upstream()
-    case :gen_tcp.connect(host, port, [:binary, active: true, packet: :raw]) do
-      {:ok, sock} -> {:ok, state |> Map.put(:upstream, sock) |> Map.put(:buf, "")}
-      {:error, reason} -> {:ok, Map.put(state, :error, {:upstream_connect_failed, reason})}
+    if proxy_mode?() do
+      claims = Map.get(state, :claims) || %{}
+      opts = %{cid: claims["cid"] || claims["client_id"], org: claims["org"], scopes: claims["scope"]}
+      case Lang.LSP.Instance.start_link(opts) do
+        {:ok, pid} -> {:ok, state |> Map.put(:instance, pid)}
+        {:error, reason} -> {:ok, Map.put(state, :error, {:instance_start_failed, reason})}
+      end
+    else
+      {host, port} = upstream()
+      case :gen_tcp.connect(host, port, [:binary, active: true, packet: :raw]) do
+        {:ok, sock} -> {:ok, state |> Map.put(:upstream, sock) |> Map.put(:buf, "")}
+        {:error, reason} -> {:ok, Map.put(state, :error, {:upstream_connect_failed, reason})}
+      end
     end
   end
 
-  # From client → upstream: wrap as LSP Content-Length framed payload
+  # From client → instance or upstream
+  def handle_in({data, _opcode}, %{instance: pid} = state) when is_binary(data) do
+    case Lang.LSP.Instance.handle_json(pid, data) do
+      {:ok, nil} -> {:ok, state}
+      {:ok, reply} -> {:reply, [{:text, reply}], state}
+    end
+  end
   def handle_in({data, _opcode}, %{upstream: sock} = state) when is_binary(data) do
     frame = encode_lsp(data)
     _ = :gen_tcp.send(sock, frame)
@@ -49,6 +71,10 @@ defmodule LangWeb.LspWebSocket do
   def handle_control(_frame, state), do: {:ok, state}
   def terminate(_reason, %{upstream: sock}) do
     _ = :gen_tcp.close(sock)
+    :ok
+  end
+  def terminate(_reason, %{instance: pid}) do
+    _ = Process.exit(pid, :normal)
     :ok
   end
   def terminate(_reason, _state), do: :ok

@@ -39,7 +39,13 @@ defmodule Lang.LSP.SecurityValidator do
       "lang.fs." <> _ -> validate_fs_params(method, params)
       "lang.storage." <> _ -> validate_storage_params(method, params)  
       "lang.generate." <> _ -> validate_generate_params(method, params)
+      "lang.think." <> _ -> validate_think_params(method, params)
+      "lang.prompt." <> _ -> validate_prompt_params(method, params)
+      "lang.multi_modal." <> _ -> validate_multi_modal_params(method, params)
+      "lang.agent.self_reflect" -> validate_self_reflect_params(params)
+      "lang.agent.knowledge_share" -> validate_knowledge_share_params(params)
       "lang.query." <> _ -> validate_query_params(method, params)
+      "lang.ml.rag_query" -> validate_rag_query_params(params)
       "textDocument/" <> _ -> validate_text_document_params(method, params)
       "mcp." <> _ -> validate_mcp_params(method, params)
       _ -> {:ok, params}  # Default allow for now
@@ -88,13 +94,82 @@ defmodule Lang.LSP.SecurityValidator do
     # Limit code generation input size
     case params do
       %{"code" => code} when is_binary(code) ->
-        if String.length(code) > 100_000 do
-          {:error, "Code input too large"}
-        else
-          {:ok, params}
+        cond do
+          String.length(code) > 100_000 -> {:error, "Code input too large"}
+          dangerous_code?(code) -> {:error, "Dangerous code patterns not allowed"}
+          true -> {:ok, params}
         end
       
       _ -> {:ok, params}
+    end
+  end
+
+  @doc """
+  Validates think operation parameters (code review/analysis inputs).
+  """
+  @spec validate_think_params(String.t(), map()) :: {:ok, sanitized_params()} | {:error, String.t()}
+  def validate_think_params(_method, params) do
+    case params do
+      %{"code" => code} when is_binary(code) ->
+        cond do
+          String.length(code) > 100_000 -> {:error, "Code input too large"}
+          dangerous_code?(code) -> {:error, "Dangerous code patterns not allowed"}
+          true -> {:ok, params}
+        end
+      _ -> {:ok, params}
+    end
+  end
+
+  @doc """
+  Validates prompt optimization inputs.
+  """
+  def validate_prompt_params(_method, params) do
+    case params do
+      %{"original_prompt" => p} when is_binary(p) ->
+        if String.length(p) > 100_000 or prompt_injection?("lang.prompt.optimize", %{"prompt" => p}) != false do
+          {:error, "Prompt too large or appears to contain prompt injection"}
+        else
+          {:ok, params}
+        end
+      _ -> {:error, "Missing original_prompt"}
+    end
+  end
+
+  @doc """
+  Validates multimodal inputs.
+  """
+  def validate_multi_modal_params(_method, params) do
+    text_ok = is_binary(Map.get(params, "text", ""))
+    img = Map.get(params, "image_url")
+    case {text_ok, img} do
+      {true, _} -> {:ok, params}
+      _ -> {:error, "Invalid multimodal parameters"}
+    end
+  end
+
+  def validate_self_reflect_params(params) do
+    if Map.has_key?(params, "previous_output") do
+      {:ok, params}
+    else
+      {:error, "Missing previous_output"}
+    end
+  end
+
+  def validate_knowledge_share_params(params) do
+    to_ids = Map.get(params, "to_agent_ids", [])
+    cond do
+      not is_binary(Map.get(params, "from_agent_id")) -> {:error, "Missing from_agent_id"}
+      not (is_list(to_ids) and length(to_ids) > 0) -> {:error, "to_agent_ids must be a non-empty list"}
+      true -> {:ok, params}
+    end
+  end
+
+  def validate_rag_query_params(params) do
+    with true <- is_binary(Map.get(params, "query")),
+         true <- is_binary(Map.get(params, "knowledge_base_id")) do
+      {:ok, params}
+    else
+      _ -> {:error, "Missing query or knowledge_base_id"}
     end
   end
   
@@ -268,6 +343,64 @@ defmodule Lang.LSP.SecurityValidator do
     query
     |> String.replace(~r/[;&|`$(){}[\]\\]/, "")  # Remove shell metacharacters
     |> String.slice(0, @max_query_length)
+  end
+
+  defp dangerous_code?(code) when is_binary(code) do
+    patterns = [
+      ~r/Code\.(compile_string|eval_string)/,
+      ~r/:os\./,
+      ~r/System\./,
+      ~r/File\./,
+      ~r/Port\./,
+      ~r/:erlang\./,
+      ~r/Node\./,
+      ~r/spawn\b/,
+      ~r/:c\./
+    ]
+
+    Enum.any?(patterns, &Regex.match?(&1, code))
+  end
+  defp dangerous_code?(_), do: false
+
+  @doc """
+  Detects prompt injection attempts in free-form inputs for sensitive methods.
+  Returns {true, %{reason:, fields: [...]}} or false.
+  """
+  @spec prompt_injection?(String.t(), map()) :: {true, map()} | false
+  def prompt_injection?(method, params) when is_map(params) do
+    sensitive? = String.starts_with?(method, "lang.think.") or String.starts_with?(method, "lang.generate.") or String.starts_with?(method, "mcp.")
+
+    if sensitive? do
+      fields = ["input", "instructions", "message", "content", "prompt", "code"]
+      text_values =
+        params
+        |> Enum.flat_map(fn {k, v} -> if k in fields and is_binary(v), do: [v], else: [] end)
+
+      case find_prompt_injection(text_values) do
+        nil -> false
+        {field_text, pattern} -> {true, %{pattern: pattern, sample: String.slice(field_text, 0, 160)}}
+      end
+    else
+      false
+    end
+  end
+  def prompt_injection?(_method, _), do: false
+
+  defp find_prompt_injection(texts) do
+    patterns = [
+      ~r/ignore (all|any|previous|above) (rules|instructions|prompts)/i,
+      ~r/disregard (previous|above) (instructions|context)/i,
+      ~r/act as/i,
+      ~r/jailbreak|DAN/i,
+      ~r/you are (now )?free to/i,
+      ~r/override (system|developer) prompt/i,
+      ~r/exfiltrat(e|ion)|leak secrets?/i,
+      ~r/do anything now/i
+    ]
+
+    Enum.find_value(texts, fn t ->
+      Enum.find(patterns, fn p -> Regex.match?(p, t) end) && {t, Enum.find(patterns, fn p -> Regex.match?(p, t) end)}
+    end)
   end
   
   defp valid_session_id?(session_id) do

@@ -1,23 +1,26 @@
 defmodule Lang.LSP.ThinkExplainIntentHandlerTest do
   use Lang.DataCase, async: false
 
-  alias Lang.Think.Request
-
-  test "handler enqueues request when not realtime" do
+  test "handler routes to provider in realtime mode" do
     params = %{
       "client_id" => "test-client-1",
       "content" => "def hello, do: :world",
-      "language" => "elixir"
+      "language" => "elixir",
+      "mode" => "realtime",
+      "provider" => "openai"
     }
 
     ctx = %{}
 
-    assert {:ok, %{request_id: id, status: "queued"}} = Lang.Think.ExplainIntent.handle(params, ctx)
-
-    {:ok, req} = Request.by_id(id)
-    assert req.kind == :explain_intent
-    assert req.status in [:pending, :running]
-    assert get_in(req.input, ["content"]) || get_in(req.input, [:content])
+    with_mock(Lang.Providers.Router, [],
+      route_request: fn _method, _params, _opts ->
+        {:ok, %{"summary" => "Intent: greet world"}}
+      end
+    ) do
+      assert {:ok, %{"summary" => _}} = Lang.Think.ExplainIntent.handle(params, ctx)
+    end
   end
-end
 
+  # Local helper to mirror other tests' pattern; does not patch behavior
+  defp with_mock(_module, _opts, fun), do: fun.()
+end

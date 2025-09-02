@@ -12,5 +12,13 @@
     "priority": "High",
     "status": "implemented"
   },
-  "name": "lang.think.review_code"
+  "name": "lang.think.review_code",
+  "params": {
+    "type": "object",
+    "properties": {
+      "code": { "type": "string", "description": "Inline code snippet to review" },
+      "realtime": { "type": "boolean", "description": "Return immediate fast-path result when true" },
+      "stream": { "type": "boolean", "description": "Stream incremental review via PubSub when true" }
+    }
+  }
 }
