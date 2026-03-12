@@ -1,0 +1,19 @@
+{
+  "project": "jsonld",
+  "title": "URDNA2015 canonicalization + hashing",
+  "motivation": "Deterministic JSON-LD processing and graph equality across services.",
+  "api": {
+    "c14n": "JSONLD.c14n(term, opts) :: {:ok, %{nquads: iodata, bnode_map: map}} | {:error, term}",
+    "hash": "JSONLD.hash(term, form: :urdna2015_nquads | :stable_json) :: {:ok, Integrity.t}",
+    "equal?": "JSONLD.equal?(a, b, no_remote: true) :: boolean"
+  },
+  "errors": ["{:context_unavailable, iri}", ":canonicalization_failed"],
+  "determinism": ["Offline-first context loader", "No remote by default"],
+  "telemetry": [["jsonld","canonicalize"],["jsonld","hash"]],
+  "tests": ["golden N-Quads match", "equal?/3 true on canonically equal graphs"],
+  "acceptance": ["c14n returns N-Quads", "hash returns algorithm/form/hash/quad_count"],
+  "attachments": ["work/jsonld_spec_proposals.md"],
+  "contacts": {"author": "codex", "reviewers": ["codex"]},
+  "meta": {"priority": "high", "version": "v1"}
+}
+

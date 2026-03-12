@@ -1,0 +1,28 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.knowledge_share",
+  "@type": "lang:Function",
+  "name": "lang.agent.knowledge_share",
+  "category": "agent",
+  "description": "Shares knowledge between agents within a swarm.",
+  "params": {
+    "type": "object",
+    "properties": {
+      "from_agent_id": {"type": "string"},
+      "to_agent_ids": {"type": "array", "items": {"type": "string"}},
+      "knowledge": {}
+    },
+    "required": ["from_agent_id", "to_agent_ids", "knowledge"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "shared": {"type": "boolean"},
+      "acknowledgments": {"type": "array", "items": {"type": "object"}}
+    }
+  }
+}
+

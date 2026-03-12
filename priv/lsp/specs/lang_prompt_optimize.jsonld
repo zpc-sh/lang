@@ -1,0 +1,27 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.prompt.optimize",
+  "@type": "lang:Function",
+  "name": "lang.prompt.optimize",
+  "category": "generate",
+  "description": "Optimizes a prompt for better performance and token efficiency.",
+  "params": {
+    "type": "object",
+    "properties": {
+      "original_prompt": {"type": "string"},
+      "examples": {"type": "array", "items": {"type": "object"}}
+    },
+    "required": ["original_prompt"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "optimized_prompt": {"type": "string"},
+      "estimated_improvement": {"type": "number"}
+    }
+  }
+}
+

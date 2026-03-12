@@ -1,0 +1,28 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.ml.rag_query",
+  "@type": "lang:Function",
+  "name": "lang.ml.rag_query",
+  "category": "ml",
+  "description": "Performs a retrieval-augmented generation (RAG) query against a knowledge base.",
+  "params": {
+    "type": "object",
+    "properties": {
+      "query": {"type": "string"},
+      "knowledge_base_id": {"type": "string"},
+      "top_k": {"type": "integer"}
+    },
+    "required": ["query", "knowledge_base_id"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "retrieved_docs": {"type": "array", "items": {"type": "object"}},
+      "generated_response": {"type": "string"}
+    }
+  }
+}
+

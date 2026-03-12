@@ -1,0 +1,651 @@
+defmodule Lang.Native.FsWatcher do
+  @moduledoc """
+  LANG Filesystem Watcher - Cross-Platform File System Monitoring with Architectural Rules
+
+  This module provides Elixir bindings to the ultra-optimized Rust NIF implementation
+  for cross-platform filesystem watching with real-time architectural rule checking.
+
+  CRITICAL: All functions in this module are performance-optimized native code with:
+  - Cross-platform filesystem event handling (inotify, kqueue, Windows events)
+  - Event coalescing to handle rapid-fire changes efficiently
+  - Real-time architectural rule validation
+  - Memory-mapped file processing for large codebases
+
+  ## Platform Support
+  - **Linux**: inotify-based watching with kernel-level optimization
+  - **macOS**: kqueue-based watching with FSEvents integration
+  - **Windows**: ReadDirectoryChangesW with completion ports
+  - **Cross-platform**: Unified API with platform-specific optimizations
+
+  ## Performance Features
+  - Event coalescing reduces noise from rapid file changes
+  - Lock-free concurrent data structures for high throughput
+  - NUMA-aware memory allocation for large directory trees
+  - Parallel rule checking with automatic load balancing
+
+  ## Usage Examples
+
+      # Create a watcher for a project directory
+      {:ok, watcher} = Lang.Native.FsWatcher.create_watcher(
+        "project_watcher",
+        recursive: true,
+        patterns: ["**/*.ex", "**/*.exs"],
+        enable_rules: true
+      )
+
+      # Add architectural rules
+      rules = [
+        %{
+          id: "no_direct_database_access",
+          name: "No Direct Database Access in Web Layer",
+          pattern: "lib/web/**/*.ex",
+          severity: "error",
+          enabled: true
+        }
+      ]
+      :ok = Lang.Native.FsWatcher.set_architectural_rules(Jason.encode!(rules))
+
+      # Start watching a directory
+      :ok = Lang.Native.FsWatcher.add_watch_path(watcher, "/path/to/project")
+
+      # Get filesystem events with rule violations
+      {:ok, events} = Lang.Native.FsWatcher.get_events(watcher, 100)
+  """
+
+  use Rustler, otp_app: :lang, crate: "fs_watcher"
+
+  # ============================================================================
+  # TYPE DEFINITIONS
+  # ============================================================================
+
+  @typedoc "Filesystem event types"
+  @type event_type :: :created | :modified | :deleted | :renamed | :moved
+
+  @typedoc "Rule violation severity levels"
+  @type severity :: :info | :warning | :error | :critical
+
+  @typedoc "Watcher configuration options"
+  @type watcher_opts :: [
+          recursive: boolean(),
+          patterns: [String.t()],
+          enable_rules: boolean(),
+          coalescing_ms: non_neg_integer(),
+          max_events_per_batch: non_neg_integer()
+        ]
+
+  @typedoc "Architectural rule definition"
+  @type architectural_rule :: %{
+          id: String.t(),
+          name: String.t(),
+          description: String.t(),
+          pattern: String.t(),
+          severity: String.t(),
+          enabled: boolean()
+        }
+
+  @typedoc "Filesystem event with metadata and rule violations"
+  @type filesystem_event :: %{
+          event_type: String.t(),
+          file_path: String.t(),
+          timestamp_us: non_neg_integer(),
+          metadata: map() | nil,
+          rule_violations: [map()]
+        }
+
+  @typedoc "Watcher statistics for monitoring and optimization"
+  @type watcher_statistics :: %{
+          total_events: non_neg_integer(),
+          events_by_type: map(),
+          rule_violations: non_neg_integer(),
+          files_processed: non_neg_integer(),
+          directories_watched: non_neg_integer(),
+          average_processing_time_us: float(),
+          peak_memory_usage_mb: float()
+        }
+
+  # ============================================================================
+  # CORE WATCHER FUNCTIONS
+  # ============================================================================
+
+  @doc """
+  Create a new filesystem watcher with specified configuration.
+
+  ## Parameters
+  - `id` - Unique identifier for this watcher instance
+  - `recursive` - Whether to watch subdirectories recursively
+  - `patterns` - File patterns to include (e.g., ["**/*.ex", "**/*.exs"])
+  - `enable_rules` - Whether to enable real-time architectural rule checking
+
+  ## Performance Notes
+  - Each watcher runs in its own native thread for maximum parallelism
+  - Event coalescing is enabled by default to handle rapid changes
+  - Rule checking runs in parallel with filesystem monitoring
+
+  ## Examples
+
+      {:ok, watcher} = Lang.Native.FsWatcher.create_watcher(
+        "main_project",
+        true,
+        ["**/*.ex", "**/*.exs", "**/mix.exs"],
+        true
+      )
+
+  """
+  @spec create_watcher(String.t(), boolean(), [String.t()], boolean()) ::
+          {:ok, reference()} | {:error, term()}
+  def create_watcher(_id, _recursive, _patterns, _enable_rules),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Destroy a filesystem watcher and clean up all associated resources.
+
+  ## Examples
+
+      :ok = Lang.Native.FsWatcher.destroy_watcher(watcher)
+
+  """
+  @spec destroy_watcher(reference()) :: :ok | {:error, term()}
+  def destroy_watcher(_watcher), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Add a path to be monitored by the filesystem watcher.
+
+  The watcher will begin monitoring this path immediately, generating events
+  for any changes that occur within the path (and recursively if configured).
+
+  ## Performance Notes
+  - Adding large directory trees may take a moment to initialize
+  - The watcher uses platform-optimized APIs for maximum efficiency
+  - Memory usage scales with the number of files and directories watched
+
+  ## Examples
+
+      # Watch a project root directory
+      :ok = Lang.Native.FsWatcher.add_watch_path(watcher, "/path/to/project")
+
+      # Watch specific subdirectories
+      :ok = Lang.Native.FsWatcher.add_watch_path(watcher, "/path/to/project/lib")
+      :ok = Lang.Native.FsWatcher.add_watch_path(watcher, "/path/to/project/test")
+
+  """
+  @spec add_watch_path(reference(), String.t()) :: :ok | {:error, term()}
+  def add_watch_path(_watcher, _path), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Remove a path from filesystem monitoring.
+
+  ## Examples
+
+      :ok = Lang.Native.FsWatcher.remove_watch_path(watcher, "/path/to/remove")
+
+  """
+  @spec remove_watch_path(reference(), String.t()) :: :ok | {:error, term()}
+  def remove_watch_path(_watcher, _path), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ============================================================================
+  # ARCHITECTURAL RULES ENGINE
+  # ============================================================================
+
+  @doc """
+  Configure architectural rules for real-time validation.
+
+  Rules are applied to all filesystem events and can detect violations such as:
+  - Direct database access in web layers
+  - Circular dependencies between modules
+  - Violation of layered architecture principles
+  - Code style and structure violations
+
+  ## Rule Definition Format
+
+  Rules are defined as JSON with the following structure:
+
+      [
+        {
+          "id": "no_direct_database_access",
+          "name": "No Direct Database Access",
+          "description": "Web layer should not directly access the database",
+          "pattern": "lib/web/**/*.ex",
+          "severity": "error",
+          "enabled": true
+        }
+      ]
+
+  ## Examples
+
+      rules = [
+        %{
+          id: "no_long_functions",
+          name: "Function Length Limit",
+          description: "Functions should not exceed 50 lines",
+          pattern: "**/*.ex",
+          severity: "warning",
+          enabled: true
+        },
+        %{
+          id: "require_tests",
+          name: "Test Coverage Required",
+          description: "All modules must have corresponding tests",
+          pattern: "lib/**/*.ex",
+          severity: "error",
+          enabled: true
+        }
+      ]
+
+      rules_json = Jason.encode!(rules)
+      :ok = Lang.Native.FsWatcher.set_architectural_rules(rules_json)
+
+  """
+  @spec set_architectural_rules(String.t()) :: :ok | {:error, term()}
+  def set_architectural_rules(_rules_json), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ============================================================================
+  # EVENT RETRIEVAL AND PROCESSING
+  # ============================================================================
+
+  @doc """
+  Retrieve filesystem events from the watcher.
+
+  Returns up to `max_events` events that have occurred since the last call.
+  Events include metadata and any architectural rule violations detected.
+
+  ## Event Coalescing
+  Events are automatically coalesced to reduce noise from rapid file changes:
+  - Multiple modifications to the same file within 100ms are merged
+  - Create/delete/create sequences are simplified
+  - Rule violations are deduplicated and prioritized by severity
+
+  ## Examples
+
+      # Get up to 50 events
+      {:ok, events} = Lang.Native.FsWatcher.get_events(watcher, 50)
+
+      # Process each event
+      Enum.each(events, fn event_json ->
+        event = Jason.decode!(event_json)
+        IO.puts("File changed: #{event["file_path"]}")
+
+        if length(event["rule_violations"]) > 0 do
+          IO.puts("Rule violations detected!")
+        end
+      end)
+
+  ## Event Structure
+
+  Each event is a JSON string with this structure:
+
+      {
+        "event_type": "modified",
+        "file_path": "/path/to/file.ex",
+        "timestamp_us": 1234567890123456,
+        "metadata": {
+          "size_bytes": 1024,
+          "modified_time": 1234567890,
+          "file_type": "file"
+        },
+        "rule_violations": [
+          {
+            "rule_id": "no_long_functions",
+            "severity": "warning",
+            "message": "Function exceeds 50 lines",
+            "line_number": 42
+          }
+        ]
+      }
+
+  """
+  @spec get_events(reference(), non_neg_integer()) :: {:ok, [String.t()]} | {:error, term()}
+  def get_events(_watcher, _max_events), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Get comprehensive statistics about watcher performance and activity.
+
+  Returns detailed metrics including:
+  - Total events processed
+  - Breakdown by event type
+  - Rule violation counts
+  - Performance metrics
+  - Memory usage information
+
+  ## Examples
+
+      {:ok, stats_json} = Lang.Native.FsWatcher.get_statistics(watcher)
+      stats = Jason.decode!(stats_json)
+
+      IO.puts("Total events: #{stats["total_events"]}")
+      IO.puts("Rule violations: #{stats["rule_violations"]}")
+      IO.puts("Average processing time: #{stats["average_processing_time_us"]}μs")
+
+  """
+  @spec get_statistics(reference()) :: {:ok, String.t()} | {:error, term()}
+  def get_statistics(_watcher), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ============================================================================
+  # EVENT PROCESSING AND UTILITIES
+  # ============================================================================
+
+  @doc """
+  Manually coalesce a batch of events to reduce noise.
+
+  This function can be used to post-process events when you want custom
+  coalescing logic or when processing historical events.
+
+  ## Parameters
+  - `events_json` - List of event JSON strings to coalesce
+  - `window_ms` - Time window in milliseconds for coalescing
+
+  ## Examples
+
+      events = [event1_json, event2_json, event3_json]
+      {:ok, coalesced} = Lang.Native.FsWatcher.coalesce_events(events, 200)
+
+      IO.puts("Coalesced #{length(events)} events into #{length(coalesced)}")
+
+  """
+  @spec coalesce_events([String.t()], non_neg_integer()) :: {:ok, [String.t()]} | {:error, term()}
+  def coalesce_events(_events_json, _window_ms), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Batch validate architectural rules against a list of file paths.
+
+  This is useful for:
+  - Initial codebase auditing
+  - CI/CD pipeline integration
+  - Bulk rule validation without filesystem watching
+
+  ## Examples
+
+      file_paths = [
+        "/path/to/project/lib/web/controller.ex",
+        "/path/to/project/lib/core/business_logic.ex",
+        "/path/to/project/test/controller_test.exs"
+      ]
+
+      {:ok, violations_json} = Lang.Native.FsWatcher.batch_validate_rules(file_paths)
+
+      violations = Enum.map(violations_json, &Jason.decode!/1)
+      IO.puts("Found #{length(violations)} rule violations")
+
+  """
+  @spec batch_validate_rules([String.t()]) :: {:ok, [String.t()]} | {:error, term()}
+  def batch_validate_rules(_file_paths), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ============================================================================
+  # DIRECTORY SCANNING AND ANALYSIS
+  # ============================================================================
+
+  @doc """
+  Scan a directory tree and return all file paths up to a maximum depth.
+
+  This is useful for:
+  - Initial project analysis
+  - Building file inventories
+  - Preparing file lists for batch operations
+
+  ## Performance Notes
+  - Uses optimized directory traversal with walkdir
+  - Respects symbolic links based on configuration
+  - Memory-efficient streaming for large directory trees
+
+  ## Examples
+
+      # Scan up to 5 levels deep
+      {:ok, file_paths} = Lang.Native.FsWatcher.scan_directory_tree("/path/to/project", 5)
+
+      IO.puts("Found #{length(file_paths)} files")
+
+      # Filter for specific file types
+      elixir_files = Enum.filter(file_paths, &String.ends_with?(&1, [".ex", ".exs"]))
+
+  """
+  @spec scan_directory_tree(String.t(), non_neg_integer()) :: {:ok, [String.t()]} | {:error, term()}
+  def scan_directory_tree(_root_path, _max_depth), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Get file metadata for a batch of file paths in parallel.
+
+  Returns metadata for each file including:
+  - File size in bytes
+  - Last modified time
+  - File type (file/directory)
+  - Permissions (simplified for cross-platform compatibility)
+
+  ## Examples
+
+      file_paths = ["/path/to/file1.ex", "/path/to/file2.ex"]
+      {:ok, metadata_json} = Lang.Native.FsWatcher.get_file_metadata_batch(file_paths)
+
+      metadata_list = Enum.map(metadata_json, &Jason.decode!/1)
+
+  """
+  @spec get_file_metadata_batch([String.t()]) :: {:ok, [String.t()]} | {:error, term()}
+  def get_file_metadata_batch(_file_paths), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Setup real-time performance monitoring for the watcher.
+
+  Enables background collection of performance metrics including:
+  - Memory usage tracking
+  - CPU utilization monitoring
+  - Event throughput measurement
+  - Rule checking performance
+
+  ## Examples
+
+      :ok = Lang.Native.FsWatcher.setup_real_time_monitoring(watcher)
+
+      # Metrics will be updated automatically in the background
+      Process.sleep(5000)
+
+      {:ok, stats_json} = Lang.Native.FsWatcher.get_statistics(watcher)
+      stats = Jason.decode!(stats_json)
+      IO.inspect(stats["peak_memory_usage_mb"])
+
+  """
+  @spec setup_real_time_monitoring(reference()) :: :ok | {:error, term()}
+  def setup_real_time_monitoring(_watcher), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ============================================================================
+  # HIGH-LEVEL CONVENIENCE FUNCTIONS
+  # ============================================================================
+
+  @doc """
+  Create and configure a watcher with common architectural rules.
+
+  This convenience function sets up a watcher with pre-configured rules
+  for common architectural patterns in Elixir projects.
+
+  ## Predefined Rules
+  - No direct database access in web controllers
+  - Function length limits
+  - Proper module organization
+  - Test coverage requirements
+  - Documentation requirements
+
+  ## Examples
+
+      {:ok, watcher} = Lang.Native.FsWatcher.create_elixir_project_watcher(
+        "/path/to/project",
+        patterns: ["**/*.ex", "**/*.exs"],
+        strict_mode: true
+      )
+
+  """
+  @spec create_elixir_project_watcher(String.t(), keyword()) ::
+          {:ok, reference()} | {:error, term()}
+  def create_elixir_project_watcher(project_path, opts \\ []) do
+    watcher_id = "elixir_project_#{:erlang.phash2(project_path)}"
+    patterns = Keyword.get(opts, :patterns, ["**/*.ex", "**/*.exs", "**/mix.exs"])
+    strict_mode = Keyword.get(opts, :strict_mode, false)
+
+    case create_watcher(watcher_id, true, patterns, true) do
+      {:ok, watcher} ->
+        # Add the project path to watch
+        :ok = add_watch_path(watcher, project_path)
+
+        # Configure architectural rules
+        rules = elixir_architectural_rules(strict_mode)
+        rules_json = Jason.encode!(rules)
+        :ok = set_architectural_rules(rules_json)
+
+        # Enable performance monitoring
+        :ok = setup_real_time_monitoring(watcher)
+
+        {:ok, watcher}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Watch a directory with automatic rule violation reporting.
+
+  Sets up a watcher and starts a background process that automatically
+  reports rule violations to the specified callback function.
+
+  ## Examples
+
+      callback = fn violations ->
+        Enum.each(violations, fn violation ->
+          Logger.warning("Rule violation: #{violation["message"]} in #{violation["file_path"]}")
+        end)
+      end
+
+      {:ok, watcher_pid} = Lang.Native.FsWatcher.watch_with_reporting(
+        "/path/to/project",
+        callback,
+        interval_ms: 1000
+      )
+
+  """
+  @spec watch_with_reporting(String.t(), function(), keyword()) ::
+          {:ok, pid()} | {:error, term()}
+  def watch_with_reporting(project_path, callback, opts \\ []) do
+    interval_ms = Keyword.get(opts, :interval_ms, 5000)
+    patterns = Keyword.get(opts, :patterns, ["**/*.ex", "**/*.exs"])
+
+    case create_elixir_project_watcher(project_path, patterns: patterns) do
+      {:ok, watcher} ->
+        pid = spawn_link(fn ->
+          watch_loop(watcher, callback, interval_ms)
+        end)
+
+        {:ok, pid}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Health check for the filesystem watcher native engine.
+
+  ## Examples
+
+      case Lang.Native.FsWatcher.health_check() do
+        {:ok, :healthy} -> IO.puts("Filesystem watcher ready")
+        {:error, reason} -> IO.puts("Watcher error: #{inspect(reason)}")
+      end
+
+  """
+  @spec health_check() :: {:ok, :healthy} | {:error, term()}
+  def health_check() do
+    try do
+      # Test basic watcher creation and destruction
+      case create_watcher("health_check", false, ["*"], false) do
+        {:ok, watcher} ->
+          destroy_watcher(watcher)
+          {:ok, :healthy}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    rescue
+      error -> {:error, {:health_check_failed, error}}
+    end
+  end
+
+  # ============================================================================
+  # PRIVATE HELPER FUNCTIONS
+  # ============================================================================
+
+  defp elixir_architectural_rules(strict_mode) do
+    base_rules = [
+      %{
+        id: "no_direct_database_access",
+        name: "No Direct Database Access in Web Layer",
+        description: "Web controllers should not directly access the database",
+        pattern: "lib/*_web/**/*.ex",
+        severity: "error",
+        enabled: true
+      },
+      %{
+        id: "require_module_doc",
+        name: "Module Documentation Required",
+        description: "All modules should have @moduledoc documentation",
+        pattern: "lib/**/*.ex",
+        severity: "warning",
+        enabled: true
+      },
+      %{
+        id: "test_coverage",
+        name: "Test Coverage Required",
+        description: "All modules should have corresponding tests",
+        pattern: "lib/**/*.ex",
+        severity: "info",
+        enabled: true
+      }
+    ]
+
+    if strict_mode do
+      base_rules ++
+        [
+          %{
+            id: "function_length_strict",
+            name: "Strict Function Length Limit",
+            description: "Functions should not exceed 20 lines in strict mode",
+            pattern: "**/*.ex",
+            severity: "error",
+            enabled: true
+          },
+          %{
+            id: "require_type_specs",
+            name: "Type Specifications Required",
+            description: "All public functions must have @spec definitions",
+            pattern: "lib/**/*.ex",
+            severity: "error",
+            enabled: true
+          }
+        ]
+    else
+      base_rules
+    end
+  end
+
+  defp watch_loop(watcher, callback, interval_ms) do
+    receive
+      :stop ->
+        :ok
+    after
+      interval_ms ->
+        case get_events(watcher, 1000) do
+          {:ok, events_json} ->
+            events = Enum.map(events_json, &Jason.decode!/1)
+
+            violations =
+              events
+              |> Enum.flat_map(& &1["rule_violations"])
+              |> Enum.reject(&is_nil/1)
+
+            if length(violations) > 0 do
+              callback.(violations)
+            end
+
+          {:error, _reason} ->
+            :ok
+        end
+
+        watch_loop(watcher, callback, interval_ms)
+    end
+  end
+end

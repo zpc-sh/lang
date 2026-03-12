@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.parser.parse_stream",
+  "@type": "lang:Function",
+  "category": "parser",
+  "description": "Streaming parser",
+  "implementation": {
+    "file": "lib/kyozo/lang/universal_parser.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.parser.parse_stream"
+}

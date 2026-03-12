@@ -1,0 +1,51 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="p-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold">LSP Debug</h2>
+      <div class="text-sm text-gray-500">Last refresh: {if @last_refreshed_at, do: Calendar.strftime(@last_refreshed_at, "%H:%M:%S"), else: "never"}</div>
+    </div>
+
+    <.form for={to_form(%{})} phx-submit="refresh" id="refresh-form">
+      <button type="submit" class="px-3 py-1 rounded bg-blue-600 text-white">Refresh</button>
+    </.form>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <h3 class="font-medium">LSP Debug Log</h3>
+        <div class="text-xs text-gray-500">Path: {@debug_path || "(unset LSP_DEBUG_LOG)"}</div>
+        <div id="dbg" phx-update="stream" class="mt-2 space-y-1 max-h-80 overflow-auto border rounded p-2 bg-gray-50">
+          <div :for={{id, item} <- @streams.logs} id={id} class="font-mono text-xs">
+            {Jason.encode!(item)}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="font-medium">Telemetry Log</h3>
+        <div class="text-xs text-gray-500">Path: {@metrics_path || "(unset LSP_METRICS_LOG)"}</div>
+        <div id="met" phx-update="stream" class="mt-2 space-y-1 max-h-80 overflow-auto border rounded p-2 bg-gray-50">
+          <div :for={{id, item} <- @streams.metrics} id={id} class="font-mono text-xs">
+            {Jason.encode!(item)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <h3 class="font-medium">Review Stream</h3>
+      <.form for={to_form(%{})} id="sub-form" phx-submit="subscribe" class="flex items-end gap-2">
+        <.input type="text" name="stream_id" label="Stream ID" value={@stream_id} class="w-64" />
+        <button type="submit" class="px-3 py-1 rounded bg-emerald-600 text-white">Subscribe</button>
+        <span class={[@subscribed? && "text-emerald-700", !@subscribed? && "text-gray-500", "text-sm"]}>
+          {@subscribed? && "subscribed" || "not subscribed"}
+        </span>
+      </.form>
+      <div id="rev" phx-update="stream" class="mt-2 space-y-1 max-h-60 overflow-auto border rounded p-2 bg-white">
+        <div :for={{id, item} <- @streams.reviews} id={id} class="font-mono text-xs">
+          [#{Calendar.strftime(item.at, "%H:%M:%S")}] {to_string(item.phase)}: {item.text}
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>
+

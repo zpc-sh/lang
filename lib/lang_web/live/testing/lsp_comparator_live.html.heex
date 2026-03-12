@@ -1,0 +1,460 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">LSP Performance Testing</h1>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        Compare AI agent performance with and without Language Server Protocol support
+      </p>
+    </div>
+    
+<!-- Action Bar -->
+    <div class="mb-6 flex flex-wrap gap-4 items-center justify-between">
+      <div class="flex gap-3">
+        <button
+          phx-click="show_config_modal"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <.icon name="hero-plus" class="w-4 h-4 mr-2" /> Start New Test
+        </button>
+
+        <button
+          phx-click="refresh_sessions"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4 mr-2" /> Refresh
+        </button>
+      </div>
+
+      <%= if @current_session do %>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+            <.icon name="hero-clock" class="w-3 h-3 mr-1" /> Running: {@current_session}
+          </span>
+
+          <button
+            phx-click="stop_session"
+            phx-value-session_id={@current_session}
+            data-confirm="Are you sure you want to stop this test session?"
+            class="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-red-900 dark:border-red-700 dark:text-red-200"
+          >
+            <.icon name="hero-stop" class="w-3 h-3 mr-1" /> Stop
+          </button>
+        </div>
+      <% end %>
+    </div>
+    
+<!-- Test Sessions Overview -->
+    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md mb-8">
+      <div class="px-4 py-5 sm:px-6">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+          Recent Test Sessions
+        </h3>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+          Monitor and review your LSP comparison tests
+        </p>
+      </div>
+
+      <%= if Enum.empty?(@test_sessions) do %>
+        <div class="px-4 py-8 text-center">
+          <.icon name="hero-beaker" class="mx-auto h-12 w-12 text-gray-400" />
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No test sessions</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Get started by creating your first LSP comparison test.
+          </p>
+        </div>
+      <% else %>
+        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+          <%= for session <- @test_sessions do %>
+            <li class="px-4 py-4 sm:px-6">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <%= if session.status == :running do %>
+                      <div class="h-2 w-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                    <% else %>
+                      <div class="h-2 w-2 bg-green-400 rounded-full"></div>
+                    <% end %>
+                  </div>
+                  <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      Session {session.id}
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {session.scenario_count} scenarios, {session.variant_count} variants
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                    {format_duration(session.duration)}
+                  </span>
+                  <%= if session.status == :completed do %>
+                    <button
+                      phx-click="view_results"
+                      phx-value-session_id={session.id}
+                      class="text-blue-600 hover:text-blue-900 text-sm font-medium dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      View Results
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+    
+<!-- Scenarios Overview -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+            Available Scenarios
+          </h3>
+          <div class="space-y-2">
+            <%= for scenario <- @available_scenarios do %>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                  {scenario_display_name(scenario)}
+                </span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  Complexity: {get_scenario_complexity(scenario)}/5
+                </span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+            Agent Variants
+          </h3>
+          <div class="space-y-2">
+            <%= for variant <- @available_variants do %>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                  {variant_display_name(variant)}
+                </span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  {get_variant_focus(variant)}
+                </span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+<!-- Configuration Modal -->
+    <%= if @show_config_modal do %>
+      <div class="fixed inset-0 z-50 overflow-y-auto" phx-click="hide_config_modal">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div
+            class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+            aria-hidden="true"
+          >
+          </div>
+
+          <div
+            class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+            phx-click-away="hide_config_modal"
+          >
+            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+                Configure LSP Comparison Test
+              </h3>
+
+              <form phx-submit="start_comparison" phx-change="update_config">
+                <!-- Scenario Selection -->
+                <div class="mb-6">
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Select Scenarios to Test
+                  </label>
+                  <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2">
+                    <%= for scenario <- @available_scenarios do %>
+                      <label class="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input
+                          type="checkbox"
+                          phx-click="toggle_scenario"
+                          phx-value-scenario={scenario}
+                          checked={scenario in @selected_scenarios}
+                          class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:border-gray-600 dark:bg-gray-700"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                          {scenario_display_name(scenario)}
+                        </span>
+                      </label>
+                    <% end %>
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Selected: {length(@selected_scenarios)} scenarios
+                  </p>
+                </div>
+                
+<!-- Agent Variant Selection -->
+                <div class="mb-6">
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Select Agent Variants
+                  </label>
+                  <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2">
+                    <%= for variant <- @available_variants do %>
+                      <label class="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input
+                          type="checkbox"
+                          phx-click="toggle_variant"
+                          phx-value-variant={variant}
+                          checked={variant in @selected_variants}
+                          class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:border-gray-600 dark:bg-gray-700"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                          {variant_display_name(variant)}
+                        </span>
+                      </label>
+                    <% end %>
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Selected: {length(@selected_variants)} variants
+                  </p>
+                </div>
+                
+<!-- Test Configuration -->
+                <div class="mb-6 grid grid-cols-3 gap-4">
+                  <div>
+                    <label
+                      for="parallel_tests"
+                      class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Parallel Tests
+                    </label>
+                    <input
+                      type="number"
+                      name="parallel_tests"
+                      id="parallel_tests"
+                      value={@test_config.parallel_tests}
+                      min="1"
+                      max="8"
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      for="timeout_minutes"
+                      class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Timeout (min)
+                    </label>
+                    <input
+                      type="number"
+                      name="timeout_minutes"
+                      id="timeout_minutes"
+                      value={@test_config.timeout_minutes}
+                      min="10"
+                      max="120"
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      for="significance_threshold"
+                      class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Significance (α)
+                    </label>
+                    <input
+                      type="number"
+                      name="significance_threshold"
+                      id="significance_threshold"
+                      value={@test_config.significance_threshold}
+                      min="0.01"
+                      max="0.10"
+                      step="0.01"
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+                
+<!-- Estimated Test Information -->
+                <div class="mb-6 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                  <h4 class="text-sm font-medium text-blue-900 dark:text-blue-200">
+                    Test Estimate
+                  </h4>
+                  <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    Total tests: {length(@selected_scenarios) * length(@selected_variants) * 2} (each scenario × variant combination tested with and without LSP)
+                  </p>
+                  <p class="text-sm text-blue-700 dark:text-blue-300">
+                    Estimated duration: {estimate_test_duration(
+                      @selected_scenarios,
+                      @selected_variants,
+                      @test_config
+                    )}
+                  </p>
+                </div>
+                
+<!-- Action Buttons -->
+                <div class="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    phx-click="hide_config_modal"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={length(@selected_scenarios) == 0 || length(@selected_variants) == 0}
+                  >
+                    Start Test
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+    
+<!-- Results Modal -->
+    <%= if @show_results_modal && @results_data do %>
+      <div class="fixed inset-0 z-50 overflow-y-auto" phx-click="hide_results_modal">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div
+            class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+            aria-hidden="true"
+          >
+          </div>
+
+          <div
+            class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full max-h-[90vh] overflow-y-auto"
+            phx-click-away="hide_results_modal"
+          >
+            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+                Test Results - Session {@results_data.session_id}
+              </h3>
+              
+<!-- Summary Cards -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-blue-50 dark:bg-blue-900 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-blue-900 dark:text-blue-200">
+                    Tests Completed
+                  </h4>
+                  <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {@results_data.completed_tests}/{@results_data.total_tests_run}
+                  </p>
+                </div>
+
+                <div class="bg-green-50 dark:bg-green-900 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-green-900 dark:text-green-200">
+                    Time Improvement
+                  </h4>
+                  <p class="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {format_percentage(
+                      get_in(@results_data, [
+                        :performance_comparison,
+                        :completion_time_improvement
+                      ])
+                    )}
+                  </p>
+                </div>
+
+                <div class="bg-purple-50 dark:bg-purple-900 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-purple-900 dark:text-purple-200">
+                    Quality Improvement
+                  </h4>
+                  <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                    {format_percentage(
+                      get_in(@results_data, [:performance_comparison, :quality_score_improvement])
+                    )}
+                  </p>
+                </div>
+              </div>
+              
+<!-- Detailed Results -->
+              <%= if @analysis_data do %>
+                <div class="space-y-6">
+                  <div>
+                    <h4 class="text-md font-medium text-gray-900 dark:text-white mb-2">
+                      Overall Analysis
+                    </h4>
+                    <%= if @analysis_data.overall_analysis do %>
+                      <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">
+                              LSP Performance:
+                            </span>
+                            <p class="text-gray-600 dark:text-gray-400">
+                              Avg Time: {round(
+                                @analysis_data.overall_analysis.lsp_performance.avg_completion_time
+                              )}ms<br />
+                              Quality Score: {Float.round(
+                                @analysis_data.overall_analysis.lsp_performance.avg_quality_score,
+                                2
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">
+                              No-LSP Performance:
+                            </span>
+                            <p class="text-gray-600 dark:text-gray-400">
+                              Avg Time: {round(
+                                @analysis_data.overall_analysis.no_lsp_performance.avg_completion_time
+                              )}ms<br />
+                              Quality Score: {Float.round(
+                                @analysis_data.overall_analysis.no_lsp_performance.avg_quality_score,
+                                2
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+
+                  <%= if @analysis_data.recommendations do %>
+                    <div>
+                      <h4 class="text-md font-medium text-gray-900 dark:text-white mb-2">
+                        Recommendations
+                      </h4>
+                      <div class="bg-yellow-50 dark:bg-yellow-900 rounded-lg p-4">
+                        <%= if @analysis_data.recommendations.strategic_recommendations && length(@analysis_data.recommendations.strategic_recommendations) > 0 do %>
+                          <ul class="list-disc list-inside space-y-1 text-sm text-yellow-800 dark:text-yellow-200">
+                            <%= for recommendation <- @analysis_data.recommendations.strategic_recommendations do %>
+                              <li>{recommendation}</li>
+                            <% end %>
+                          </ul>
+                        <% else %>
+                          <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                            No specific recommendations available. Continue testing for more insights.
+                          </p>
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <div class="flex justify-end mt-6">
+                <button
+                  type="button"
+                  phx-click="hide_results_modal"
+                  class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</Layouts.app>

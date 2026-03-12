@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.orchestration.start",
+  "@type": "lang:Function",
+  "category": "orchestration",
+  "description": "Launch distributed analysis",
+  "implementation": {
+    "file": "lib/lang/orchestration/master.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.orchestration.start"
+}

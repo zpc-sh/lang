@@ -1,0 +1,61 @@
+[package]
+name = "fs_watcher"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "fs_watcher"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = { version = "0.34", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+notify = "6.1"
+globset = "0.4"
+dashmap = "5.5"
+rayon = "1.8"
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+mimalloc = { version = "0.1", default-features = false }
+walkdir = "2.4"
+regex = "1.10"
+ahash = "0.8"
+once_cell = "1.19"
+memmap2 = "0.9"
+aho-corasick = "1.1"
+xxhash-rust = { version = "0.8", features = ["xxh64"] }
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "linux")'.dependencies]
+inotify = "0.10"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+kqueue = "1.0"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = [
+    "winbase",
+    "fileapi",
+    "handleapi",
+    "processthreadsapi",
+    "synchapi",
+    "winnt",
+] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+target-cpu = "native"
+
+[profile.dev]
+opt-level = 1
+
+[features]
+default = ["async", "rules-engine"]
+async = []
+rules-engine = []
+performance-monitoring = []

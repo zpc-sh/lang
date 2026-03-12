@@ -1,0 +1,39 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.auto_attach",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Provide client bootstrap hints to auto-identify and start an LSP session with best-practice steps (identify, capabilities, health).",
+  "name": "lang.agent.auto_attach",
+  "params": {
+    "type": "object",
+    "properties": {
+      "label": { "type": "string", "description": "Optional human-readable client label" },
+      "capabilities": { "type": "object", "description": "Optional client capability hints" }
+    }
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "identifyNotification": {
+        "type": "object",
+        "properties": {
+          "method": { "const": "lang/tester/identify" },
+          "params": {
+            "type": "object",
+            "properties": { "clientId": { "type": "string" } }
+          }
+        }
+      },
+      "recommendedCalls": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Ordered list of recommended bootstrap methods"
+      }
+    }
+  }
+}
+

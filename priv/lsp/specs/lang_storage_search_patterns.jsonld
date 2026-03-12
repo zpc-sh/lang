@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.storage.search_patterns",
+  "@type": "lang:Function",
+  "category": "storage",
+  "description": "Semantic search across stored patterns",
+  "implementation": {
+    "file": "lib/lang/storage/patterns.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.storage.search_patterns"
+}

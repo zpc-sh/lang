@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.coordinate",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Coordinate multiple agents",
+  "implementation": {
+    "file": "lib/lang/agent/coordinator.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.coordinate"
+}

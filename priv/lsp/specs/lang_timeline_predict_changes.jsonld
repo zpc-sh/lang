@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.timeline.predict_changes",
+  "@type": "lang:Function",
+  "category": "timeline",
+  "description": "Predict likely future changes",
+  "implementation": {
+    "file": "lib/lang/timeline/predictor.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.timeline.predict_changes"
+}

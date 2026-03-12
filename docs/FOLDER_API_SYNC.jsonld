@@ -1,0 +1,178 @@
+{
+  "@context": {
+    "ai": "https://folder.sh/vocab/ai#",
+    "sh": "https://folder.sh/vocab/shared#",
+    "oci": "https://opencontainers.org/specs/oci#",
+    "id": "@id",
+    "type": "@type",
+    "mediaType": "sh:mediaType",
+    "size": "sh:size",
+    "digest": "sh:digest",
+    "layers": "oci:layers",
+    "config": "oci:config",
+    "annotations": "oci:annotations",
+    "ownerType": "sh:ownerType",
+    "ownerId": "sh:ownerId",
+    "workspace": "sh:workspace",
+    "layerType": "ai:layerType",
+    "accessFrequency": "ai:accessFrequency",
+    "entries": "ai:entries",
+    "path": "sh:path",
+    "toc": "ai:toc",
+    "title": "sh:title",
+    "created": "sh:created",
+    "content": "sh:content",
+    "embeddingsModel": "ai:embeddingsModel",
+    "embeddingsDims": "ai:embeddingsDims"
+  },
+
+  "profiles": {
+    "MemoryManifest": "ai:MemoryManifest",
+    "MemoryLayer": "ai:MemoryLayer",
+    "TOCLayer": "ai:TOCLayer",
+    "PromptLayer": "ai:PromptLayer",
+    "EmbeddingLayer": "ai:EmbeddingLayer",
+    "ConfigLayer": "ai:ConfigLayer",
+    "CheckpointLayer": "ai:CheckpointLayer",
+    "DatasetShardLayer": "ai:DatasetShardLayer"
+  },
+
+  "notes": [
+    "OCI manifests remain canonical; JSON-LD rides along via annotations and layer bodies where applicable.",
+    "TOC is a first-class layer (content-addressed) with mediaType application/vnd.folder.ai.toc.v1+json.",
+    "Folders/paths in TOC use forward slashes, no leading slash, UTF-8, ≤255 chars per component, no duplicates.",
+    "Blob streaming: inline small text/JSON; 307 redirect to pre-signed URL for large/binary per Folder policy.",
+    "Registry search stays outside OCI spec under /api/v1/registry/search with ann[...] filters."
+  ],
+
+  "examples": [
+    {
+      "type": "ai:MemoryManifest",
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "config": {
+        "mediaType": "application/vnd.folder.ai.memory.manifest.v1+json",
+        "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 512
+      },
+      "layers": [
+        {
+          "type": "ai:ConfigLayer",
+          "mediaType": "application/vnd.folder.ai.memory.config.v1+json",
+          "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "size": 834,
+          "annotations": {
+            "ai:embeddingsModel": "text-embedding-004",
+            "ai:embeddingsDims": 768
+          }
+        },
+        {
+          "type": "ai:TOCLayer",
+          "mediaType": "application/vnd.folder.ai.toc.v1+json",
+          "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "size": 1024
+        },
+        {
+          "type": "ai:MemoryLayer",
+          "mediaType": "application/vnd.folder.ai.memory.layer.v1+json",
+          "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "size": 4096,
+          "annotations": {
+            "ai:layerType": "foundation",
+            "ai:accessFrequency": "high",
+            "sh:workspace": "00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "type": "ai:EmbeddingLayer",
+          "mediaType": "application/vnd.folder.ai.embedding.v1+binary",
+          "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "size": 98304,
+          "annotations": {
+            "ai:embeddingsModel": "text-embedding-004",
+            "ai:embeddingsDims": 768
+          }
+        },
+        {
+          "type": "ai:PromptLayer",
+          "mediaType": "application/vnd.folder.ai.prompt.v1+json",
+          "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "size": 512,
+          "annotations": {
+            "ai:layerType": "session"
+          }
+        }
+      ],
+      "annotations": {
+        "sh:title": "acme/ai/memory/foundation",
+        "sh:created": "2025-09-01T12:00:00Z",
+        "sh:ownerType": "team",
+        "sh:ownerId": "11111111-2222-3333-4444-555555555555"
+      }
+    },
+
+    {
+      "id": "urn:layer:toc:example",
+      "type": "ai:TOCLayer",
+      "mediaType": "application/vnd.folder.ai.toc.v1+json",
+      "entries": [
+        {
+          "path": "memory/foundation/patterns.md",
+          "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "size": 4096,
+          "mediaType": "text/markdown",
+          "annotations": { "ai:layerType": "foundation" }
+        },
+        {
+          "path": "memory/session/prompts.yaml",
+          "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "size": 1024,
+          "mediaType": "application/yaml"
+        }
+      ]
+    },
+
+    {
+      "id": "urn:layer:memory:foundation",
+      "type": "ai:MemoryLayer",
+      "mediaType": "application/vnd.folder.ai.memory.layer.v1+json",
+      "content": {
+        "@context": { "@vocab": "https://folder.sh/vocab/ai#" },
+        "@type": "MemoryLayer",
+        "entries": [
+          {
+            "kind": "policy",
+            "title": "Architecture Guidelines",
+            "content": "Use Phoenix/Ash/AshPostgres. Minimize diffs.",
+            "tags": ["foundation", "policy"],
+            "lang": "en"
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "urn:result:registry:search",
+      "type": "ai:RegistrySearchResult",
+      "mediaType": "application/json",
+      "content": {
+        "data": [
+          {
+            "owner": "acme",
+            "repo": "ai/memory/foundation",
+            "reference": "latest",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "annotations": { "ai:layerType": "foundation", "sh:workspace": "..." }
+          },
+          {
+            "owner": "acme",
+            "repo": "ai/memory/foundation",
+            "digest": "sha256:3333...",
+            "mediaType": "application/vnd.folder.ai.memory.layer.v1+json",
+            "annotations": { "ai:layerType": "foundation" }
+          }
+        ]
+      }
+    }
+  ]
+}
+

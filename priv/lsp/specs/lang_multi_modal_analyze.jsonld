@@ -1,0 +1,28 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.multi_modal.analyze",
+  "@type": "lang:Function",
+  "name": "lang.multi_modal.analyze",
+  "category": "analysis",
+  "description": "Analyzes combined text and image input for entities/insights.",
+  "params": {
+    "type": "object",
+    "properties": {
+      "text": {"type": "string"},
+      "image_url": {"type": "string"},
+      "query": {"type": "string"}
+    },
+    "required": ["text"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "analysis": {"type": "object"},
+      "entities": {"type": "array", "items": {"type": "object"}}
+    }
+  }
+}
+

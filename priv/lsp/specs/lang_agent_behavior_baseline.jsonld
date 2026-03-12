@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.behavior_baseline",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Establish normal behavior patterns",
+  "implementation": {
+    "file": "lib/lang/agent/behavioral.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.behavior_baseline"
+}

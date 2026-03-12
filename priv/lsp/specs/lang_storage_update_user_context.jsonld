@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.storage.update_user_context",
+  "@type": "lang:Function",
+  "category": "storage",
+  "description": "Update user context in Kyozo",
+  "implementation": {
+    "file": "lib/lang/storage/context.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.storage.update_user_context"
+}

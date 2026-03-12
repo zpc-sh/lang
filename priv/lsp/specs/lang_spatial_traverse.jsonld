@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.spatial.traverse",
+  "@type": "lang:Function",
+  "category": "spatial",
+  "description": "Full BFS implementation with depth control",
+  "implementation": {
+    "file": "lib/lang/spatial/mapper.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.spatial.traverse"
+}

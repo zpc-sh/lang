@@ -1,0 +1,24 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="px-6 py-4">
+    <h1 class="text-xl font-semibold mb-4">Workspace References</h1>
+
+    <div class="mb-4 flex items-center gap-3">
+      <.link navigate={"/workspaces/#{@workspace_id}/symbols"} class="text-blue-600 text-sm">← Back to symbols</.link>
+    </div>
+
+    <div id="references" phx-update="stream" class="divide-y border rounded">
+      <div class="hidden only:block p-6 text-gray-500">No references</div>
+      <div :for={{id, r} <- @streams.references} id={id} class="p-3 flex items-center justify-between gap-4">
+        <div class="text-sm flex-1">
+          <span class="font-medium">{r.reference_type}</span>
+          from <span class="font-mono">{r.from_symbol_id}</span>
+          to <span class="font-mono">{r.to_symbol_id}</span>
+        </div>
+        <div class="text-xs text-gray-500">{r.file_path}:{r.line}</div>
+        <div>
+          <button type="button" phx-click="reingest_file" phx-value-file_path={r.file_path} class="text-xs px-2 py-1 border rounded">Re-ingest</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

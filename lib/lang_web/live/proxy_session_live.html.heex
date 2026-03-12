@@ -1,0 +1,26 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="px-6 py-4">
+    <h1 class="text-xl font-semibold mb-4">Run Session</h1>
+
+    <.form for={to_form(%{})} id="session-form" phx-submit="preview">
+      <label class="text-xs text-gray-600">JSON-LD Session</label>
+      <textarea name="session_text" rows="10" class="w-full border rounded p-2 font-mono text-xs">{@session_text}</textarea>
+      <div class="flex gap-3 mt-3">
+        <button type="submit" class="px-3 py-2 rounded bg-blue-600 text-white text-sm">Preview Route</button>
+        <button type="button" phx-click="run" phx-value-session_text={@session_text} class="px-3 py-2 rounded bg-green-600 text-white text-sm">Run Pipeline</button>
+      </div>
+    </.form>
+
+    <div :if={@error} class="mt-4 text-red-600 text-sm">Error: {@error}</div>
+
+    <div :if={@route} class="mt-6">
+      <div class="text-sm text-gray-600">Route Preview:</div>
+      <pre class="p-3 bg-gray-50 border rounded break-all text-xs">{inspect(@route, pretty: true, limit: :infinity)}</pre>
+    </div>
+
+    <div :if={@pipeline_id} class="mt-4">
+      <.link navigate={"/proxy/pipeline/#{@pipeline_id}"} class="text-blue-600 text-sm">View Pipeline</.link>
+    </div>
+  </div>
+</Layouts.app>
+

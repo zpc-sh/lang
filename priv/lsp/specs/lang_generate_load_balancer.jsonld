@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.generate.load_balancer",
+  "@type": "lang:Function",
+  "category": "generate",
+  "description": "Generate load balancer configs",
+  "implementation": {
+    "file": "lib/lang/generate/services.ex",
+    "priority": "Medium",
+    "status": "not_implemented"
+  },
+  "name": "lang.generate.load_balancer"
+}

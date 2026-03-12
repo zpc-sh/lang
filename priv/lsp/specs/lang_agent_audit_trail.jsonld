@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.audit_trail",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Full audit log of agent actions",
+  "implementation": {
+    "file": "lib/lang/agent/audit.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.audit_trail"
+}

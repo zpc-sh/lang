@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.graph.query",
+  "@type": "lang:Function",
+  "category": "graph",
+  "description": "Advanced graph reasoning and queries",
+  "implementation": {
+    "file": "lib/lang/graph_reasoner.ex",
+    "priority": "High",
+    "status": "in_progress"
+  },
+  "name": "lang.graph.query"
+}

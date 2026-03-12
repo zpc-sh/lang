@@ -1,0 +1,80 @@
+[package]
+name = "markdown_ld_nif"
+version = "0.3.0"
+edition = "2021"
+authors = ["NOCSI"]
+description = "High-performance Markdown processing with SIMD optimizations"
+
+[lib]
+name = "markdown_ld_nif"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.34.0"
+pulldown-cmark = "0.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+url = "2.4"
+regex = "1.10"
+thiserror = "1.0"
+lazy_static = "1.4"
+indexmap = { version = "2.0", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rayon = { version = "1.8", optional = true }
+lru = "0.12"
+ahash = "0.8"
+memchr = { version = "2.7", optional = true }
+simdutf8 = "0.1"
+bumpalo = "3.14"
+wide = { version = "0.7", optional = true }
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.4"
+
+# BUILD: Advanced build profiles for different use cases
+[profile.release]
+lto = "fat"  # Full LTO for maximum optimization
+opt-level = 3
+codegen-units = 1
+panic = "abort"  # Smaller binaries, faster performance
+strip = true     # Strip debug symbols
+debug = false
+
+[profile.dev]
+opt-level = 1    # Some optimization in dev for faster local testing
+debug = true
+overflow-checks = true
+
+# BUILD: High-performance release profile for production
+[profile.production]
+inherits = "release"
+lto = "fat"
+opt-level = 3
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false
+rpath = false
+
+# BUILD: Fast build profile for CI/development iterations
+[profile.fast-build]
+inherits = "dev"
+opt-level = 1
+debug = false
+strip = true
+incremental = true
+
+# BUILD: Benchmarking profile
+[profile.bench]
+inherits = "release"
+debug = true      # Keep symbols for profiling
+strip = false
+
+[features]
+default = ["parallel", "simd"]
+parallel = ["rayon"]
+simd = ["wide", "memchr"]
+fast-build = []
+production = []

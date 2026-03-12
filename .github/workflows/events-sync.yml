@@ -1,0 +1,45 @@
+name: Events Sync
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  sync-events:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '26'
+          elixir-version: '1.15.7'
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-deps-${{ hashFiles('**/mix.lock') }}
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-mix-build-${{ hashFiles('**/mix.lock') }}
+      - name: Install deps
+        run: mix deps.get
+      - name: Compile
+        env:
+          SKIP_DB: '1'
+        run: MIX_ENV=test mix compile
+      - name: Generate event docs and lint registry
+        env:
+          SKIP_DB: '1'
+        run: mix dev.events.sync
+      - name: Verify event docs are committed
+        run: |
+          if git diff --quiet -- docs/architecture/events.md; then
+            echo "Event docs up-to-date"
+          else
+            echo "::error::docs/architecture/events.md is out of date. Run 'mix dev.events.docs' and commit."
+            git --no-pager diff -- docs/architecture/events.md
+            exit 1
+          fi

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.query.impact",
+  "@type": "lang:Function",
+  "category": "query",
+  "description": "\"What breaks if I change X?\"",
+  "implementation": {
+    "file": "lib/lang/query/impact.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.query.impact"
+}

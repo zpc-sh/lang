@@ -1,0 +1,62 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.ml.code_quality_predict",
+  "@type": "lang:Function",
+  "category": "ml",
+  "description": "ML-powered code quality prediction using trained models",
+  "implementation": {
+    "file": "lib/lang_ml/code_quality_predictor.ex",
+    "priority": "High",
+    "status": "stub"
+  },
+  "name": "lang.ml.code_quality_predict",
+  "parameters": {
+    "textDocument": {
+      "type": "object",
+      "description": "Document to analyze",
+      "properties": {
+        "uri": {"type": "string"},
+        "version": {"type": "integer"}
+      },
+      "required": ["uri"]
+    },
+    "range": {
+      "type": "object",
+      "description": "Optional range to analyze",
+      "properties": {
+        "start": {"$ref": "#/definitions/Position"},
+        "end": {"$ref": "#/definitions/Position"}
+      }
+    }
+  },
+  "response": {
+    "type": "object",
+    "properties": {
+      "overall_score": {"type": "number", "minimum": 0, "maximum": 1},
+      "metrics": {
+        "type": "object",
+        "properties": {
+          "maintainability": {"type": "number"},
+          "complexity": {"type": "number"},
+          "readability": {"type": "number"},
+          "testability": {"type": "number"}
+        }
+      },
+      "issues": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {"type": "string", "enum": ["warning", "suggestion", "info"]},
+            "message": {"type": "string"},
+            "range": {"$ref": "#/definitions/Range"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        }
+      }
+    }
+  }
+}

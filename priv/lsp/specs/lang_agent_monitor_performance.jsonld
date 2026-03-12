@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.monitor_performance",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Real-time performance monitoring",
+  "implementation": {
+    "file": "lib/lang/agent/monitor.ex",
+    "priority": "Medium",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.monitor_performance"
+}

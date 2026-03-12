@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.generate.learn_patterns",
+  "@type": "lang:Function",
+  "category": "generate",
+  "description": "Extract and learn from success",
+  "implementation": {
+    "file": "lib/lang/generate/patterns.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.generate.learn_patterns"
+}

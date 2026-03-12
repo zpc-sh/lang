@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.metrics.usage",
+  "@type": "lang:Function",
+  "category": "metrics",
+  "description": "API usage statistics",
+  "implementation": {
+    "file": "lib/lang/accounts/api_usage_logger.ex",
+    "priority": "High",
+    "status": "in_progress"
+  },
+  "name": "lang.metrics.usage"
+}

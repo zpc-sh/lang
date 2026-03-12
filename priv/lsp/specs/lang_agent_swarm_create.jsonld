@@ -1,0 +1,47 @@
+{
+  "@context": {
+    "lsp": "https://lsp.dev/schema#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lsp:lang.agent.swarm_create",
+  "@type": "lsp:Method",
+  "lsp:method": "lang.agent.swarm_create",
+  "lsp:params": {
+    "@type": "lsp:Params",
+    "lsp:properties": [
+      {
+        "lsp:name": "goals",
+        "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } },
+        "lsp:required": true,
+        "lsp:description": "List of shared goals for the agent swarm"
+      },
+      {
+        "lsp:name": "agent_count",
+        "lsp:type": "xsd:integer",
+        "lsp:required": true,
+        "lsp:description": "Number of agents to create in the swarm"
+      },
+      {
+        "lsp:name": "coordinator_id",
+        "lsp:type": "xsd:string",
+        "lsp:required": false,
+        "lsp:description": "Optional ID of the coordinating agent"
+      }
+    ]
+  },
+  "lsp:result": {
+    "@type": "lsp:Result",
+    "lsp:type": {
+      "@type": "lsp:Object",
+      "lsp:properties": [
+        { "lsp:name": "swarm_id", "lsp:type": "xsd:string" },
+        { "lsp:name": "agent_ids", "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } } },
+        { "lsp:name": "status", "lsp:type": "xsd:string" }
+      ]
+    }
+  },
+  "lsp:description": "Creates a swarm of AI agents with shared goals for collaborative tasks"
+}
+

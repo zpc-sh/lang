@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.generate.monitoring",
+  "@type": "lang:Function",
+  "category": "generate",
+  "description": "Generate observability stack",
+  "implementation": {
+    "file": "lib/lang/generate/services.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.generate.monitoring"
+}

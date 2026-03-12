@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.verify_profile",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Check agent against expected behavior profile",
+  "implementation": {
+    "file": "lib/lang/agent/security.ex",
+    "priority": "Critical",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.verify_profile"
+}
