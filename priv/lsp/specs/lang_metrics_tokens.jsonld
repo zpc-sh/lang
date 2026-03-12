@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.metrics.tokens",
+  "@type": "lang:Function",
+  "category": "metrics",
+  "description": "Token consumption tracking",
+  "implementation": {
+    "file": "lib/lang/rpc/router.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.metrics.tokens"
+}

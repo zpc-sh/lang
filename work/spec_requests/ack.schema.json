@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/spec-request-ack.schema.json",
+  "title": "Spec Request Acknowledgment",
+  "type": "object",
+  "required": ["owner", "contact", "status", "updated_at"],
+  "properties": {
+    "owner": {"type": "string"},
+    "contact": {"type": "string"},
+    "eta_iso8601": {"type": "string"},
+    "branch": {"type": "string"},
+    "status": {"type": "string", "enum": ["accepted", "in_progress", "blocked"]},
+    "notes": {"type": "string"},
+    "updated_at": {"type": "string"}
+  }
+}
+

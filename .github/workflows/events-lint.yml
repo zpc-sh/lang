@@ -1,0 +1,34 @@
+name: Events Lint
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  lint-events:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '26'
+          elixir-version: '1.15.7'
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-deps-${{ hashFiles('**/mix.lock') }}
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: ${{ runner.os }}-mix-build-${{ hashFiles('**/mix.lock') }}
+      - name: Install deps
+        run: mix deps.get
+      - name: Compile (no warnings as errors)
+        run: MIX_ENV=test SKIP_DB=1 mix compile
+      - name: Lint event types
+        env:
+          SKIP_DB: '1'
+        run: mix dev.events.lint --fail

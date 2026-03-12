@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.storage.sync_session",
+  "@type": "lang:Function",
+  "category": "storage",
+  "description": "Sync active session with Kyozo",
+  "implementation": {
+    "file": "lib/lang/storage/session.ex",
+    "priority": "Critical",
+    "status": "not_implemented"
+  },
+  "name": "lang.storage.sync_session"
+}

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.timeline.branch",
+  "@type": "lang:Function",
+  "category": "timeline",
+  "description": "Create branches in timeline + LSP integration",
+  "implementation": {
+    "file": "lib/lang/timeline/core.ex",
+    "priority": "Medium",
+    "status": "implemented"
+  },
+  "name": "lang.timeline.branch"
+}

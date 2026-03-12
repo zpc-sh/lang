@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.tokens.filter",
+  "@type": "lang:Function",
+  "category": "tokens",
+  "description": "Filter by relevance",
+  "implementation": {
+    "file": "lib/lang/tokens/filter.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.tokens.filter"
+}

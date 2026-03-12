@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.graph.traverse",
+  "@type": "lang:Function",
+  "category": "graph",
+  "description": "Graph traversal algorithms",
+  "implementation": {
+    "file": "lib/lang/graph_reasoner.ex",
+    "priority": "Medium",
+    "status": "in_progress"
+  },
+  "name": "lang.graph.traverse"
+}

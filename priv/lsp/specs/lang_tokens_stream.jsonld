@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.tokens.stream",
+  "@type": "lang:Function",
+  "category": "tokens",
+  "description": "Stream only deltas",
+  "implementation": {
+    "file": "lib/lang/tokens/streamer.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.tokens.stream"
+}

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.fs.preview",
+  "@type": "lang:Function",
+  "category": "fs",
+  "description": "File content preview via Rust NIF",
+  "implementation": {
+    "file": "lib/lang/rpc/router.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.fs.preview"
+}

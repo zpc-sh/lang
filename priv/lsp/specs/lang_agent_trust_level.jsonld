@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.trust_level",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Assign trust score to agent",
+  "implementation": {
+    "file": "lib/lang/agent/trust.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.trust_level"
+}

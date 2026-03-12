@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.agent.anomaly_score",
+  "@type": "lang:Function",
+  "category": "agent",
+  "description": "Calculate deviation from expected behavior",
+  "implementation": {
+    "file": "lib/lang/agent/behavioral.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.agent.anomaly_score"
+}

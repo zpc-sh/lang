@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.tokens.estimate",
+  "@type": "lang:Function",
+  "category": "tokens",
+  "description": "Estimate operation token cost",
+  "implementation": {
+    "file": "lib/lang/tokens/estimator.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.tokens.estimate"
+}

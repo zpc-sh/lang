@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.tokens.cache_strategy",
+  "@type": "lang:Function",
+  "category": "tokens",
+  "description": "Optimize caching for tokens",
+  "implementation": {
+    "file": "lib/lang/tokens/cache.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.tokens.cache_strategy"
+}

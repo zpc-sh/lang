@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.storage.create_scratch",
+  "@type": "lang:Function",
+  "category": "storage",
+  "description": "Create temporary scratch pipeline",
+  "implementation": {
+    "file": "lib/lang/storage/scratch.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.storage.create_scratch"
+}

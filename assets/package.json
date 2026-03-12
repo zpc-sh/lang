@@ -1,0 +1,31 @@
+{
+  "name": "lang-assets",
+  "version": "1.0.0",
+  "description": "LANG Universal Text Intelligence Platform - Frontend Assets",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "deploy": "NODE_ENV=production node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "@nocsi/recurse": "1.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "phoenix",
+    "liveview",
+    "text-intelligence",
+    "lsp",
+    "ai-first",
+    "editor"
+  ],
+  "author": "LANG Platform",
+  "license": "UNLICENSED"
+}

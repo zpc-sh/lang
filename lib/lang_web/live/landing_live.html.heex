@@ -1,0 +1,2134 @@
+<Layouts.app
+  flash={@flash}
+  current_user={assigns[:current_user]}
+  current_scope={assigns[:current_scope]}
+>
+  <!-- Structured Data for SEO -->
+  <LangWeb.SEO.structured_data type={:organization} data={%{}} />
+  <LangWeb.SEO.structured_data
+    type={:software}
+    data={
+      %{
+        "description" =>
+          "Universal Text Intelligence Platform that transforms any text into actionable intelligence",
+        "screenshot" => "https://lang.ai/images/screenshots/dashboard.png",
+        "featureList" => [
+          "Text Analysis",
+          "Code Intelligence",
+          "Document Processing",
+          "Log Analysis",
+          "API Access"
+        ],
+        "offers" => [
+          %{"@type" => "Offer", "price" => "0", "priceCurrency" => "USD", "name" => "Free Plan"},
+          %{"@type" => "Offer", "price" => "19", "priceCurrency" => "USD", "name" => "Plus Plan"},
+          %{"@type" => "Offer", "price" => "49", "priceCurrency" => "USD", "name" => "Pro Plan"}
+        ]
+      }
+    }
+  />
+
+  <style>
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-gradient {
+      background-size: 200% 200%;
+      animation: gradient 4s ease infinite;
+    }
+    .glow {
+      filter: drop-shadow(0 0 20px rgba(74, 158, 255, 0.5));
+    }
+  </style>
+  
+<!-- Hero Section -->
+  <section class="relative min-h-[100vh] overflow-hidden bg-black flex items-center">
+    <!-- Animated Background -->
+    <div class="absolute inset-0">
+      <div class="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-purple-900/20">
+      </div>
+      <div
+        class="absolute inset-0"
+        style="background-image: radial-gradient(circle at 1px 1px, rgb(74 158 255 / 15%) 1px, transparent 1px); background-size: 40px 40px;"
+      >
+      </div>
+    </div>
+
+    <div class="relative w-full px-6 py-4 sm:px-12 lg:px-16">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <!-- Left: Content -->
+          <div class="text-left space-y-8">
+            <!-- Logo -->
+            <div class="mb-8">
+              <svg class="w-16 h-16 glow" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 35 35 L 25 60 L 35 85"
+                  stroke="url(#logoGradient)"
+                  stroke-width="3"
+                  fill="none"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M 40 60 Q 50 52, 60 60 T 80 60"
+                  stroke="url(#logoGradient)"
+                  stroke-width="2.5"
+                  fill="none"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M 85 35 L 95 60 L 85 85"
+                  stroke="url(#logoGradient)"
+                  stroke-width="3"
+                  fill="none"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </div>
+
+            <div class="space-y-4">
+              <h1 class="text-6xl lg:text-8xl font-thin tracking-tight leading-tight">
+                Universal
+                <span class="block relative h-[1.2em] overflow-hidden">
+                  <span
+                    class="absolute inset-0 font-light bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-gradient"
+                    phx-hook="RotatingText"
+                    id="rotating-text"
+                  >
+                    Text
+                  </span>
+                </span>
+                Intelligence
+              </h1>
+              <p class="text-xl md:text-2xl text-gray-400 leading-relaxed max-w-lg">
+                AI-powered analysis that understands context, meaning, and intent across any domain.
+              </p>
+            </div>
+
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const words = [
+                  'Text', 'Document', 'Code', 'Email',
+                  'Recipe', 'Blog', 'Network', 'FileSystem',
+                  'API', 'Database', 'Markdown', 'JSON',
+                  'YAML', 'Config', 'Log', 'Chat',
+                  'Report', 'Knowledge', 'Content', 'Data'
+                ];
+                let currentIndex = 0;
+
+                const element = document.getElementById('rotating-text');
+                if (element) {
+                  element.style.transition = 'all 0.3s ease';
+
+                  setInterval(() => {
+                    element.style.opacity = '0';
+                    element.style.transform = 'translateY(-10px)';
+
+                    setTimeout(() => {
+                      currentIndex = (currentIndex + 1) % words.length;
+                      element.textContent = words[currentIndex];
+                      element.style.opacity = '1';
+                      element.style.transform = 'translateY(0)';
+                    }, 300);
+                  }, 2500);
+                }
+              });
+            </script>
+            
+<!-- Stats Row -->
+            <div class="grid grid-cols-3 gap-6 py-6">
+              <div>
+                <div class="text-3xl font-bold text-blue-400">
+                  {@animated_stats.files_processed}K+
+                </div>
+                <div class="text-sm text-gray-500">Files Processed</div>
+              </div>
+              <div>
+                <div class="text-3xl font-bold text-purple-400">
+                  {@animated_stats.insights_generated}M+
+                </div>
+                <div class="text-sm text-gray-500">Insights Generated</div>
+              </div>
+              <div>
+                <div class="text-3xl font-bold text-green-400">{@animated_stats.time_saved}%</div>
+                <div class="text-sm text-gray-500">Time Saved</div>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+              <button
+                phx-click="demo_click"
+                class="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5 shadow-lg"
+              >
+                <span class="flex items-center gap-2">
+                  Start Live Demo
+                  <svg
+                    class="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    >
+                    </path>
+                  </svg>
+                </span>
+              </button>
+              <a
+                href="/analyze"
+                class="px-8 py-4 border border-gray-600 text-gray-300 text-lg font-medium rounded-lg hover:border-blue-500 hover:text-blue-400 transition-all text-center"
+              >
+                Try It Now
+              </a>
+            </div>
+            
+<!-- Demo Output -->
+            <%= if @typing_text || @demo_output do %>
+              <div class="mt-8 p-6 bg-gray-900/80 backdrop-blur border border-gray-700 rounded-xl shadow-2xl animate-fadeIn">
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <div class="text-sm text-gray-400">LANG Analysis Engine</div>
+                </div>
+                <div class="font-mono text-green-400 whitespace-pre-line">
+                  {@typing_text || @demo_output}
+                </div>
+              </div>
+            <% end %>
+          </div>
+          
+<!-- Right: Interactive Visual -->
+          <div class="relative hidden lg:block">
+            <div class="relative animate-float">
+              <!-- Central Logo -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg
+                  class="w-64 h-64 glow"
+                  viewBox="0 0 300 300"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#4a9eff;stop-opacity:1">
+                        <animate
+                          attributeName="stop-color"
+                          values="#4a9eff;#00ff88;#ff00ff;#4a9eff"
+                          dur="8s"
+                          repeatCount="indefinite"
+                        />
+                      </stop>
+                      <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1">
+                        <animate
+                          attributeName="stop-color"
+                          values="#0066ff;#00ffff;#00ff88;#0066ff"
+                          dur="8s"
+                          repeatCount="indefinite"
+                        />
+                      </stop>
+                    </linearGradient>
+                  </defs>
+                  <g opacity="0.3">
+                    <circle
+                      cx="150"
+                      cy="150"
+                      r="140"
+                      fill="none"
+                      stroke="url(#centerGrad)"
+                      stroke-width="1"
+                    >
+                      <animate
+                        attributeName="r"
+                        values="140;145;140"
+                        dur="4s"
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                    <circle
+                      cx="150"
+                      cy="150"
+                      r="100"
+                      fill="none"
+                      stroke="url(#centerGrad)"
+                      stroke-width="2"
+                    >
+                      <animate
+                        attributeName="r"
+                        values="100;95;100"
+                        dur="3s"
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                  </g>
+                  <path
+                    d="M 90 90 L 60 150 L 90 210"
+                    stroke="url(#centerGrad)"
+                    stroke-width="8"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M 100 150 Q 125 130, 150 150 T 200 150"
+                    stroke="url(#centerGrad)"
+                    stroke-width="7"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M 210 90 L 240 150 L 210 210"
+                    stroke="url(#centerGrad)"
+                    stroke-width="8"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              
+<!-- Orbiting Elements -->
+              <div class="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500/20 backdrop-blur rounded-lg px-4 py-2 border border-blue-500/30">
+                <div class="text-sm font-mono text-blue-300">API Docs</div>
+              </div>
+              <div class="absolute top-1/4 right-0 bg-purple-500/20 backdrop-blur rounded-lg px-4 py-2 border border-purple-500/30">
+                <div class="text-sm font-mono text-purple-300">Log Files</div>
+              </div>
+              <div class="absolute bottom-1/4 right-0 bg-green-500/20 backdrop-blur rounded-lg px-4 py-2 border border-green-500/30">
+                <div class="text-sm font-mono text-green-300">Sales Emails</div>
+              </div>
+              <div class="absolute bottom-0 left-1/2 -translate-x-1/2 bg-yellow-500/20 backdrop-blur rounded-lg px-4 py-2 border border-yellow-500/30">
+                <div class="text-sm font-mono text-yellow-300">Code Files</div>
+              </div>
+              <div class="absolute top-1/4 left-0 bg-pink-500/20 backdrop-blur rounded-lg px-4 py-2 border border-pink-500/30">
+                <div class="text-sm font-mono text-pink-300">Recipes</div>
+              </div>
+              <div class="absolute bottom-1/4 left-0 bg-cyan-500/20 backdrop-blur rounded-lg px-4 py-2 border border-cyan-500/30">
+                <div class="text-sm font-mono text-cyan-300">Research Papers</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+<!-- Features Section -->
+
+  <section id="features" class="py-16 px-6 sm:px-12 lg:px-16">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center space-y-4 mb-12">
+        <h2 class="text-5xl font-thin tracking-tight">
+          Why Choose <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">LANG</span>?
+        </h2>
+        <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+          Built for speed, accuracy, and scale. LANG processes any text format with enterprise-grade reliability.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              >
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Lightning Fast</h3>
+          <p class="text-gray-400">
+            Native Rust performance delivers 60-100x faster processing than traditional solutions.
+          </p>
+        </div>
+        
+<!-- Feature 2 -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Universal Format Support</h3>
+          <p class="text-gray-400">
+            Parse PDFs, Word docs, emails, code files, and more with consistent accuracy.
+          </p>
+        </div>
+        
+<!-- Feature 3 -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+              >
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Smart Extraction</h3>
+          <p class="text-gray-400">
+            AI-powered content extraction that understands context and structure.
+          </p>
+        </div>
+        
+<!-- Feature 4 -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              >
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Developer APIs</h3>
+          <p class="text-gray-400">
+            RESTful APIs with comprehensive SDKs for seamless integration.
+          </p>
+        </div>
+        
+<!-- Feature 5 -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              >
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Enterprise Security</h3>
+          <p class="text-gray-400">SOC2 compliant with end-to-end encryption and audit trails.</p>
+        </div>
+        
+<!-- Feature 6 -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
+              >
+              </path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3">Real-time Analytics</h3>
+          <p class="text-gray-400">
+            Live dashboards and metrics to monitor your text processing pipeline.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+<!-- AI Agent Integration Section -->
+  <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gradient-to-b from-black to-gray-950">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center space-y-4 mb-12">
+        <h2 class="text-5xl font-thin tracking-tight">
+          Supercharge Your
+          <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            AI Agents
+          </span>
+        </h2>
+        <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+          No special coding required. LANG automatically enhances any AI agent with structured intelligence.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <!-- Left: How it works -->
+        <div class="space-y-6">
+          <h3 class="text-3xl font-semibold mb-6">Zero-Code AI Enhancement</h3>
+
+          <div class="space-y-4">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-white font-bold">1</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-medium mb-1">Drop-in Replacement</h4>
+                <p class="text-gray-400">
+                  Replace your AI's API endpoint with LANG's. That's it.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-white font-bold">2</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-medium mb-1">Automatic Structure Detection</h4>
+                <p class="text-gray-400">
+                  LANG identifies and parses structured data before it reaches the AI.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-white font-bold">3</span>
+              </div>
+              <div>
+                <h4 class="text-lg font-medium mb-1">10-100x Better Results</h4>
+                <p class="text-gray-400">
+                  Your AI gets clean, structured data instead of raw text soup.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+<!-- Right: Benefits -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8">
+          <h4 class="text-2xl font-semibold mb-6">AI Agent Benefits</h4>
+
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              <span>
+                <strong class="text-green-400">99% fewer hallucinations</strong>
+                on structured data
+              </span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              <span>
+                <strong class="text-blue-400">80% cost reduction</strong>
+                with pre-structured inputs
+              </span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              <span>
+                <strong class="text-purple-400">Instant responses</strong>
+                for filesystem/network queries
+              </span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              <span>Works with <strong>GPT, Claude, Gemini,</strong> any LLM</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <svg
+                class="w-5 h-5 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              <span>No agent code changes required</span>
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-blue-950/30 rounded-lg border border-blue-900/30">
+            <p class="text-sm text-blue-300">
+              <strong>Available in Plus ($19) and higher plans.</strong>
+              Your AI agents deserve better than raw text.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+<!-- Code Example -->
+      <div class="mt-12 bg-gray-900/50 rounded-xl p-6 border border-gray-800">
+        <h4 class="text-lg font-medium mb-4">Integration Example</h4>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <div class="text-sm text-gray-400 mb-2">❌ Before (Direct to AI)</div>
+            <pre
+              class="bg-gray-950 rounded-lg p-4 text-sm overflow-x-auto"
+              phx-no-curly-interpolation
+            ><code class="text-gray-300">// Sends raw text to AI
+const response = await openai.complete({
+  prompt: fileContents,
+  model: "gpt-4"
+});
+// AI has to guess structure</code></pre>
+          </div>
+          <div>
+            <div class="text-sm text-gray-400 mb-2">✅ After (Through LANG)</div>
+            <pre
+              class="bg-gray-950 rounded-lg p-4 text-sm overflow-x-auto"
+              phx-no-curly-interpolation
+            ><code class="text-green-400">// Just change the endpoint!
+const response = await openai.complete({
+  prompt: fileContents,
+  model: "gpt-4",
+  baseURL: "https://api.lang.dev/v1"
+});
+// AI gets pre-parsed structure</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+<!-- FAQ Section -->
+  <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gray-950">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center space-y-4 mb-12">
+        <h2 class="text-5xl font-thin tracking-tight">
+          Frequently Asked
+          <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Questions
+          </span>
+        </h2>
+        <p class="text-xl text-gray-400">
+          Everything you need to know about LANG's universal intelligence platform
+        </p>
+      </div>
+
+      <div class="space-y-6">
+        <!-- FAQ Item 1 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-blue-400">
+            What makes LANG different from using ChatGPT or Claude directly?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            LANG pre-structures your data before it reaches AI, resulting in 99% fewer hallucinations, 100x faster responses, and 80% cost reduction. Instead of sending raw text that AI has to "guess" about, LANG provides clean, structured data that AI can work with accurately. Plus, LANG handles non-text data like networks, filesystems, and databases that generic AI can't process effectively.
+          </p>
+        </div>
+        
+<!-- FAQ Item 2 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-purple-400">
+            How fast is LANG compared to traditional solutions?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            Our native Rust NIFs deliver 60-100x faster processing than pure Elixir or Python solutions. API responses typically complete in under 100ms, while complex filesystem scans that might take minutes with other tools complete in seconds. Real-time analysis happens at wire speed.
+          </p>
+        </div>
+        
+<!-- FAQ Item 3 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-green-400">
+            Do I need to change my AI agent's code to use LANG?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            No! LANG works as a drop-in replacement. Just change your AI's API endpoint to point to LANG - that's it. We automatically enhance any AI agent (GPT, Claude, Gemini, or custom) with structured intelligence. Your existing prompts and workflows continue working, just 10-100x better.
+          </p>
+        </div>
+        
+<!-- FAQ Item 4 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-yellow-400">
+            What kind of data can LANG analyze beyond text?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            LANG is truly universal - we analyze network traffic patterns, scan entire filesystems, parse database schemas, process production logs, understand code repositories, and more. Our Pro tier ($49/month) unlocks all these "beyond text" capabilities with native performance.
+          </p>
+        </div>
+        
+<!-- FAQ Item 5 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-cyan-400">
+            What are the API rate limits?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            Rate limits depend on your tier: Free gets 1,000 calls/month (rate limited), Plus gets 50,000 calls/month, and Pro gets unlimited API calls. All plans include rate limit headers in responses so you can track usage. Business plans have no limits and priority queues.
+          </p>
+        </div>
+        
+<!-- FAQ Item 6 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-pink-400">
+            Can LANG handle enterprise-scale workloads?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            Absolutely. LANG processes 1TB+ of text daily, handles 10,000+ concurrent WebSocket connections, and supports 50K+ simultaneous users. Our Business plan includes dedicated infrastructure, SLA guarantees, SSO integration, and custom model training. We're SOC2 compliant with end-to-end encryption.
+          </p>
+        </div>
+        
+<!-- FAQ Item 7 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-orange-400">
+            How does DAG agent orchestration work?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            LANG supports complex Directed Acyclic Graph (DAG) workflows where multiple AI agents work together. You can chain agents, run them in parallel, or create sophisticated pipelines - all while LANG ensures each agent gets perfectly structured data. This enables building powerful multi-agent systems without the usual complexity.
+          </p>
+        </div>
+        
+<!-- FAQ Item 8 -->
+        <div class="bg-gray-900/50 backdrop-blur rounded-xl border border-gray-800 p-6 hover:border-gray-700 transition-colors">
+          <h3 class="text-xl font-semibold mb-3 text-indigo-400">
+            Is there a self-hosted option?
+          </h3>
+          <p class="text-gray-300 leading-relaxed">
+            Business tier customers can deploy LANG on-premises or in their own cloud environment. You get the full platform including native NIFs, background job processing, and real-time features. We provide Docker images, Kubernetes manifests, and deployment support.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-12 text-center">
+        <p class="text-gray-400 mb-6">Still have questions?</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="/api-portal"
+            class="px-6 py-3 border border-gray-600 text-gray-300 font-medium rounded-lg hover:border-blue-500 hover:text-blue-400 transition-all"
+          >
+            Read the Docs
+          </a>
+          <a
+            href="mailto:support@lang.dev"
+            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+          >
+            Contact Support
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+<!-- Live Demo Playground -->
+  <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gradient-to-b from-gray-950 to-black">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center space-y-4 mb-12">
+        <h2 class="text-5xl font-thin tracking-tight">
+          Try LANG
+          <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Right Now
+          </span>
+        </h2>
+        <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+          Paste any text below and watch LANG analyze it in real-time. No signup required.
+        </p>
+      </div>
+
+      <div class="bg-gray-900/50 backdrop-blur rounded-2xl border border-gray-800 p-8">
+        <form phx-submit="try_demo_input" phx-change="try_demo_input">
+          <div class="mb-6">
+            <label class="block text-sm text-gray-400 mb-2">Paste your text here:</label>
+            <textarea
+              name="demo_text"
+              class="w-full h-48 px-4 py-3 bg-gray-950 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none font-mono"
+              placeholder="Try pasting a contract clause, recipe, email, or any text you want analyzed..."
+              value={@demo_text}
+            >{@demo_text}</textarea>
+          </div>
+          <div class="flex gap-4">
+            <button
+              type="submit"
+              class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+            >
+              Analyze with LANG
+            </button>
+            <%= if @live_demo_output do %>
+              <button
+                type="button"
+                phx-click="clear_demo"
+                class="px-6 py-3 border border-gray-600 text-gray-300 font-medium rounded-lg hover:border-gray-500 hover:bg-gray-800/50 transition-all"
+              >
+                Clear
+              </button>
+            <% end %>
+          </div>
+        </form>
+
+        <%= if @live_demo_output do %>
+          <div class="mt-8 animate-fadeIn">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <h3 class="text-lg font-medium">LANG Analysis Results</h3>
+              <span class="text-sm text-gray-400">
+                ({String.capitalize(@live_demo_output.type)} detected)
+              </span>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-6">
+              <div>
+                <h4 class="text-sm text-gray-400 mb-3">Insights</h4>
+                <div class="space-y-2">
+                  <%= for insight <- @live_demo_output.insights do %>
+                    <div class="flex items-start gap-2 bg-gray-950 rounded-lg p-3 border border-gray-800">
+                      <span class="text-lg flex-shrink-0">{String.first(insight)}</span>
+                      <span class="text-gray-300">{String.slice(insight, 2..-1)}</span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+
+              <div>
+                <h4 class="text-sm text-gray-400 mb-3">Metrics</h4>
+                <div class="grid grid-cols-2 gap-3">
+                  <%= for {key, value} <- @live_demo_output.metrics do %>
+                    <div class="bg-gray-950 rounded-lg p-3 border border-gray-800">
+                      <div class="text-xs text-gray-500 uppercase">
+                        {key |> Atom.to_string() |> String.replace("_", " ")}
+                      </div>
+                      <div class="text-lg font-medium text-blue-400">{value}</div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </section>
+  
+<!-- AI Performance Comparison -->
+  <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gradient-to-b from-black to-gray-950">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center space-y-4 mb-12">
+        <h2 class="text-5xl font-thin tracking-tight">
+          AI Performance
+          <span class="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+            Without
+          </span>
+          vs
+          <span class="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+            With
+          </span>
+          LANG
+        </h2>
+        <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+          See why raw AI without structured intelligence is just expensive guesswork
+        </p>
+      </div>
+      
+<!-- Benchmark Visualization -->
+      <div class="grid lg:grid-cols-2 gap-8 mb-12">
+        <!-- Without LANG -->
+        <div class="bg-gray-900/50 border border-red-900/50 rounded-xl p-8">
+          <h3 class="text-2xl font-semibold mb-6 text-red-400">❌ Without LANG</h3>
+
+          <div class="space-y-6">
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Accuracy</span>
+                <span class="text-red-400">42%</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-red-600 to-red-400 h-3 rounded-full"
+                  style="width: 42%"
+                >
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Processing Speed</span>
+                <span class="text-orange-400">3.2s</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-orange-600 to-orange-400 h-3 rounded-full"
+                  style="width: 20%"
+                >
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Context Understanding</span>
+                <span class="text-red-400">Limited</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-red-600 to-red-400 h-3 rounded-full"
+                  style="width: 25%"
+                >
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Cost per 1M tokens</span>
+                <span class="text-red-400">$62.40</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-red-600 to-red-400 h-3 rounded-full"
+                  style="width: 95%"
+                >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-red-950/30 rounded-lg border border-red-900/30">
+            <p class="text-sm text-red-300">⚠️ Generic AI hallucinates on structured data</p>
+          </div>
+        </div>
+        
+<!-- With LANG -->
+        <div class="bg-gray-900/50 border border-green-900/50 rounded-xl p-8">
+          <h3 class="text-2xl font-semibold mb-6 text-green-400">✅ With LANG</h3>
+
+          <div class="space-y-6">
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Accuracy</span>
+                <span class="text-green-400">99.2%</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-green-600 to-green-400 h-3 rounded-full"
+                  style="width: 99.2%"
+                >
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Processing Speed</span>
+                <span class="text-green-400">0.03s</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-green-600 to-green-400 h-3 rounded-full"
+                  style="width: 98%"
+                >
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Context Understanding</span>
+                <span class="text-green-400">Complete</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-green-600 to-green-400 h-3 rounded-full"
+                  style="width: 100%"
+                >
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Cost per 1M tokens</span>
+                <span class="text-green-400">$0.12</span>
+              </div>
+              <div class="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  class="bg-gradient-to-r from-green-600 to-green-400 h-3 rounded-full"
+                  style="width: 2%"
+                >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-green-950/30 rounded-lg border border-green-900/30">
+            <p class="text-sm text-green-300">🚀 Structured parsing = 100x faster, 500x cheaper</p>
+          </div>
+        </div>
+      </div>
+      
+<!-- Real Examples Carousel -->
+      <div class="relative overflow-hidden">
+        <h4 class="text-2xl font-semibold mb-8 text-center">
+          Real World Examples
+        </h4>
+        
+<!-- Mobile: Stack view with swipe -->
+        <div class="lg:hidden">
+          <div class="overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+            <div class="flex gap-4" style="width: max-content;">
+              <!-- Example 1: API Docs -->
+              <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
+                <h5 class="text-lg font-medium mb-4 text-blue-400">
+                  Technical Documentation Analysis
+                </h5>
+                <div class="space-y-4">
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <div class="text-red-400 line-clamp-3">
+                        "This appears to be some kind of API documentation. It mentions authentication and endpoints..."
+                      </div>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 3.2s | Cost: $0.11</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <pre
+                        class="text-green-400 text-xs overflow-x-auto"
+                        phx-no-curly-interpolation
+                      >{
+  "endpoints": 2,
+  "auth": "bearer_token",
+  "rate_limit": 60/min
+}</pre>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 0.03s | Cost: $0.0002</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+<!-- Example 2: Network -->
+              <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
+                <h5 class="text-lg font-medium mb-4 text-purple-400">Network Traffic Analysis</h5>
+                <div class="space-y-4">
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <div class="text-red-400 line-clamp-3">
+                        "I see some network data here with IP addresses and ports. Can't really tell what's normal..."
+                      </div>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 2.8s | Cost: $0.13</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <pre
+                        class="text-green-400 text-xs overflow-x-auto"
+                        phx-no-curly-interpolation
+                      >{
+  "anomalies": 3,
+  "risk_score": 7.2,
+  "action": "INVESTIGATE"
+}</pre>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 0.04s | Cost: $0.0003</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+<!-- Example 3: FileSystem -->
+              <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
+                <h5 class="text-lg font-medium mb-4 text-green-400">FileSystem Analysis</h5>
+                <div class="space-y-4">
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <div class="text-red-400 line-clamp-3">
+                        "There are various files and folders here. The directory structure seems nested..."
+                      </div>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 3.7s | Cost: $0.17</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <pre
+                        class="text-green-400 text-xs overflow-x-auto"
+                        phx-no-curly-interpolation
+                      >{
+  "vulnerabilities": 1,
+  "large_files": ["2.3GB log"],
+  "sensitive": [".env", "key"]
+}</pre>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 0.08s | Cost: $0.0005</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+<!-- Example 4: Logs -->
+              <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
+                <h5 class="text-lg font-medium mb-4 text-yellow-400">Production Log Analysis</h5>
+                <div class="space-y-4">
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <div class="text-red-400 line-clamp-3">
+                        "These look like server logs. I can see some ERROR and WARN entries..."
+                      </div>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 4.1s | Cost: $0.19</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <pre
+                        class="text-green-400 text-xs overflow-x-auto"
+                        phx-no-curly-interpolation
+                      >{
+  "issue": "db_cascade_failure",
+  "users": 4821,
+  "fix": "Increase pool to 50"
+}</pre>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 0.02s | Cost: $0.0001</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+<!-- Example 5: Database -->
+              <div class="snap-center flex-shrink-0 w-[90vw] bg-gray-900/30 rounded-xl p-6 border border-gray-800">
+                <h5 class="text-lg font-medium mb-4 text-cyan-400">Database Schema Analysis</h5>
+                <div class="space-y-4">
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <div class="text-red-400 line-clamp-3">
+                        "This appears to be database schema information with tables and columns..."
+                      </div>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 3.5s | Cost: $0.15</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                    <div class="bg-gray-950 rounded-lg p-3 text-sm">
+                      <pre
+                        class="text-green-400 text-xs overflow-x-auto"
+                        phx-no-curly-interpolation
+                      >{
+  "issue": "missing_index",
+  "impact": "87% slower",
+  "savings": "62% faster"
+}</pre>
+                      <div class="text-gray-500 mt-2 text-xs">Time: 0.05s | Cost: $0.0004</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+<!-- Mobile scroll hint -->
+          <div class="text-center mt-4 text-sm text-gray-500">
+            <span>← Swipe to see more examples →</span>
+          </div>
+        </div>
+        
+<!-- Desktop: Current implementation with buttons -->
+        <div class="hidden lg:block">
+          <div class="bg-gray-900/30 rounded-xl p-8 border border-gray-800">
+            <!-- Example 1: API Documentation (visible when example_index == 0) -->
+            <div :if={@example_index == 0} class="space-y-6">
+              <h5 class="text-xl font-medium text-center text-blue-400">
+                Technical Documentation Analysis
+              </h5>
+              <div class="grid lg:grid-cols-2 gap-8">
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <div class="text-red-400">
+                      "This appears to be some kind of API documentation. It mentions authentication and endpoints. There might be rate limits mentioned somewhere. The response format seems to be JSON but I'm not entirely sure about the structure..."
+                    </div>
+                    <div class="text-gray-500 mt-2">Time: 3.2s | Tokens: 1,847 | Cost: $0.11</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <pre class="text-green-400" phx-no-curly-interpolation>{
+  "api_endpoints": [
+    {"path": "/api/v1/analyze", "method": "POST"},
+    {"path": "/api/v1/status", "method": "GET"}
+  ],
+  "auth": {
+    "type": "bearer_token",
+    "header": "Authorization"
+  },
+  "rate_limits": {
+    "requests_per_minute": 60,
+    "burst": 100
+  },
+  "response_format": "application/json"
+}</pre>
+                    <div class="text-gray-500 mt-2">Time: 0.03s | Tokens: 0 | Cost: $0.0002</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+<!-- Example 2: Network (visible when example_index == 1) -->
+            <div :if={@example_index == 1} class="space-y-6">
+              <h5 class="text-xl font-medium text-center text-purple-400">
+                Network Traffic Analysis
+              </h5>
+              <div class="grid lg:grid-cols-2 gap-8">
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <div class="text-red-400">
+                      "I see some network data here with IP addresses and ports. There seems to be traffic between different systems. Some connections might be HTTP or HTTPS based on the port numbers. Can't really tell what's normal or abnormal..."
+                    </div>
+                    <div class="text-gray-500 mt-2">Time: 2.8s | Tokens: 2,103 | Cost: $0.13</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <pre class="text-green-400" phx-no-curly-interpolation>{
+  "traffic_patterns": {
+    "anomalies_detected": 3,
+    "suspicious_ips": ["192.168.1.147", "10.0.0.89"],
+    "protocol_violations": 1
+  },
+  "service_map": {
+    "web_servers": [":80", ":443"],
+    "databases": [":5432", ":3306"],
+    "unusual_ports": [":8899", ":31337"]
+  },
+  "risk_score": 7.2,
+  "recommended_action": "INVESTIGATE"
+}</pre>
+                    <div class="text-gray-500 mt-2">
+                      Time: 0.04s | Native Analysis | Cost: $0.0003
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+<!-- Example 3: FileSystem (visible when example_index == 2) -->
+            <div :if={@example_index == 2} class="space-y-6">
+              <h5 class="text-xl font-medium text-center text-green-400">FileSystem Analysis</h5>
+              <div class="grid lg:grid-cols-2 gap-8">
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <div class="text-red-400">
+                      "There are various files and folders here. I can see some source code files, maybe configuration files, and what looks like documentation. The directory structure seems nested but I can't really analyze the dependencies or security issues..."
+                    </div>
+                    <div class="text-gray-500 mt-2">Time: 3.7s | Tokens: 2,892 | Cost: $0.17</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <pre class="text-green-400" phx-no-curly-interpolation>{
+  "codebase_analysis": {
+    "languages": {"rust": "45%", "elixir": "35%", "js": "20%"},
+    "vulnerabilities": [
+      {"file": "lib/auth.ex", "type": "hardcoded_secret", "line": 47}
+    ],
+    "dependencies": {
+      "outdated": 3,
+      "security_patches": 1
+    }
+  },
+  "large_files": ["logs/debug.log (2.3GB)"],
+  "sensitive_data": [".env.production", "private.key"],
+  "recommendation": "Rotate secrets, update deps"
+}</pre>
+                    <div class="text-gray-500 mt-2">
+                      Time: 0.08s | Rust Scanner | Cost: $0.0005
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+<!-- Example 4: Logs (visible when example_index == 3) -->
+            <div :if={@example_index == 3} class="space-y-6">
+              <h5 class="text-xl font-medium text-center text-yellow-400">
+                Production Log Analysis
+              </h5>
+              <div class="grid lg:grid-cols-2 gap-8">
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <div class="text-red-400">
+                      "These look like server logs with timestamps and error messages. I can see some ERROR and WARN entries. There might be a pattern but it's hard to tell from all this text. Some database timeouts maybe?"
+                    </div>
+                    <div class="text-gray-500 mt-2">Time: 4.1s | Tokens: 3,291 | Cost: $0.19</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <pre class="text-green-400" phx-no-curly-interpolation>{
+  "critical_issues": [
+    {
+      "type": "database_cascade_failure",
+      "started": "14:23:17",
+      "affected_services": ["auth", "payments"],
+      "root_cause": "connection_pool_exhausted"
+    }
+  ],
+  "error_rate": "327% above baseline",
+  "impacted_users": 4821,
+  "suggested_fix": "Increase pool size to 50",
+  "similar_incidents": ["2024-01-15", "2024-02-03"]
+}</pre>
+                    <div class="text-gray-500 mt-2">
+                      Time: 0.02s | Pattern Matching | Cost: $0.0001
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+<!-- Example 5: Database (visible when example_index == 4) -->
+            <div :if={@example_index == 4} class="space-y-6">
+              <h5 class="text-xl font-medium text-center text-cyan-400">
+                Database Schema Analysis
+              </h5>
+              <div class="grid lg:grid-cols-2 gap-8">
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">🤖 Generic AI Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <div class="text-red-400">
+                      "This appears to be database schema information with tables and columns. I see some foreign keys and indexes. The relationships between tables seem complex. There might be performance issues but I'd need more context..."
+                    </div>
+                    <div class="text-gray-500 mt-2">Time: 3.5s | Tokens: 2,547 | Cost: $0.15</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-400 mb-2">✨ LANG Output:</div>
+                  <div class="bg-gray-950 rounded-lg p-4 font-mono text-sm">
+                    <pre class="text-green-400" phx-no-curly-interpolation>{
+  "performance_issues": [
+    {
+      "table": "orders",
+      "issue": "missing_index",
+      "columns": ["user_id", "created_at"],
+      "impact": "87% slower queries"
+    }
+  ],
+  "schema_antipatterns": [
+    "nullable_foreign_keys: 3",
+    "wide_tables: products (47 cols)"
+  ],
+  "optimization_potential": "62% query time reduction",
+  "migration_script": "generated"
+}</pre>
+                    <div class="text-gray-500 mt-2">
+                      Time: 0.05s | AST Analysis | Cost: $0.0004
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+<!-- Navigation Controls -->
+          <div class="flex justify-center items-center gap-4 mt-6">
+            <button
+              phx-click="prev_example"
+              class="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                >
+                </path>
+              </svg>
+            </button>
+            
+<!-- Dots Indicator -->
+            <div class="flex gap-2">
+              <button
+                :for={idx <- 0..4}
+                phx-click="set_example"
+                phx-value-index={idx}
+                class={[
+                  "w-2 h-2 rounded-full transition-all",
+                  @example_index == idx && "bg-blue-500 w-6",
+                  @example_index != idx && "bg-gray-600 hover:bg-gray-500"
+                ]}
+              >
+              </button>
+            </div>
+
+            <button
+              phx-click="next_example"
+              class="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                >
+                </path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        /* Hide scrollbar for carousel */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+
+        /* Line clamp for mobile */
+        .line-clamp-3 {
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+        }
+      </style>
+      <!-- The Punchline -->
+      <div class="text-center mt-12">
+        <p class="text-2xl text-gray-300 mb-4">
+          Why burn money on AI that <span class="text-red-400">guesses</span>
+          when you can have AI that <span class="text-green-400">knows</span>?
+        </p>
+        <p class="text-lg text-gray-500">
+          LANG pre-structures your data so AI doesn't have to figure it out every. single. time.
+        </p>
+      </div>
+    </div>
+  </section>
+  
+<!-- Pricing Section -->
+  <section id="pricing" class="py-16 px-6 sm:px-12 lg:px-16 bg-gray-900/50">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center space-y-4 mb-12">
+        <h2 class="text-5xl font-thin tracking-tight">
+          Simple, Transparent
+          <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Pricing
+          </span>
+        </h2>
+        <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+          Start free and scale as you grow. No hidden fees, no surprises.
+        </p>
+      </div>
+      
+<!-- Tab Switcher -->
+      <div class="flex justify-center mb-8">
+        <div class="bg-gray-900 border border-gray-800 rounded-lg p-1 flex">
+          <button
+            phx-click="set_pricing_tab"
+            phx-value-tab="individual"
+            class={[
+              "px-6 py-2 rounded-md font-medium transition-all",
+              @pricing_tab == "individual" && "bg-blue-600 text-white",
+              @pricing_tab != "individual" && "text-gray-400 hover:text-white"
+            ]}
+          >
+            Individual
+          </button>
+          <button
+            phx-click="set_pricing_tab"
+            phx-value-tab="business"
+            class={[
+              "px-6 py-2 rounded-md font-medium transition-all",
+              @pricing_tab == "business" && "bg-blue-600 text-white",
+              @pricing_tab != "business" && "text-gray-400 hover:text-white"
+            ]}
+          >
+            Business
+          </button>
+        </div>
+      </div>
+
+      <div :if={@pricing_tab == "individual"} class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <!-- Free Tier -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 relative">
+          <div class="space-y-4 mb-8">
+            <h3 class="text-2xl font-semibold">Free</h3>
+            <div class="text-4xl font-bold">
+              $0 <span class="text-lg text-gray-400 font-normal">/month</span>
+            </div>
+            <p class="text-gray-400">Perfect for trying LANG</p>
+          </div>
+
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              1,000 API calls/month
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Text analysis only
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Community support
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-gray-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                >
+                </path>
+              </svg>
+              <span class="text-gray-500">Rate limited</span>
+            </li>
+          </ul>
+
+          <a
+            href="/auth?mode=register"
+            class="block w-full text-center px-6 py-3 border border-gray-600 text-gray-300 font-medium rounded-lg hover:border-blue-500 hover:text-blue-400 transition-all"
+          >
+            Start Free
+          </a>
+        </div>
+        
+<!-- Plus Tier -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 relative">
+          <div class="space-y-4 mb-8">
+            <h3 class="text-2xl font-semibold">Plus</h3>
+            <div class="text-4xl font-bold">
+              $19 <span class="text-lg text-gray-400 font-normal">/month</span>
+            </div>
+            <p class="text-gray-400">Professional text models</p>
+          </div>
+
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              50,000 API calls/month
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Standard models
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              All text formats
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              AI agent integration
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Email support
+            </li>
+          </ul>
+
+          <button class="w-full px-6 py-3 border border-gray-600 text-gray-300 font-medium rounded-lg hover:border-blue-500 hover:text-blue-400 transition-all">
+            Get Started
+          </button>
+        </div>
+        
+<!-- Pro Tier -->
+        <div class="bg-gray-900 border-2 border-blue-500 rounded-2xl p-8 relative">
+          <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+            Most Popular
+          </div>
+
+          <div class="space-y-4 mb-8">
+            <h3 class="text-2xl font-semibold">Pro</h3>
+            <div class="text-4xl font-bold">
+              $49 <span class="text-lg text-gray-400 font-normal">/month</span>
+            </div>
+            <p class="text-gray-400">Universal intelligence beyond text</p>
+          </div>
+
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Unlimited API calls
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              All advanced models
+            </li>
+            <li class="flex items-center text-green-400">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                >
+                </path>
+              </svg>
+              Network analysis
+            </li>
+            <li class="flex items-center text-green-400">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                >
+                </path>
+              </svg>
+              FileSystem scanning
+            </li>
+            <li class="flex items-center text-green-400">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+                >
+                </path>
+              </svg>
+              Database analysis
+            </li>
+            <li class="flex items-center text-green-400">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                >
+                </path>
+              </svg>
+              Log intelligence
+            </li>
+            <li class="flex items-center">
+              <svg
+                class="w-5 h-5 text-green-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                >
+                </path>
+              </svg>
+              Priority support
+            </li>
+          </ul>
+
+          <button class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5">
+            Start Trial
+          </button>
+        </div>
+      </div>
+      
+<!-- Business Tab Content -->
+      <div :if={@pricing_tab == "business"} class="max-w-3xl mx-auto">
+        <div class="bg-gray-900 border-2 border-purple-500 rounded-2xl p-8">
+          <div class="space-y-4 mb-8">
+            <h3 class="text-3xl font-semibold">Business</h3>
+            <div class="text-4xl font-bold">
+              $25 <span class="text-lg text-gray-400 font-normal">/user/month</span>
+            </div>
+            <p class="text-gray-400">Secure team workspace with collaboration</p>
+            <p class="text-sm text-gray-500">Minimum 2 users</p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 mb-8">
+            <ul class="space-y-3">
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                Unlimited API calls
+              </li>
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                All models + custom
+              </li>
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                Team collaboration
+              </li>
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                SSO integration
+              </li>
+            </ul>
+            <ul class="space-y-3">
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                MFA support
+              </li>
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                Audit logs
+              </li>
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                SLA guarantee
+              </li>
+              <li class="flex items-center">
+                <svg
+                  class="w-5 h-5 text-green-500 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  >
+                  </path>
+                </svg>
+                Custom integrations
+              </li>
+            </ul>
+          </div>
+
+          <button class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:-translate-y-0.5">
+            Contact Sales
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+<!-- Integration Partners -->
+  <section class="py-16 px-6 sm:px-12 lg:px-16 bg-gray-950/50">
+    <div class="max-w-6xl mx-auto text-center">
+      <h3 class="text-2xl font-light text-gray-400 mb-8">
+        Integrates seamlessly with your stack
+      </h3>
+      <div class="flex flex-wrap justify-center items-center gap-x-16 gap-y-8">
+        <div class="group">
+          <div class="text-3xl font-mono text-gray-600 group-hover:text-blue-400 transition-colors cursor-pointer">
+            VSCode
+          </div>
+        </div>
+        <div class="group">
+          <div class="text-3xl font-mono text-gray-600 group-hover:text-purple-400 transition-colors cursor-pointer">
+            Vim
+          </div>
+        </div>
+        <div class="group">
+          <div class="text-3xl font-mono text-gray-600 group-hover:text-green-400 transition-colors cursor-pointer">
+            Emacs
+          </div>
+        </div>
+        <div class="group">
+          <div class="text-3xl font-mono text-gray-600 group-hover:text-yellow-400 transition-colors cursor-pointer">
+            JetBrains
+          </div>
+        </div>
+        <div class="group">
+          <div class="text-3xl font-mono text-gray-600 group-hover:text-pink-400 transition-colors cursor-pointer">
+            Sublime
+          </div>
+        </div>
+        <div class="group">
+          <div class="text-3xl font-mono text-gray-600 group-hover:text-cyan-400 transition-colors cursor-pointer">
+            REST API
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+<!-- CTA Section -->
+  <section class="py-16 px-6 sm:px-12 lg:px-16">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-5xl font-thin tracking-tight mb-6">
+        Ready to Transform Your <span class="font-light bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-gradient">
+          Intelligence Stack
+        </span>?
+      </h2>
+      <p class="text-xl text-gray-400 mb-12">
+        Join thousands of developers and companies using LANG for universal intelligence beyond text.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-6 justify-center">
+        <a
+          href="/auth?mode=register"
+          class="px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xl font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5 shadow-xl"
+        >
+          Start Building for Free
+        </a>
+        <a
+          href="/api-portal"
+          class="px-10 py-5 border-2 border-gray-600 text-gray-300 text-xl font-medium rounded-lg hover:border-blue-500 hover:text-blue-400 transition-all"
+        >
+          Explore Documentation
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .animate-gradient {
+      background-size: 200% 200%;
+      animation: gradient 3s ease-in-out infinite;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Custom focus styles */
+    textarea:focus, input:focus, button:focus {
+      outline: none;
+    }
+
+    /* Smooth transitions for all interactive elements */
+    a, button, input, textarea {
+      transition: all 0.2s ease;
+    }
+  </style>
+</Layouts.app>

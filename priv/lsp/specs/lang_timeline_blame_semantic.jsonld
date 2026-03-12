@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.timeline.blame_semantic",
+  "@type": "lang:Function",
+  "category": "timeline",
+  "description": "Who introduced this concept (not line)",
+  "implementation": {
+    "file": "lib/lang/timeline/semantic_blame.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.timeline.blame_semantic"
+}

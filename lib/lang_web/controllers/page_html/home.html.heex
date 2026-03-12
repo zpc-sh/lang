@@ -1,0 +1,324 @@
+<Layouts.flash_group flash={@flash} />
+<div class="px-6 py-24 sm:px-12 lg:px-16">
+  <div class="max-w-7xl mx-auto text-center">
+    <div class="mb-12">
+      <img
+        src={~p"/images/lang_logo.svg"}
+        alt="LANG Universal Text Intelligence Platform"
+        class="mx-auto"
+        style="max-width: 600px; height: auto;"
+      />
+    </div>
+    <p class="text-xl md:text-2xl text-gray-400 tracking-widest uppercase mb-12">
+      Universal Text Intelligence Platform
+    </p>
+    
+<!-- Scroll indicator -->
+    <div class="flex flex-col items-center space-y-4 mb-8">
+      <p class="text-gray-500 text-sm">Explore our features below</p>
+      <div class="animate-bounce">
+        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+  
+<!-- Main Actions -->
+  <div class="text-center mb-20">
+    <div class="flex flex-col sm:flex-row justify-center gap-4">
+      <.link
+        navigate="/analyze"
+        class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5 shadow-lg"
+      >
+        <.icon name="hero-magnifying-glass" class="-ml-1 mr-3 h-6 w-6" /> Try Text Analysis
+      </.link>
+      <.link
+        navigate="/dashboard"
+        class="inline-flex items-center px-8 py-4 bg-gray-800 text-gray-100 font-medium rounded-lg hover:bg-gray-700 transition-all transform hover:-translate-y-0.5 shadow-lg"
+      >
+        <.icon name="hero-chart-bar" class="-ml-1 mr-3 h-6 w-6" /> View Dashboard
+      </.link>
+      <.link
+        navigate="/api-portal"
+        class="inline-flex items-center px-8 py-4 bg-gray-900 border border-gray-700 text-gray-100 font-medium rounded-lg hover:border-blue-500 transition-all transform hover:-translate-y-0.5 shadow-lg"
+      >
+        <.icon name="hero-key" class="-ml-1 mr-3 h-6 w-6" /> API Portal
+      </.link>
+    </div>
+  </div>
+  
+<!-- Features Section -->
+  <section id="features" class="py-24 border-t border-gray-800">
+    <h2 class="text-5xl font-light text-center text-gray-100 mb-4">
+      Why Choose <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">LANG</span>?
+    </h2>
+    <p class="text-xl text-gray-400 text-center mb-16 max-w-3xl mx-auto">
+      The most advanced text intelligence platform built for developers who demand performance, accuracy, and scalability.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all">
+        <div class="text-4xl mb-4">🧠</div>
+        <h3 class="text-xl font-medium mb-3 text-gray-100">Universal Text Intelligence</h3>
+        <p class="text-gray-400">
+          Parse and analyze ANY text format - code, documents, data, communication. One platform for all text intelligence.
+        </p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-purple-600 transition-all">
+        <div class="text-4xl mb-4">⚡</div>
+        <h3 class="text-xl font-medium mb-3 text-gray-100">Native Rust Performance</h3>
+        <p class="text-gray-400">
+          60-100x faster than pure Elixir. High-performance NIFs for filesystem operations and text processing.
+        </p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-green-600 transition-all">
+        <div class="text-4xl mb-4">🔄</div>
+        <h3 class="text-xl font-medium mb-3 text-gray-100">Real-time Analysis</h3>
+        <p class="text-gray-400">
+          Live text analysis with instant feedback. Stream processing for continuous intelligence.
+        </p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-yellow-600 transition-all">
+        <div class="text-4xl mb-4">🌍</div>
+        <h3 class="text-xl font-medium mb-3 text-gray-100">Multi-Language Support</h3>
+        <p class="text-gray-400">
+          Tree-sitter parsing for 20+ programming languages. Semantic understanding beyond syntax.
+        </p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-red-600 transition-all">
+        <div class="text-4xl mb-4">🔌</div>
+        <h3 class="text-xl font-medium mb-3 text-gray-100">RESTful API</h3>
+        <p class="text-gray-400">
+          Complete API access with authentication, rate limiting, and comprehensive documentation.
+        </p>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-indigo-600 transition-all">
+        <div class="text-4xl mb-4">📊</div>
+        <h3 class="text-xl font-medium mb-3 text-gray-100">Advanced Analytics</h3>
+        <p class="text-gray-400">
+          Deep insights into text patterns, quality metrics, and semantic structures with beautiful visualizations.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <!-- Customer Dashboard -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-100">
+        <.icon name="hero-chart-bar" class="inline-block w-6 h-6 mr-2 text-blue-400" />
+        Customer Dashboard
+      </h2>
+      <p class="text-gray-400 mb-4">
+        Monitor your API usage, billing, team members, and subscription analytics in real-time.
+      </p>
+      <ul class="text-sm text-gray-500 space-y-1 mb-4">
+        <li>• Usage analytics & limits</li>
+        <li>• Billing & subscription management</li>
+        <li>• Team collaboration tools</li>
+        <li>• Performance monitoring</li>
+      </ul>
+      <.link navigate="/dashboard" class="text-blue-400 hover:text-blue-300 font-medium">
+        Open Dashboard →
+      </.link>
+    </div>
+    
+<!-- API Portal -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-green-600 transition-all">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-100">
+        <.icon name="hero-key" class="inline-block w-6 h-6 mr-2 text-green-400" /> API Portal
+      </h2>
+      <p class="text-gray-400 mb-4">
+        Generate API keys, explore interactive documentation, and test endpoints in real-time.
+      </p>
+      <ul class="text-sm text-gray-500 space-y-1 mb-4">
+        <li>• API key management</li>
+        <li>• Interactive documentation</li>
+        <li>• Live endpoint testing</li>
+        <li>• Rate limit monitoring</li>
+      </ul>
+      <.link navigate="/api-portal" class="text-green-400 hover:text-green-300 font-medium">
+        Manage APIs →
+      </.link>
+    </div>
+    
+<!-- Text Analysis -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-purple-600 transition-all">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-100">
+        <.icon name="hero-magnifying-glass" class="inline-block w-6 h-6 mr-2 text-purple-400" />
+        Real-time Analysis
+      </h2>
+      <p class="text-gray-400 mb-4">
+        Get instant feedback on text quality, readability, sentiment, and language detection.
+      </p>
+      <ul class="text-sm text-gray-500 space-y-1 mb-4">
+        <li>• Multi-format support</li>
+        <li>• Live text analysis</li>
+        <li>• Quality scoring</li>
+        <li>• Writing suggestions</li>
+      </ul>
+      <.link navigate="/analyze" class="text-purple-400 hover:text-purple-300 font-medium">
+        Try Analysis →
+      </.link>
+    </div>
+  </div>
+  
+<!-- SaaS Features Grid -->
+  <div class="mt-20">
+    <h2 class="text-3xl font-light text-center text-gray-300 mb-12">Enterprise-Ready Platform</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="text-center p-6 bg-gray-900/50 border border-gray-800 rounded-xl">
+        <.icon name="hero-users" class="w-8 h-8 mx-auto mb-3 text-blue-400" />
+        <h3 class="font-semibold text-gray-100">Team Management</h3>
+        <p class="text-sm text-gray-400">Multi-user collaboration with role-based access</p>
+      </div>
+      <div class="text-center p-6 bg-gray-900/50 border border-gray-800 rounded-xl">
+        <.icon name="hero-credit-card" class="w-8 h-8 mx-auto mb-3 text-green-400" />
+        <h3 class="font-semibold text-gray-100">Flexible Billing</h3>
+        <p class="text-sm text-gray-400">Usage-based pricing with subscription tiers</p>
+      </div>
+      <div class="text-center p-6 bg-gray-900/50 border border-gray-800 rounded-xl">
+        <.icon name="hero-shield-check" class="w-8 h-8 mx-auto mb-3 text-red-400" />
+        <h3 class="font-semibold text-gray-100">Rate Limiting</h3>
+        <p class="text-sm text-gray-400">Fair usage policies and traffic management</p>
+      </div>
+      <div class="text-center p-6 bg-gray-900/50 border border-gray-800 rounded-xl">
+        <.icon name="hero-chart-line" class="w-8 h-8 mx-auto mb-3 text-purple-400" />
+        <h3 class="font-semibold text-gray-100">Analytics</h3>
+        <p class="text-sm text-gray-400">Detailed usage insights and performance metrics</p>
+      </div>
+    </div>
+  </div>
+  
+<!-- Pricing Section -->
+  <section id="pricing" class="py-24 border-t border-gray-800">
+    <h2 class="text-5xl font-light text-center text-gray-100 mb-4">
+      Simple, Transparent Pricing
+    </h2>
+    <p class="text-xl text-gray-400 text-center mb-16 max-w-2xl mx-auto">
+      Start free, scale as you grow. No hidden fees, no surprises.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <!-- Free Tier -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-blue-600 transition-all">
+        <div class="text-center">
+          <h3 class="text-2xl font-bold text-gray-100 mb-2">Developer</h3>
+          <div class="text-4xl font-bold text-blue-400 mb-4">Free</div>
+          <p class="text-gray-400 mb-6">Perfect for getting started</p>
+        </div>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> 1,000 API calls/month
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Basic text analysis
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Community support
+          </li>
+        </ul>
+        <.link
+          navigate="/analyze"
+          class="block w-full text-center px-6 py-3 bg-gray-800 text-gray-100 font-medium rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
+        >
+          Get Started
+        </.link>
+      </div>
+      
+<!-- Pro Tier -->
+      <div class="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-2 border-blue-500 rounded-xl p-8 relative">
+        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+          <span class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+            Most Popular
+          </span>
+        </div>
+        <div class="text-center">
+          <h3 class="text-2xl font-bold text-gray-100 mb-2">Professional</h3>
+          <div class="text-4xl font-bold text-blue-400 mb-4">
+            $29<span class="text-lg text-gray-400">/mo</span>
+          </div>
+          <p class="text-gray-400 mb-6">For growing applications</p>
+        </div>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" />
+            100,000 API calls/month
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Advanced analytics
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Priority support
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Team collaboration
+          </li>
+        </ul>
+        <.link
+          navigate="/dashboard"
+          class="block w-full text-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5 shadow-lg"
+        >
+          Start Pro Trial
+        </.link>
+      </div>
+      
+<!-- Enterprise Tier -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-purple-600 transition-all">
+        <div class="text-center">
+          <h3 class="text-2xl font-bold text-gray-100 mb-2">Enterprise</h3>
+          <div class="text-4xl font-bold text-purple-400 mb-4">Custom</div>
+          <p class="text-gray-400 mb-6">For large-scale operations</p>
+        </div>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Unlimited API calls
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Custom integrations
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> Dedicated support
+          </li>
+          <li class="flex items-center text-gray-300">
+            <.icon name="hero-check" class="w-5 h-5 text-green-400 mr-3" /> On-premises deployment
+          </li>
+        </ul>
+        <a
+          href="mailto:enterprise@lang.ai"
+          class="block w-full text-center px-6 py-3 bg-gray-800 text-gray-100 font-medium rounded-lg hover:bg-gray-700 transition-all border border-gray-700"
+        >
+          Contact Sales
+        </a>
+      </div>
+    </div>
+  </section>
+  
+<!-- CTA Section -->
+  <div class="mt-24 bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 border border-gray-800 rounded-xl text-center py-12 px-8">
+    <h2 class="text-4xl md:text-5xl font-light mb-8 text-gray-100">
+      Ready to Code with <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Intelligence</span>?
+    </h2>
+    <p class="text-xl text-gray-400 mb-12">
+      Join thousands of developers using LANG for intelligent text processing
+    </p>
+    <div class="flex flex-col sm:flex-row justify-center gap-4">
+      <.link
+        navigate="/dashboard"
+        class="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5 shadow-lg"
+      >
+        Get Started Free
+      </.link>
+      <.link
+        navigate="/api-portal"
+        class="px-8 py-4 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-700 transition-all transform hover:-translate-y-0.5 border border-gray-700 hover:border-gray-600"
+      >
+        View Documentation
+      </.link>
+    </div>
+  </div>
+</div>

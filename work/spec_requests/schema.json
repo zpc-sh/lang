@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/spec-request.schema.json",
+  "title": "Spec Request",
+  "type": "object",
+  "required": ["project", "title", "api", "acceptance", "meta"],
+  "properties": {
+    "project": {"type": "string", "enum": ["jsonld", "markdown_ld"]},
+    "title": {"type": "string"},
+    "motivation": {"type": "string"},
+    "background": {"type": "string"},
+    "api": {"type": "object"},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "determinism": {"type": "array", "items": {"type": "string"}},
+    "telemetry": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+    "tests": {"type": "array", "items": {"type": "string"}},
+    "acceptance": {"type": "array", "items": {"type": "string"}},
+    "attachments": {"type": "array", "items": {"type": "string"}},
+    "contacts": {"type": "object"},
+    "meta": {"type": "object"}
+  }
+}
+

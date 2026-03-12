@@ -1,0 +1,44 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="max-w-5xl mx-auto p-4">
+    <h1 class="text-2xl font-semibold mb-4">Filesystem Watch (Demo)</h1>
+
+    <div class="text-sm text-gray-600 mb-2">
+      <div>Stream: {@stream_id || "—"} • Topic: {@topic || "—"}</div>
+      <div>
+        Snapshots: {@snapshots_count} {if @last_seq, do: "• Last seq: #{@last_seq}", else: ""}
+      </div>
+    </div>
+
+    <.form
+      for={
+        to_form(%{"path" => @path, "interval_ms" => @interval_ms, "duration_ms" => @duration_ms})
+      }
+      id="fs-watch-form"
+      phx-submit="start"
+    >
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <.input field={@form[:path]} type="text" label="Path" />
+        <.input field={@form[:interval_ms]} type="number" label="Interval (ms)" />
+        <.input field={@form[:duration_ms]} type="number" label="Duration (ms)" />
+      </div>
+      <div class="mt-4">
+        <button id="start-watch" type="submit" class="px-3 py-2 rounded bg-blue-600 text-white">
+          {(@watching? && "Watching...") || "Start Watch"}
+        </button>
+      </div>
+    </.form>
+
+    <div class="mt-6">
+      <h2 class="text-xl font-semibold mb-2">Snapshots</h2>
+      <div id="snapshots" phx-update="stream">
+        <div class="hidden only:block text-gray-500">No snapshots yet</div>
+        <div :for={{id, snap} <- @streams.snapshots} id={id} class="border rounded p-3 mb-2">
+          <div class="text-sm text-gray-600">
+            Seq: {snap.seq} • {@path} • {Calendar.strftime(snap.at, "%H:%M:%S")}
+          </div>
+          <div class="text-sm">Stats: {inspect(snap.stats)}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

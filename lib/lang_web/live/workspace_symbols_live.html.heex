@@ -1,0 +1,50 @@
+<Layouts.app flash={@flash} current_user={@current_user} current_scope={@current_scope}>
+  <div class="px-6 py-4">
+    <h1 class="text-xl font-semibold mb-4">Workspace Symbols</h1>
+
+    <.form for={to_form(%{filter: @filter})} id="symbol-filter" phx-change="filter">
+      <div class="flex gap-3 items-end mb-4">
+        <div class="w-96">
+          <.input type="text" field={@form[:filter][:file_path]} placeholder="Filter by file path" />
+        </div>
+        <div class="w-64">
+          <.input type="text" field={@form[:filter][:name]} placeholder="Filter by symbol name" />
+        </div>
+        <div class="w-48">
+          <.input type="select" field={@form[:filter][:type]} options={["": "", "function": "function", "module": "module", "type": "type", "variable": "variable", "macro": "macro"]} />
+        </div>
+      </div>
+    </.form>
+
+    <.form for={to_form(%{root: @root})} id="ingest-form" phx-submit="ingest">
+      <div class="flex gap-3 items-end mb-6">
+        <div class="w-96">
+          <.input type="text" field={@form[:root]} placeholder="Workspace root path (optional)" />
+        </div>
+        <button type="submit" class="px-3 py-2 rounded bg-blue-600 text-white text-sm">Ingest Symbols</button>
+      </div>
+    </.form>
+
+    <div id="symbols" phx-update="stream" class="divide-y border rounded">
+      <div class="hidden only:block p-6 text-gray-500">No symbols loaded</div>
+      <div :for={{id, s} <- @streams.symbols} id={id} class="p-3 flex items-center justify-between gap-4">
+        <div class="flex-1">
+          <div class="font-medium">{s.name}</div>
+          <div class="text-xs text-gray-500">{s.type} • {s.file_path}</div>
+        </div>
+        <div class="text-xs text-gray-400 w-24 text-right">
+          {s.line_start}:{s.column_start}
+        </div>
+        <div class="flex items-center gap-2">
+          <.link navigate={"/workspaces/#{@workspace_id}/references?symbol_id=#{s.id}"} class="text-blue-600 text-xs">View refs</.link>
+          <button type="button" phx-click="reingest_file" phx-value-file_path={s.file_path} class="text-xs px-2 py-1 border rounded">Re-ingest</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end mt-4 gap-2">
+      <button type="button" phx-click="prev_page" class="px-2 py-1 border rounded text-sm">Prev</button>
+      <button type="button" phx-click="next_page" class="px-2 py-1 border rounded text-sm">Next</button>
+    </div>
+  </div>
+</Layouts.app>

@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.generate.from_tests",
+  "@type": "lang:Function",
+  "category": "generate",
+  "description": "Queued via Ash/Oban; working stub",
+  "implementation": {
+    "file": "lib/lang/generate/workers/request_worker.ex",
+    "priority": "Critical",
+    "status": "in_progress"
+  },
+  "name": "lang.generate.from_tests"
+}

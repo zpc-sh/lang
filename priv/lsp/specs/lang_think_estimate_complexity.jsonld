@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.think.estimate_complexity",
+  "@type": "lang:Function",
+  "category": "think",
+  "description": "AI-powered complexity analysis",
+  "implementation": {
+    "file": "lib/lang/think/ai_engine.ex",
+    "priority": "Medium",
+    "status": "implemented"
+  },
+  "name": "lang.think.estimate_complexity"
+}

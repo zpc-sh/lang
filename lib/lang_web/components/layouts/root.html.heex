@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <meta
+      name="stripe-publishable-key"
+      content={System.get_env("STRIPE_PUBLISHABLE_KEY", "pk_test_placeholder")}
+    />
+    
+<!-- SEO Meta Tags -->
+    <LangWeb.SEO.meta_tags
+      title={assigns[:seo_title] || assigns[:page_title]}
+      description={assigns[:seo_description]}
+      keywords={assigns[:seo_keywords]}
+      image={assigns[:seo_image]}
+      canonical={assigns[:canonical_path]}
+      noindex={assigns[:noindex] || false}
+    />
+    <!-- Carbon Design System CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/carbon-components/css/carbon-components.min.css"
+    />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+    <script>
+      (() => {
+        const setTheme = (theme) => {
+          if (theme === "system") {
+            localStorage.removeItem("phx:theme");
+            document.documentElement.removeAttribute("data-theme");
+          } else {
+            localStorage.setItem("phx:theme", theme);
+            document.documentElement.setAttribute("data-theme", theme);
+          }
+        };
+        if (!document.documentElement.hasAttribute("data-theme")) {
+          setTheme(localStorage.getItem("phx:theme") || "system");
+        }
+        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
+
+        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
+      })();
+    </script>
+    <style>
+      html { scroll-behavior: smooth; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-950 text-gray-100">
+    <header class="navbar px-4 sm:px-6 lg:px-8 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
+      <div class="flex-1">
+        <a href="/" class="flex items-center">
+          <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 7l5 5m0 0l-5 5m5-5H6"
+            >
+            </path>
+          </svg>
+        </a>
+      </div>
+      <div class="flex-none">
+        <ul class="flex flex-column px-1 space-x-4 items-center">
+          <li>
+            <a
+              href="#features"
+              class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+            >
+              Features
+            </a>
+          </li>
+          <li>
+            <a
+              href="/api-portal"
+              class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+            >
+              Documentation
+            </a>
+          </li>
+          <li>
+            <a
+              href="#pricing"
+              class="px-4 py-2 text-gray-300 hover:text-blue-400 transition-colors duration-200 font-medium"
+            >
+              Pricing
+            </a>
+          </li>
+          <li>
+            <a
+              href="/analyze"
+              class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:-translate-y-0.5"
+            >
+              Try Free
+            </a>
+          </li>
+        </ul>
+      </div>
+    </header>
+    <main class="relative">
+      <div class="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-transparent to-purple-900/10">
+      </div>
+      <div class="relative">
+        {@inner_content}
+      </div>
+    </main>
+  </body>
+</html>

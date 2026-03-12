@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.spatial.waypoint_set",
+  "@type": "lang:Function",
+  "category": "spatial",
+  "description": "Ash resource implemented",
+  "implementation": {
+    "file": "lib/lang/spatial/waypoint.ex",
+    "priority": "High",
+    "status": "in_progress"
+  },
+  "name": "lang.spatial.waypoint_set"
+}

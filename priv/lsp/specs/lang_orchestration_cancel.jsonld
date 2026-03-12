@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.orchestration.cancel",
+  "@type": "lang:Function",
+  "category": "orchestration",
+  "description": "Cancel running jobs",
+  "implementation": {
+    "file": "_Not implemented_",
+    "priority": "Medium",
+    "status": "not_implemented"
+  },
+  "name": "lang.orchestration.cancel"
+}

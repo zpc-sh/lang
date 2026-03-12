@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:textDocument/didOpen",
+  "@type": "lang:Function",
+  "category": "textDocument/didOpen",
+  "description": "Document opened",
+  "implementation": {
+    "file": "lib/lang/lsp/server.ex",
+    "priority": "Medium",
+    "status": "in_progress"
+  },
+  "name": "textDocument/didOpen"
+}

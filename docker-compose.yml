@@ -1,0 +1,39 @@
+# Compose file for local development databases
+# Requires a shell with direnv loaded so ${...} vars are populated
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: lang-pg
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-postgres}"
+      POSTGRES_DB: "${DB_DATABASE:-lang_dev}"
+    volumes:
+      - lang_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-postgres} -h 127.0.0.1 -p 5432 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lang-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - lang_redisdata:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    # To require a password, uncomment below and set REDIS_PASSWORD in your env
+    # command: ["sh", "-lc", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    # environment:
+    #   REDIS_PASSWORD: "${REDIS_PASSWORD}"
+
+volumes:
+  lang_pgdata: {}
+  lang_redisdata: {}

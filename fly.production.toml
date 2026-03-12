@@ -1,0 +1,96 @@
+# fly.toml - LANG Production Configuration
+# Optimized for lang.nocsi.com deployment with cost efficiency
+
+app = 'lang-floral-firefly-7929'
+primary_region = 'ewr'  # East coast for better US performance
+kill_signal = 'SIGTERM'
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  release_command = "/app/bin/lang eval Lang.Release.migrate"
+
+[env]
+  MIX_ENV = 'prod'
+  PHX_HOST = 'lang.nocsi.com'
+  PHX_SERVER = 'true'
+  PORT = "4000"
+  ECTO_IPV6 = "true"
+  ERL_AFLAGS = "-proto_dist inet6_tcp"
+  
+  # Optimize Erlang VM for production
+  ERL_MAX_PORTS = "65536"
+  ERL_MAX_ETS_TABLES = "32768"
+  
+  # Application settings
+  POOL_SIZE = "10"
+  
+  # Enable health checks
+  HEALTH_CHECK_ENABLED = "true"
+
+[[mounts]]
+  source = 'lang_uploads'
+  destination = '/app/uploads'
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = true    # Cost optimization
+  auto_start_machines = true
+  min_machines_running = 1     # Cost optimization
+  max_machines_running = 3     # Scale limit
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'connections'
+    hard_limit = 1000
+    soft_limit = 800
+
+  # Health check configuration matching your HealthController
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '10s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/health'
+    headers = { }
+
+  # Additional checks for critical endpoints
+  [[http_service.checks]]
+    interval = '60s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/api/health'
+    headers = { }
+
+# VM configuration optimized for cost/performance
+[[vm]]
+  memory = '1gb'      # Sufficient for your Rust NIFs + Elixir
+  cpu_kind = 'shared' # Cost effective
+  cpus = 1
+
+# Metrics endpoint for monitoring
+[[metrics]]
+  port = 9091
+  path = '/metrics'
+
+# Custom domain configuration
+[[services]]
+  protocol = "tcp"
+  internal_port = 4000
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+# Machine configuration for auto-scaling
+[machine]
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1

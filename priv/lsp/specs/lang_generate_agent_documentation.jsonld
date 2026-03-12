@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.generate.agent.documentation",
+  "@type": "lang:Function",
+  "category": "generate",
+  "description": "Generate only in docs/, *.md",
+  "implementation": {
+    "file": "lib/lang/generate/agent_bounded.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.generate.agent.documentation"
+}

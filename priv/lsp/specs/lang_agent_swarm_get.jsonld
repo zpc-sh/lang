@@ -1,0 +1,47 @@
+{
+  "@context": {
+    "lsp": "https://lsp.dev/schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lsp:lang.agent.swarm_get",
+  "@type": "lsp:Method",
+  "lsp:method": "lang.agent.swarm_get",
+  "lsp:params": {
+    "@type": "lsp:Params",
+    "lsp:properties": [
+      { "lsp:name": "swarm_id", "lsp:type": "xsd:string", "lsp:required": true }
+    ]
+  },
+  "lsp:result": {
+    "@type": "lsp:Result",
+    "lsp:type": {
+      "@type": "lsp:Object",
+      "lsp:properties": [
+        { "lsp:name": "swarm_id", "lsp:type": "xsd:string" },
+        { "lsp:name": "status", "lsp:type": "xsd:string" },
+        { "lsp:name": "goals", "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } } },
+        { "lsp:name": "agent_ids", "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } } },
+        { "lsp:name": "coordinator_id", "lsp:type": "xsd:string" },
+        {
+          "lsp:name": "agents",
+          "lsp:type": {
+            "@type": "lsp:Array",
+            "lsp:items": {
+              "@type": "lsp:Object",
+              "lsp:properties": [
+                { "lsp:name": "id", "lsp:type": "xsd:string" },
+                { "lsp:name": "name", "lsp:type": "xsd:string" },
+                { "lsp:name": "state", "lsp:type": "xsd:string" },
+                { "lsp:name": "capabilities", "lsp:type": { "@type": "lsp:Array", "lsp:items": { "@type": "xsd:string" } } },
+                { "lsp:name": "session_id", "lsp:type": "xsd:string" }
+              ]
+            }
+          }
+        },
+        { "lsp:name": "metadata", "lsp:type": "lsp:Object" }
+      ]
+    }
+  },
+  "lsp:description": "Fetches a swarm and its agents"
+}
+

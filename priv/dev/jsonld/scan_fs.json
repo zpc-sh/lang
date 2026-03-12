@@ -1,0 +1,4 @@
+{
+  "lds:action": "analysis.scan_fs",
+  "path": "."
+}

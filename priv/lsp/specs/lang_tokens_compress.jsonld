@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.tokens.compress",
+  "@type": "lang:Function",
+  "category": "tokens",
+  "description": "Compress context intelligently",
+  "implementation": {
+    "file": "lib/lang/tokens/compressor.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.tokens.compress"
+}

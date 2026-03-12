@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:mcp.connection.create",
+  "@type": "lang:Function",
+  "category": "mcp",
+  "description": "Create MCP connection",
+  "implementation": {
+    "file": "lib/lang/rpc/router.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "mcp.connection.create"
+}

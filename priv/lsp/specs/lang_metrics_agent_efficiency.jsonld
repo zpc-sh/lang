@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.metrics.agent_efficiency",
+  "@type": "lang:Function",
+  "category": "metrics",
+  "description": "Agent resource usage",
+  "implementation": {
+    "file": "lib/lang/metrics/agent_efficiency.ex",
+    "priority": "High",
+    "status": "not_implemented"
+  },
+  "name": "lang.metrics.agent_efficiency"
+}

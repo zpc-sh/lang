@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.parser.parse",
+  "@type": "lang:Function",
+  "category": "parser",
+  "description": "Universal text parsing",
+  "implementation": {
+    "file": "lib/kyozo/lang/universal_parser.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "lang.parser.parse"
+}

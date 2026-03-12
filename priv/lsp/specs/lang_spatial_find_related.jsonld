@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.spatial.find_related",
+  "@type": "lang:Function",
+  "category": "spatial",
+  "description": "Relation-based similarity implemented",
+  "implementation": {
+    "file": "lib/lang/spatial/mapper.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.spatial.find_related"
+}

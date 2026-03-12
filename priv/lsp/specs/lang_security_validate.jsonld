@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.security.validate",
+  "@type": "lang:Function",
+  "category": "security",
+  "description": "Request validation",
+  "implementation": {
+    "file": "lib/lang/security/input_validator.ex",
+    "priority": "Critical",
+    "status": "in_progress"
+  },
+  "name": "lang.security.validate"
+}

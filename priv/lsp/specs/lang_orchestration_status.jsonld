@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:lang.orchestration.status",
+  "@type": "lang:Function",
+  "category": "orchestration",
+  "description": "Monitor progress",
+  "implementation": {
+    "file": "lib/lang/orchestration/master.ex",
+    "priority": "High",
+    "status": "implemented"
+  },
+  "name": "lang.orchestration.status"
+}

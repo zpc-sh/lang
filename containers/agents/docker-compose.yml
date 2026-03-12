@@ -1,0 +1,32 @@
+version: "3.9"
+
+x-agent-base: &agent_base
+  build: .
+  environment:
+    LSP_HOST: ${LSP_HOST:-host.docker.internal}
+    LSP_PORT: ${LSP_PORT:-4001}
+  extra_hosts:
+    - "host.docker.internal:host-gateway"   # Linux Docker 20.10+
+  networks:
+    - default
+
+services:
+  agent1:
+    <<: *agent_base
+    env_file: ["${TEST_ENV_DIR}/client-1.env"]
+  agent2:
+    <<: *agent_base
+    env_file: ["${TEST_ENV_DIR}/client-2.env"]
+  agent3:
+    <<: *agent_base
+    env_file: ["${TEST_ENV_DIR}/client-3.env"]
+  agent4:
+    <<: *agent_base
+    env_file: ["${TEST_ENV_DIR}/client-4.env"]
+  agent5:
+    <<: *agent_base
+    env_file: ["${TEST_ENV_DIR}/client-5.env"]
+
+networks:
+  default: {}
+

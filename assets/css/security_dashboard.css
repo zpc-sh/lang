@@ -1,0 +1,485 @@
+/* Security Dashboard Styles */
+
+.security-dashboard {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 1rem;
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin: 0;
+}
+
+.dashboard-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Threat Level Indicator */
+.threat-level {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.threat-level-normal {
+  background-color: #dcfce7;
+  border: 1px solid #16a34a;
+  color: #15803d;
+}
+
+.threat-level-low {
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #d97706;
+}
+
+.threat-level-medium {
+  background-color: #fed7aa;
+  border: 1px solid #ea580c;
+  color: #c2410c;
+}
+
+.threat-level-high {
+  background-color: #fecaca;
+  border: 1px solid #dc2626;
+  color: #b91c1c;
+}
+
+.threat-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.threat-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.threat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.metric-card h3 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+/* Chart Section */
+.chart-section {
+  margin-bottom: 2rem;
+}
+
+.chart-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.chart-container {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.activity-chart {
+  width: 100%;
+  height: 200px;
+}
+
+/* Alert Filters */
+.alert-filters {
+  margin-bottom: 1rem;
+}
+
+.alert-filters h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-buttons .btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* Alerts Section */
+.alerts-section {
+  margin-bottom: 2rem;
+}
+
+.alerts-list {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: white;
+}
+
+.alert-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  position: relative;
+}
+
+.alert-item:last-child {
+  border-bottom: none;
+}
+
+.alert-item.acknowledged {
+  opacity: 0.6;
+  background-color: #f9fafb;
+}
+
+.alert-critical,
+.alert-emergency {
+  border-left: 4px solid #dc2626;
+  background-color: #fef2f2;
+}
+
+.alert-warning {
+  border-left: 4px solid #f59e0b;
+  background-color: #fffbeb;
+}
+
+.alert-info {
+  border-left: 4px solid #3b82f6;
+  background-color: #eff6ff;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.alert-level {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.alert-critical .alert-level,
+.alert-emergency .alert-level {
+  background-color: #dc2626;
+  color: white;
+}
+
+.alert-warning .alert-level {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.alert-info .alert-level {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.alert-time {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-family: 'Fira Code', monospace;
+}
+
+.alert-message {
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.alert-metadata {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background-color: #f9fafb;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  word-break: break-all;
+}
+
+.no-alerts {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Client Section */
+.client-section {
+  margin-bottom: 2rem;
+}
+
+.client-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.client-stats {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.client-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.client-stat:last-child {
+  border-bottom: none;
+}
+
+.client-id {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.client-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.client-status {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.client-status.active {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.client-status.blocked {
+  background-color: #fecaca;
+  color: #dc2626;
+}
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  text-decoration: none;
+}
+
+.btn:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #6b7280;
+  color: white;
+  border-color: #6b7280;
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563;
+  border-color: #4b5563;
+}
+
+.btn-success {
+  background-color: #16a34a;
+  color: white;
+  border-color: #16a34a;
+}
+
+.btn-success:hover {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-active {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .security-dashboard {
+    padding: 0.5rem;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .filter-buttons {
+    justify-content: center;
+  }
+  
+  .alert-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .client-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-container {
+    overflow-x: scroll;
+  }
+  
+  .activity-chart {
+    min-width: 600px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .security-dashboard {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+  
+  .metric-card,
+  .alerts-list,
+  .client-stats,
+  .chart-container {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+  
+  .dashboard-header {
+    border-color: #374151;
+  }
+  
+  .dashboard-header h1,
+  .alert-filters h2,
+  .client-section h2,
+  .chart-section h2 {
+    color: #f9fafb;
+  }
+  
+  .metric-value {
+    color: #f9fafb;
+  }
+  
+  .alert-item {
+    border-color: #374151;
+  }
+  
+  .alert-item.acknowledged {
+    background-color: #1f2937;
+  }
+  
+  .client-stat {
+    border-color: #374151;
+  }
+  
+  .no-alerts {
+    color: #9ca3af;
+  }
+}

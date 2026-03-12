@@ -1,0 +1,5 @@
+{
+  "lds:action": "lsp.emit_diagnostics",
+  "uri": "file:///main.ex",
+  "diagnostics": {"items": []}
+}

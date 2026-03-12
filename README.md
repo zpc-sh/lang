@@ -1,0 +1,511 @@
+<div align="center">
+  <img src="priv/static/images/lang_logo.svg" alt="LANG Logo" width="600">
+  <h1>LANG - Universal Text Intelligence Platform</h1>
+</div>
+
+LANG extends Language Server Protocol (LSP) and Tree-sitter parsing beyond code to provide semantic understanding, intelligent completions, and analysis for ANY structured content format.
+
+> Development: see docs/DEVELOPMENT.md for local setup, Mix dev tasks, and folder layout.
+> Codex: see AGENTS.codex.md for concise codegen guardrails.
+> Claude: see AGENTS.claude.md for Claude-specific guardrails.
+
+## 🚀 Features
+
+### Universal Text Intelligence
+- **Multi-Format Analysis** - Support for 20+ text formats including code, documentation, data, and communication formats
+- **Intelligent Completions** - Context-aware suggestions for any text format
+- **Real-time Diagnostics** - Quality analysis and improvement suggestions
+- **Semantic Understanding** - Deep content analysis beyond syntax
+
+### Conversation Rehearsal Engine
+- **Scenario-Based Practice** - Job interviews, sales calls, negotiations, presentations
+- **Branching Conversations** - Explore different response paths and outcomes
+- **Performance Analytics** - Track improvement over time with detailed metrics
+- **AI-Powered Feedback** - Get strategic recommendations for better outcomes
+
+### Stylometric Analysis
+- **Writing Fingerprinting** - Identify unique writing patterns and styles
+- **Authorship Attribution** - Compare writing samples for similarity analysis
+- **Style Obfuscation** - Modify writing patterns while preserving meaning
+- **Privacy Protection** - Advanced techniques to anonymize writing style
+
+### Time Machine
+- **Content Evolution** - Track how documents change over time
+- **Branching Timelines** - Create alternate versions and merge changes
+- **Temporal Navigation** - Jump between any point in content history
+- **Snapshot Management** - Save and restore content states
+
+### Language Server Protocol
+- **Universal LSP** - Works with any editor supporting LSP
+- **Real-time Analysis** - Instant feedback as you type
+- **Cross-Format Support** - Seamless experience across all supported formats
+- **Extensible Architecture** - Easy to add new formats and capabilities
+
+## 📚 Documentation
+
+Complete documentation is available in the [`priv/docs/`](priv/docs/) directory:
+
+- **[Getting Started Guide](priv/docs/guides/getting-started.md)** - Quick setup and first steps
+- **[Deployment Guide](priv/docs/guides/deployment.md)** - Production deployment with Fly.io
+- **[FAQ](priv/docs/guides/faq.md)** - Frequently asked questions
+- **[Terminal Sessions Onboarding](priv/docs/guides/terminal-sessions-onboarding.md)** - Safe, server-mediated terminal usage from Markdown
+- **[API Documentation](priv/docs/api/index.md)** - Complete API reference
+- **[Architecture](priv/docs/architecture/index.md)** - System architecture and components
+- **[Tutorials](priv/docs/tutorials/index.md)** - Step-by-step tutorials
+- **[Performance Guide](priv/docs/performance/optimization-guide.md)** - Optimization tips
+ - **[Dev Pipeline Checklist](docs/dev_pipeline_checklist.md)** - Run analysis pipeline locally
+ - **[Analysis Pipeline](docs/analysis_pipeline.md)** - Scan → Ingest → Analyze → Finalize flow
+
+## 🛠️ Quick Start
+
+### Prerequisites
+
+- Elixir 1.15+
+- PostgreSQL 12+
+- Node.js 18+ (for assets)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd lang
+
+# Install dependencies and setup database
+mix setup
+
+# Start the platform
+mix phx.server
+```
+
+Visit `https://lang.nulity.com` to access the web interface.
+
+### LSP Server
+
+Connect your editor to the LANG LSP server on `localhost:4001`:
+
+**VS Code** - Add to settings.json:
+```json
+{
+  "lang.server.host": "127.0.0.1",
+  "lang.server.port": 4001
+}
+```
+
+**Neovim** - Add to your LSP config:
+```lua
+require'lspconfig'.lang.setup{
+  cmd = {"nc", "127.0.0.1", "4001"}
+}
+```
+
+## 🧭 Architecture Snapshot
+
+- Phoenix 1.8 + LiveView: Real-time UI and API endpoints.
+- Ash Framework 3.0: Resources and domains (`Lang.Analyses.*`, `Lang.Accounts`, etc.).
+- Oban: Background jobs and orchestration (`:analysis`, `:lsp`, `:metrics`, `:cleanup`, `:billing`).
+- Native Rust NIFs: High-performance FS scanning and parsing (`Lang.Native.FSScanner`, `Lang.Native.LangParser`, `Lang.Native.PerfEngine`).
+- Analysis Pipeline: See `docs/analysis_pipeline.md` (Scan → Ingest → Analyze → Finalize).
+
+### Oban Queues & Workers
+
+- Queue `:analysis`
+  - `Lang.Workers.FileSystemScanWorker`: native FS scan, ingest files, schedule finalize
+  - `Lang.Workers.FileAnalyzeWorker`: per-file analysis (parser, TI, stylometrics)
+  - `Lang.Workers.RunFinalizeWorker`: aggregate stats, complete run, reschedule until done
+  - `Lang.Workers.SemanticAnalysisWorker`: advanced semantic analysis
+  - `Lang.Workers.SecurityScanWorker`: security scanning
+  - `Lang.Workers.DependencyAnalysisWorker`: dependency analysis
+
+- Queue `:lsp`: environment workers for LSP integrations
+- Queue `:metrics`: performance/telemetry jobs
+- Queue `:cleanup`: cleanup/maintenance
+- Queue `:billing`: billing/usage reporting
+
+## 📖 Usage Examples
+
+### Text Analysis API
+
+```bash
+# Analyze a markdown document
+curl -X POST https://lang.nocsi.com/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "# Project Overview\n\nThis document outlines...",
+    "format": "markdown",
+    "options": {
+      "include_suggestions": true,
+      "complexity_analysis": true
+    }
+  }'
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "format": "markdown",
+    "content_size": 1247,
+    "analysis": {
+      "complexity_score": 6.2,
+      "readability_score": 8.1,
+      "structure_quality": 9.0,
+      "suggestions": [
+        "Consider adding more headers to improve structure"
+      ]
+    },
+    "completions": [...],
+    "diagnostics": [...]
+  }
+}
+```
+
+### Conversation Rehearsal
+
+```bash
+# Start a job interview rehearsal
+curl -X POST https://lang.nocsi.com/api/conversation/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scenario": "job_interview",
+    "participants": ["candidate", "interviewer"]
+  }'
+
+# Add a conversation turn
+curl -X POST https://lang.nocsi.com/api/conversation/{session_id}/turn \
+  -H "Content-Type: application/json" \
+  -d '{
+    "speaker": "interviewer",
+    "message": "Tell me about your experience with distributed systems.",
+    "metadata": {}
+  }'
+```
+
+### Stylometric Analysis
+
+```elixir
+# Analyze writing style
+{:ok, analysis} = Lang.analyze_writing_style("""
+  I believe that artificial intelligence represents one of the most
+  significant technological advances of our time. The implications
+  extend far beyond mere computational efficiency.
+""")
+
+IO.inspect(analysis.fingerprint)
+# => %{hash: "A1B2C3...", vector: [0.75, 0.82, ...]}
+
+# Compare two writing samples
+{:ok, comparison} = Lang.Stylometrics.AnalysisEngine.compare_writing_styles(
+  sample1, sample2
+)
+
+IO.puts("Similarity: #{comparison.similarity_score}")
+IO.puts("Same author: #{comparison.likely_same_author}")
+```
+
+### Time Machine
+
+```elixir
+# Create a timeline for document evolution
+{:ok, timeline} = Lang.create_timeline("doc_123", initial_content)
+
+# Add states as document evolves
+{:ok, state1} = Lang.TimeMachine.Core.add_state(timeline.id, revised_content)
+{:ok, state2} = Lang.TimeMachine.Core.add_state(timeline.id, final_content)
+
+# Navigate to previous state
+{:ok, previous} = Lang.TimeMachine.Core.navigate_to_state(timeline.id, state1.id)
+
+# Create a branch for alternate version
+{:ok, branch} = Lang.TimeMachine.Core.create_branch(timeline.id, state1.id, "alternate_version")
+```
+
+## 🔧 Configuration
+
+Key configuration options in `config/config.exs`:
+
+```elixir
+config :lang, :text_intelligence,
+  default_analysis_timeout: 30_000,
+  max_document_size_mb: 50,
+  supported_formats: ["markdown", "javascript", "python", ...]
+
+config :lang, :lsp,
+  port: 4001,
+  host: "127.0.0.1",
+  max_connections: 1000
+
+config :lang, :conversation_rehearsal,
+  max_session_duration_hours: 2,
+  max_conversation_turns: 1000
+
+config :lang, :stylometrics,
+  confidence_threshold: 0.7,
+  obfuscation_intensity_default: 0.5
+
+config :lang, :timemachine,
+  max_states_per_timeline: 10000,
+  cleanup_interval_minutes: 30
+```
+
+## 🧪 Development
+
+### Running Tests
+
+```bash
+# Run all tests
+mix test
+
+# Run specific test file
+mix test test/lang/text_intelligence/analysis_engine_test.exs
+
+# Run tests with coverage
+mix test --cover
+```
+
+### Code Quality
+
+```bash
+# Format code
+mix format
+
+# Run linter
+mix credo
+
+# Run static analysis
+mix dialyzer
+
+# Pre-commit checks
+mix precommit
+```
+
+### Assets Build and Optional Recurse Editor
+
+- Build uses `assets/build.mjs` with a lightweight Svelte-in-esbuild pipeline. The Recurse editor integration remains optional and only loads when present.
+
+- Scripts:
+  - `npm run --prefix assets build` – single build (outputs to `priv/static/assets`)
+  - `NODE_ENV=production npm run --prefix assets deploy` – production build
+  - `npm run --prefix assets watch` – incremental rebuilds
+
+- Optional Recurse editor loading:
+  - If `window.RecurseEditor` is defined (e.g., via your own bundle), `LspRecurseEditor` uses it.
+  - If not defined, the hook attempts a dynamic import of `@nocsi/recurse/dist/recurse/shadcn` during `mounted()`.
+  - The dynamic import is compiled into a separate chunk by `esbuild` and only fetched if needed; no extra plugins required.
+
+- Minimal usage flow:
+  1) Add a container for the editor with `phx-hook="LspRecurseEditor"` and supply `data-content` and `data-language`.
+  2) Option A (global): set `window.RecurseEditor` in your own preload script (see snippet below).
+  3) Option B (on-demand): do nothing; the hook dynamically imports the editor when mounted.
+  4) Build assets using one of the scripts above.
+
+- Global setup example (use if you want to provide the editor yourself and skip dynamic import):
+
+  Create a small preload script that runs before `app.js` and sets the global:
+
+  ```js
+  // assets/js/recurse_global.js (example preload)
+  import * as RecurseMod from '@nocsi/recurse/dist/recurse/shadcn/index.js'
+  // Prefer named export, fallback to default export
+  window.RecurseEditor = RecurseMod.RecurseEditor || RecurseMod.default
+  ```
+
+  Then import it in your HTML before the main app bundle, or add `import './recurse_global'` at the top of `assets/js/app.js` if you want it bundled.
+
+- LiveView container example (simplified):
+
+  ```heex
+  <div id="editor" phx-hook="LspRecurseEditor" data-language="elixir" data-content={@content} />
+  ```
+
+- Notes:
+  - If the editor cannot load (global missing and dynamic import not available), the hook logs a warning and continues without rich editing.
+  - Avoid long-running processes in CI. Use `watch` only for local dev.
+
+### Adding New Format Support
+
+1. **Register the format** in `ParserRegistry`:
+```elixir
+"newformat" => %{
+  parser: :builtin_newformat,
+  domain: "specialized"
+}
+```
+
+2. **Implement the parser** in `AnalysisEngine`:
+```elixir
+defp parse_newformat(content) do
+  # Your parsing logic here
+  {:ok, %{type: :newformat, ...}}
+end
+```
+
+3. **Add LSP completions** in `LSP.Server`:
+```elixir
+defp generate_newformat_completions(_document, _position) do
+  # Format-specific completions
+end
+```
+
+## 🏗️ Architecture
+
+### Core Components
+
+- **ParserRegistry** - Central registry for all supported formats
+- **AnalysisEngine** - Core text analysis and intelligence
+- **RehearsalEngine** - Conversation practice and branching
+- **LSP.Server** - Language Server Protocol implementation
+- **TimeMachine.StateManager** - Temporal content management
+- **Stylometrics.AnalysisEngine** - Writing style analysis
+- **Security.RateLimiter** - API protection and throttling
+
+### Data Flow
+
+```
+Editor/Client → LSP Server → Analysis Engine → Parser Registry
+                     ↓              ↓              ↓
+              Real-time        Intelligence    Format-specific
+              Feedback         Generation       Processing
+```
+
+### Supported Formats
+
+| Category | Formats | Parser Type |
+|----------|---------|-------------|
+| **Code** | JavaScript, Python, Elixir, TypeScript, Rust, Go | Builtin |
+| **Docs** | Markdown, Text, RST, AsciiDoc | Builtin |
+| **Data** | JSON, YAML, TOML, XML, CSV | Builtin |
+| **Comm** | Conversation, Email, Chat | Composite |
+| **Other** | Log files, SQL, RegEx | Specialized |
+
+## 🤝 Contributing
+
+Please read our [Contributing Guide](CONTRIBUTING.md) for development guidelines and project architecture information.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+Make sure to run `mix precommit` before submitting your PR to ensure all tests pass and code is properly formatted.
+### Development Setup
+
+```bash
+# Install development dependencies
+mix deps.get
+
+# Setup database
+mix ecto.setup
+
+# Install git hooks
+mix git_hooks.install
+
+# Start development server with live reload
+mix phx.server
+```
+
+## 📚 Documentation
+
+- [API Reference](docs/api.md)
+- [LSP Protocol Guide](docs/lsp.md)
+- [Format Support Guide](docs/formats.md)
+- [Conversation Rehearsal](docs/rehearsal.md)
+- [Stylometric Analysis](docs/stylometrics.md)
+- [Time Machine](docs/timemachine.md)
+- [Deployment Guide](docs/deployment.md)
+
+## 🔒 Security
+
+LANG includes comprehensive security features:
+
+- **Rate Limiting** - Configurable limits per operation and user
+- **Content Validation** - Input sanitization and size limits
+- **Privacy Protection** - Style obfuscation for anonymity
+- **Audit Logging** - Complete activity tracking
+
+Report security issues to: security@lang-platform.dev
+
+## 📊 Performance
+
+### Benchmarks
+
+| Operation | Documents/sec | Latency (p99) |
+|-----------|---------------|---------------|
+| Text Analysis | 500 | 45ms |
+| LSP Completion | 1000 | 15ms |
+| Style Fingerprinting | 200 | 120ms |
+| Conversation Turn | 800 | 25ms |
+
+### Scaling
+
+- **Horizontal Scaling** - Stateless design allows easy clustering
+- **Background Processing** - Oban for async analysis jobs
+- **Caching** - Redis for frequently accessed results
+- **Database** - PostgreSQL with optimized indexes
+
+## 🎯 Roadmap
+
+### v1.1 (Next Release)
+- [ ] Machine Learning integration for better predictions
+- [ ] Real-time collaboration features
+- [ ] Mobile app support
+- [ ] Advanced style transfer capabilities
+
+### v1.2 (Future)
+- [ ] Plugin architecture for custom analyzers
+- [ ] Integration with popular writing tools
+- [ ] Advanced conversation AI models
+- [ ] Multi-language support
+
+### v2.0 (Long-term)
+- [ ] Distributed processing architecture
+- [ ] Advanced privacy features
+- [ ] Enterprise SSO integration
+- [ ] Advanced analytics dashboard
+
+## 📄 License
+
+Copyright (c) 2025 NOCSI
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- Phoenix Framework team for the excellent web platform
+- Ash Framework for the resource layer architecture
+- Tree-sitter project for parsing inspiration
+- Language Server Protocol specification authors
+- The Elixir community for ecosystem support
+
+## 📞 Support
+
+- **Documentation**: [docs.lang-platform.dev](https://docs.lang-platform.dev)
+- **Issues**: [GitHub Issues](https://github.com/lang-platform/lang/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/lang-platform/lang/discussions)
+- **Email**: support@lang-platform.dev
+- **Chat**: [Discord Server](https://discord.gg/lang-platform)
+
+---
+
+**Built with ❤️ using Elixir and Phoenix**
+
+*Transforming how we interact with text, one format at a time.*
+## Local Dev Services (Postgres + Redis)
+
+Use the provided Mix tasks (they call `docker compose` under the hood and exit):
+
+- Start: `mix dev.db.up`
+- Status: `mix dev.db.status`
+- Stop: `mix dev.db.down` (keep volumes)
+- Wipe: `mix dev.db.wipe` (removes volumes)
+- Restart: `mix dev.db.restart`
+- PSQL helper: `mix dev.psql` or `mix dev.psql --query "select now();"`
+- Redis helper: `mix dev.redis_cli`
+
+Requirements:
+- `direnv` with `.envrc` loading the reusable `use_phoenix` module (`use phoenix`) to export `DB_*`, `PHX_*`, `REDIS_*` vars.
+- `docker` (with `docker compose`), `psql` and `redis-cli` available on PATH.
+
+`docker-compose.yml` lives in the project root and is parameterized via environment variables. The `use_phoenix` direnv module will pick free ports when defaults are busy and export `DATABASE_URL` and `REDIS_URL` for the app.

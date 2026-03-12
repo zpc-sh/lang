@@ -1,0 +1,16 @@
+{
+  "@context": {
+    "lang": "https://lang.nulity.com/schema/v1/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "lang:rpc.shutdown",
+  "@type": "lang:Function",
+  "category": "rpc",
+  "description": "Clean shutdown",
+  "implementation": {
+    "file": "lib/lang/rpc/router.ex",
+    "priority": "Critical",
+    "status": "implemented"
+  },
+  "name": "rpc.shutdown"
+}
