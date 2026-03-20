@@ -70,6 +70,7 @@ defmodule LangWeb.Layouts do
       <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
 
       <button
+        aria-label="System theme"
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
@@ -78,6 +79,7 @@ defmodule LangWeb.Layouts do
       </button>
 
       <button
+        aria-label="Light theme"
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
@@ -86,6 +88,7 @@ defmodule LangWeb.Layouts do
       </button>
 
       <button
+        aria-label="Dark theme"
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
