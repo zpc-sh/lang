@@ -351,12 +351,12 @@ defmodule Lang.Storage.MetricsStore do
         }
       end)
 
-    # Queue all updates
-    Enum.each(updates, fn update_attrs ->
-      update_attrs
-      |> Lang.Workers.ProductivityMetricsWorker.new(queue: :analytics, priority: 3)
-      |> Oban.insert()
+    # Queue all updates efficiently via bulk insert
+    updates
+    |> Enum.map(fn update_attrs ->
+      Lang.Workers.ProductivityMetricsWorker.new(update_attrs, queue: :analytics, priority: 3)
     end)
+    |> Oban.insert_all()
   end
 
   defp apply_measurement_filters(query, filters) do
