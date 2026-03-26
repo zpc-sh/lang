@@ -112,17 +112,19 @@ defmodule Lang.LSP.PhoenixIntegration do
       analysis_stream
       |> Stream.chunk_every(10)
       |> Stream.with_index()
-      |> Enum.each(fn {chunk, index} ->
+      |> Stream.map(fn {chunk, index} ->
+        %{
+          stream_id: stream_id,
+          chunk: %{items: chunk},
+          index: index,
+          uri: uri
+        }
+      end)
+      |> Stream.chunk_every(10)
+      |> Enum.each(fn batch ->
         _ =
           try do
-            Lang.LSP.Events.AnalysisStreamEvent
-            |> Ash.Changeset.for_create(:emit, %{
-              stream_id: stream_id,
-              chunk: %{items: chunk},
-              index: index,
-              uri: uri
-            })
-            |> Ash.create()
+            Ash.bulk_create(batch, Lang.LSP.Events.AnalysisStreamEvent, :emit, return_errors?: true)
           rescue
             _ -> :ok
           end
