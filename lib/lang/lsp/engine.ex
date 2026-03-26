@@ -105,13 +105,16 @@ defmodule Lang.LSP.Engine do
 
   defp invoke_by_method(mod, method, params, ctx) do
     fun = method_to_fun(method)
-    if function_exported?(mod, fun, 2), do: {:ok, apply(mod, fun, [params, ctx])}, else: {:error, :no_handler}
+    if is_atom(fun) and fun != nil and function_exported?(mod, fun, 2), do: {:ok, apply(mod, fun, [params, ctx])}, else: {:error, :no_handler}
   end
 
   defp method_to_fun(meth) when is_binary(meth) do
-    meth
-    |> String.replace([".", "/"], "_")
-    |> String.to_atom()
+    normalized = String.replace(meth, [".", "/"], "_")
+    try do
+      String.to_existing_atom(normalized)
+    rescue
+      ArgumentError -> nil
+    end
   end
 end
 
