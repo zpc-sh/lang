@@ -112,6 +112,7 @@ defmodule Lang.LSP.Dispatch do
       "lang.agent.verify_profile" -> agent_verify_profile(msg)
       "lang.agent.detect_rogue" -> agent_detect_rogue(msg)
       "lang.agent.quarantine" -> agent_quarantine(msg)
+      "lang.agent.partition" -> agent_partition(msg)
       "lang.agent.behavior_baseline" -> agent_behavior_baseline(msg)
       "lang_wake_qwen" -> wake_qwen(msg)
       "lang.agent.anomaly_score" -> agent_anomaly_score(msg)
@@ -2050,6 +2051,7 @@ defmodule Lang.LSP.Dispatch do
           "lang.query.impact",
           "lang.query.dependency",
           "lang.query.ownership",
+          "lang.agent.partition",
         "lang.metrics.tokens",
         # Dev model pipeline
         "lang.dev.models.list",
@@ -2484,6 +2486,19 @@ defmodule Lang.LSP.Dispatch do
 
       {:error, reason} ->
         %{"jsonrpc" => "2.0", "id" => id, "error" => %{code: -32000, message: inspect(reason)}}
+    end
+  end
+
+  defp agent_partition(msg) do
+    # Map the incoming JSON-RPC message directly to the handler
+    case Lang.LSP.Handlers.AgentPartition.handle(%{
+           client_id: Map.get(msg, "client_id"),
+           params: maybe_json_map(Map.get(msg, "params", %{}))
+         }, %{}) do
+      {:reply, %{result: result}, _ctx} ->
+        %{"jsonrpc" => "2.0", "id" => msg["id"], "result" => result}
+      {:error, reason} ->
+        %{"jsonrpc" => "2.0", "id" => msg["id"], "error" => %{code: -32000, message: inspect(reason)}}
     end
   end
 
