@@ -140,13 +140,21 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def show_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
+    user_id = conn.assigns.current_user.id
+
     try do
       case Analysis.get_analysis_session!(id) do
         session ->
-          render(conn, "session.json", session: session)
+          if session.project.user_id == user_id do
+            render(conn, "session.json", session: session)
+          else
+            ApiError.json(conn, :not_found, "Analysis session not found")
+          end
       end
     rescue
+      Ash.Error.Query.NotFound ->
+        ApiError.json(conn, :not_found, "Analysis session not found")
+
       Ecto.NoResultsError ->
         ApiError.json(conn, :not_found, "Analysis session not found")
     end
@@ -184,94 +192,24 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def cancel_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
-    case Analysis.get_analysis_session!(id) do
-      session ->
-        unless Run.in_progress?(session) do
-          ApiError.json(
-            conn,
-            :unprocessable_entity,
-            "Cannot cancel session that is not in progress"
-          )
-        else
-          case Analysis.cancel_analysis_session(session) do
-            {:ok, session} ->
-              render(conn, "session.json", session: session)
+    user_id = conn.assigns.current_user.id
 
-            {:error, changeset} ->
-              conn
-              |> put_status(:unprocessable_entity)
-              |> render("errors.json", changeset: changeset)
-          end
-        end
-    end
-  rescue
-    Ecto.NoResultsError ->
-      ApiError.json(conn, :not_found, "Analysis session not found")
-  end
-
-  # File Upload and Analysis
-
-  def upload_files(conn, %{"session_id" => session_id} = params) do
-    # TODO: Add user authorization check
     try do
-      case Analysis.get_analysis_session!(session_id) do
+      case Analysis.get_analysis_session!(id) do
         session ->
-          unless session.status == :pending do
-            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+          if session.project.user_id != user_id do
+            ApiError.json(conn, :not_found, "Analysis session not found")
           else
-            case extract_files_from_upload(params) do
-              {:ok, files} ->
-                case Analysis.process_analysis_session(session, files) do
-                  {:ok, updated_session} ->
-                    render(conn, "session.json", session: updated_session)
-
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:unprocessable_entity)
-                    |> render("errors.json", changeset: changeset)
-                end
-
-              {:error, reason} ->
-                ApiError.json(conn, :bad_request, to_string(reason))
-            end
-          end
-      end
-    rescue
-      Ecto.NoResultsError ->
-        ApiError.json(conn, :not_found, "Analysis session not found")
-    end
-  end
-
-  def analyze_text(conn, %{"session_id" => session_id} = params) do
-    # For direct text analysis without file upload
-    try do
-      case Analysis.get_analysis_session!(session_id) do
-        session ->
-          unless session.status == "pending" do
-            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
-          else
-            text_content = params["content"]
-            file_name = params["file_name"] || "untitled.txt"
-            language = params["language"]
-
-            unless text_content do
-              ApiError.json(conn, :bad_request, "Content is required")
+            unless Run.in_progress?(session) do
+              ApiError.json(
+                conn,
+                :unprocessable_entity,
+                "Cannot cancel session that is not in progress"
+              )
             else
-              file_attrs = %{
-                file_name: file_name,
-                file_path: file_name,
-                content: text_content,
-                file_size_bytes: byte_size(text_content),
-                language_detected: language,
-                analysis_session_id: session_id
-              }
-
-              case Analysis.create_analyzed_file(file_attrs) do
-                {:ok, file} ->
-                  # Update file status to processing
-                  {:ok, updated_file} = Analysis.update_analyzed_file_status(file, :processing)
-                  render(conn, "file.json", file: updated_file)
+              case Analysis.cancel_analysis_session(session) do
+                {:ok, session} ->
+                  render(conn, "session.json", session: session)
 
                 {:error, changeset} ->
                   conn
@@ -282,6 +220,103 @@ defmodule LangWeb.Api.AnalysisController do
           end
       end
     rescue
+      Ash.Error.Query.NotFound ->
+        ApiError.json(conn, :not_found, "Analysis session not found")
+
+      Ecto.NoResultsError ->
+        ApiError.json(conn, :not_found, "Analysis session not found")
+    end
+  end
+
+  # File Upload and Analysis
+
+  def upload_files(conn, %{"session_id" => session_id} = params) do
+    user_id = conn.assigns.current_user.id
+
+    try do
+      case Analysis.get_analysis_session!(session_id) do
+        session ->
+          if session.project.user_id != user_id do
+            ApiError.json(conn, :not_found, "Analysis session not found")
+          else
+            unless session.status == :pending do
+              ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+            else
+              case extract_files_from_upload(params) do
+                {:ok, files} ->
+                  case Analysis.process_analysis_session(session, files) do
+                    {:ok, updated_session} ->
+                      render(conn, "session.json", session: updated_session)
+
+                    {:error, changeset} ->
+                      conn
+                      |> put_status(:unprocessable_entity)
+                      |> render("errors.json", changeset: changeset)
+                  end
+
+                {:error, reason} ->
+                  ApiError.json(conn, :bad_request, to_string(reason))
+              end
+            end
+          end
+      end
+    rescue
+      Ash.Error.Query.NotFound ->
+        ApiError.json(conn, :not_found, "Analysis session not found")
+
+      Ecto.NoResultsError ->
+        ApiError.json(conn, :not_found, "Analysis session not found")
+    end
+  end
+
+  def analyze_text(conn, %{"session_id" => session_id} = params) do
+    user_id = conn.assigns.current_user.id
+
+    # For direct text analysis without file upload
+    try do
+      case Analysis.get_analysis_session!(session_id) do
+        session ->
+          if session.project.user_id != user_id do
+            ApiError.json(conn, :not_found, "Analysis session not found")
+          else
+            unless session.status == "pending" do
+              ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+            else
+              text_content = params["content"]
+              file_name = params["file_name"] || "untitled.txt"
+              language = params["language"]
+
+              unless text_content do
+                ApiError.json(conn, :bad_request, "Content is required")
+              else
+                file_attrs = %{
+                  file_name: file_name,
+                  file_path: file_name,
+                  content: text_content,
+                  file_size_bytes: byte_size(text_content),
+                  language_detected: language,
+                  analysis_session_id: session_id
+                }
+
+                case Analysis.create_analyzed_file(file_attrs) do
+                  {:ok, file} ->
+                    # Update file status to processing
+                    {:ok, updated_file} = Analysis.update_analyzed_file_status(file, :processing)
+                    render(conn, "file.json", file: updated_file)
+
+                  {:error, changeset} ->
+                    conn
+                    |> put_status(:unprocessable_entity)
+                    |> render("errors.json", changeset: changeset)
+                end
+              end
+            end
+          end
+      end
+    rescue
+      Ash.Error.Query.NotFound ->
+        ApiError.json(conn, :not_found, "Analysis session not found")
+
       Ecto.NoResultsError ->
         ApiError.json(conn, :not_found, "Analysis session not found")
     end
