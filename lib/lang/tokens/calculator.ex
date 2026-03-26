@@ -307,8 +307,8 @@ defmodule Lang.Tokens.Calculator do
     important_words = filter_important_words(original_words)
 
     # Check how many appear in compressed version
-    compressed_words = String.split(compressed, ~r/\s+/)
-    preserved_count = Enum.count(important_words, &Enum.member?(compressed_words, &1))
+    compressed_words = String.split(compressed, ~r/\s+/) |> MapSet.new()
+    preserved_count = Enum.count(important_words, &MapSet.member?(compressed_words, &1))
 
     # Calculate preservation ratio with diminishing returns for very long texts
     important_count = length(important_words)
