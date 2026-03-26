@@ -137,7 +137,17 @@ defmodule Lang.Agent.Lifecycle do
 
   defp atomize_keys(map) when is_map(map) do
     Map.new(map, fn {k, v} ->
-      key = if is_binary(k), do: String.to_atom(k), else: k
+      key =
+        if is_binary(k) do
+          try do
+            String.to_existing_atom(k)
+          rescue
+            ArgumentError -> k
+          end
+        else
+          k
+        end
+
       val = if is_map(v), do: atomize_keys(v), else: v
       {key, val}
     end)
