@@ -32,7 +32,14 @@ defmodule Lang.LSP.ML do
   Predicts usage patterns for optimization.
   """
   def handle("lang.ml.usage.predict", %{"user_id" => user_id, "time_window" => time_window}, _session) do
-    case UsagePredictor.predict_usage(user_id, String.to_atom(time_window)) do
+    time_window_atom =
+      try do
+        String.to_existing_atom(time_window)
+      rescue
+        ArgumentError -> time_window
+      end
+
+    case UsagePredictor.predict_usage(user_id, time_window_atom) do
       prediction ->
         # Log prediction request
         Events.track_event(%{

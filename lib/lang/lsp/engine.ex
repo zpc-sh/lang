@@ -109,9 +109,12 @@ defmodule Lang.LSP.Engine do
   end
 
   defp method_to_fun(meth) when is_binary(meth) do
-    meth
-    |> String.replace([".", "/"], "_")
-    |> String.to_atom()
+    fun_str = String.replace(meth, [".", "/"], "_")
+    try do
+      String.to_existing_atom(fun_str)
+    rescue
+      ArgumentError -> fun_str
+    end
   end
 end
 
