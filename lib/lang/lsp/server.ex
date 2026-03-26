@@ -1329,13 +1329,16 @@ defmodule Lang.LSP.Server do
   end
 
   defp add_keyword_tokens(acc, line, ln, keywords) do
-    Enum.reduce(keywords, acc, fn kw, a ->
-      re = ~r/\b#{Regex.escape(kw)}\b/u
+    new_tokens =
+      Enum.reduce(keywords, [], fn kw, a ->
+        re = ~r/\b#{Regex.escape(kw)}\b/u
 
-      Enum.reduce(Regex.scan(re, line, return: :index), a, fn [{pos, len}], a2 ->
-        a2 ++ [{ln, pos, len, "keyword", []}]
+        Enum.reduce(Regex.scan(re, line, return: :index), a, fn [{pos, len}], a2 ->
+          [{ln, pos, len, "keyword", []} | a2]
+        end)
       end)
-    end)
+
+    acc ++ Enum.reverse(new_tokens)
   end
 
   defp add_defmodule_tokens(acc, line, ln) do
