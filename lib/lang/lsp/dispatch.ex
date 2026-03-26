@@ -1062,7 +1062,12 @@ defmodule Lang.LSP.Dispatch do
       "markdown_ld" -> :markdown_ld
       "markdown" -> :markdown_ld
       "json" -> :jsonld
-      other -> String.to_atom(other)
+      other ->
+        try do
+          String.to_existing_atom(other)
+        rescue
+          ArgumentError -> other
+        end
     end
   end
 
@@ -2568,7 +2573,7 @@ defmodule Lang.LSP.Dispatch do
     try do
       String.to_existing_atom(k)
     rescue
-      ArgumentError -> String.to_atom(k)
+      ArgumentError -> k
     end
   end
 
