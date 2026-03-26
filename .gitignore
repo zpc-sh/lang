@@ -1,0 +1,38 @@
+# Mix build artifacts — NEVER commit these; they are CPU-architecture-specific
+# binary blobs that bloat repo size, pin CI runners to specific platform builds,
+# and cause spurious diffs on every checkout. See docs/BINARY_BLOB_PATTERN.md.
+_build/
+*.beam
+
+# Mix dependencies — fetched at CI time via `mix deps.get`; committing them
+# duplicates hundreds of MB of source + native binaries (.so, .exe, .nif) into
+# git history permanently, even after a subsequent removal.
+deps/
+
+# Erlang crash dump — can be tens of megabytes; no value in version control
+erl_crash.dump
+
+# macOS Finder metadata — zero value outside a local machine
+.DS_Store
+**/.DS_Store
+
+# Temporary / scratch files
+tmp/
+
+# Node / assets build output
+assets/node_modules/
+priv/static/assets/
+
+# Environment / secrets — NEVER commit real credentials
+.env
+*.secret
+
+# Native (Rust NIF) build artifacts — architecture-specific, built by rustler
+native/*/target/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
