@@ -71,6 +71,9 @@ defmodule Lang.MCP.ToolRegistry do
 
   defp tools, do: spec_tools()
 
+  @doc false
+  def __runtime_tools_for_test__, do: runtime_tools()
+
   defp runtime_tools do
     %{
       "filesystem" => %{
@@ -88,7 +91,7 @@ defmodule Lang.MCP.ToolRegistry do
         },
         "read" => %{
           "description" => "Read a file",
-          "function" => fn path -> File.read(path) end,
+          "function" => &safe_read_file/1,
           "schema" => %{
             "type" => "object",
             "properties" => %{"path" => %{"type" => "string"}},
@@ -134,5 +137,18 @@ defmodule Lang.MCP.ToolRegistry do
     |> Enum.drop(1)
     |> List.first()
     |> to_string()
+  end
+
+  defp safe_read_file(path) do
+    expanded_path = Path.expand(path)
+    cwd = File.cwd!()
+    # Ensure cwd has a trailing slash for a safe prefix check
+    cwd_with_slash = if String.ends_with?(cwd, "/"), do: cwd, else: cwd <> "/"
+
+    if expanded_path == cwd or String.starts_with?(expanded_path, cwd_with_slash) do
+      File.read(expanded_path)
+    else
+      {:error, :eacces}
+    end
   end
 end
