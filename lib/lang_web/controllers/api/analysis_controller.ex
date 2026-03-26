@@ -184,24 +184,29 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def cancel_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
+    user_id = conn.assigns.current_user.id
+
     case Analysis.get_analysis_session!(id) do
       session ->
-        unless Run.in_progress?(session) do
-          ApiError.json(
-            conn,
-            :unprocessable_entity,
-            "Cannot cancel session that is not in progress"
-          )
+        if session.project.user_id != user_id do
+          ApiError.json(conn, :not_found, "Analysis session not found")
         else
-          case Analysis.cancel_analysis_session(session) do
-            {:ok, session} ->
-              render(conn, "session.json", session: session)
+          unless Run.in_progress?(session) do
+            ApiError.json(
+              conn,
+              :unprocessable_entity,
+              "Cannot cancel session that is not in progress"
+            )
+          else
+            case Analysis.cancel_analysis_session(session) do
+              {:ok, session} ->
+                render(conn, "session.json", session: session)
 
-            {:error, changeset} ->
-              conn
-              |> put_status(:unprocessable_entity)
-              |> render("errors.json", changeset: changeset)
+              {:error, changeset} ->
+                conn
+                |> put_status(:unprocessable_entity)
+                |> render("errors.json", changeset: changeset)
+            end
           end
         end
     end
