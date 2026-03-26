@@ -140,11 +140,14 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def show_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
     try do
       case Analysis.get_analysis_session!(id) do
         session ->
-          render(conn, "session.json", session: session)
+          if session.project.user_id != conn.assigns.current_user.id do
+            ApiError.json(conn, :forbidden, "Forbidden")
+          else
+            render(conn, "session.json", session: session)
+          end
       end
     rescue
       Ecto.NoResultsError ->
@@ -184,24 +187,27 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def cancel_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
     case Analysis.get_analysis_session!(id) do
       session ->
-        unless Run.in_progress?(session) do
-          ApiError.json(
-            conn,
-            :unprocessable_entity,
-            "Cannot cancel session that is not in progress"
-          )
+        if session.project.user_id != conn.assigns.current_user.id do
+          ApiError.json(conn, :forbidden, "Forbidden")
         else
-          case Analysis.cancel_analysis_session(session) do
-            {:ok, session} ->
-              render(conn, "session.json", session: session)
+          unless Run.in_progress?(session) do
+            ApiError.json(
+              conn,
+              :unprocessable_entity,
+              "Cannot cancel session that is not in progress"
+            )
+          else
+            case Analysis.cancel_analysis_session(session) do
+              {:ok, session} ->
+                render(conn, "session.json", session: session)
 
-            {:error, changeset} ->
-              conn
-              |> put_status(:unprocessable_entity)
-              |> render("errors.json", changeset: changeset)
+              {:error, changeset} ->
+                conn
+                |> put_status(:unprocessable_entity)
+                |> render("errors.json", changeset: changeset)
+            end
           end
         end
     end
@@ -213,27 +219,30 @@ defmodule LangWeb.Api.AnalysisController do
   # File Upload and Analysis
 
   def upload_files(conn, %{"session_id" => session_id} = params) do
-    # TODO: Add user authorization check
     try do
       case Analysis.get_analysis_session!(session_id) do
         session ->
-          unless session.status == :pending do
-            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+          if session.project.user_id != conn.assigns.current_user.id do
+            ApiError.json(conn, :forbidden, "Forbidden")
           else
-            case extract_files_from_upload(params) do
-              {:ok, files} ->
-                case Analysis.process_analysis_session(session, files) do
-                  {:ok, updated_session} ->
-                    render(conn, "session.json", session: updated_session)
+            unless session.status == :pending do
+              ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+            else
+              case extract_files_from_upload(params) do
+                {:ok, files} ->
+                  case Analysis.process_analysis_session(session, files) do
+                    {:ok, updated_session} ->
+                      render(conn, "session.json", session: updated_session)
 
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:unprocessable_entity)
-                    |> render("errors.json", changeset: changeset)
-                end
+                    {:error, changeset} ->
+                      conn
+                      |> put_status(:unprocessable_entity)
+                      |> render("errors.json", changeset: changeset)
+                  end
 
-              {:error, reason} ->
-                ApiError.json(conn, :bad_request, to_string(reason))
+                {:error, reason} ->
+                  ApiError.json(conn, :bad_request, to_string(reason))
+              end
             end
           end
       end
@@ -248,35 +257,39 @@ defmodule LangWeb.Api.AnalysisController do
     try do
       case Analysis.get_analysis_session!(session_id) do
         session ->
-          unless session.status == "pending" do
-            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+          if session.project.user_id != conn.assigns.current_user.id do
+            ApiError.json(conn, :forbidden, "Forbidden")
           else
-            text_content = params["content"]
-            file_name = params["file_name"] || "untitled.txt"
-            language = params["language"]
-
-            unless text_content do
-              ApiError.json(conn, :bad_request, "Content is required")
+            unless session.status == "pending" do
+              ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
             else
-              file_attrs = %{
-                file_name: file_name,
-                file_path: file_name,
-                content: text_content,
-                file_size_bytes: byte_size(text_content),
-                language_detected: language,
-                analysis_session_id: session_id
-              }
+              text_content = params["content"]
+              file_name = params["file_name"] || "untitled.txt"
+              language = params["language"]
 
-              case Analysis.create_analyzed_file(file_attrs) do
-                {:ok, file} ->
-                  # Update file status to processing
-                  {:ok, updated_file} = Analysis.update_analyzed_file_status(file, :processing)
-                  render(conn, "file.json", file: updated_file)
+              unless text_content do
+                ApiError.json(conn, :bad_request, "Content is required")
+              else
+                file_attrs = %{
+                  file_name: file_name,
+                  file_path: file_name,
+                  content: text_content,
+                  file_size_bytes: byte_size(text_content),
+                  language_detected: language,
+                  analysis_session_id: session_id
+                }
 
-                {:error, changeset} ->
-                  conn
-                  |> put_status(:unprocessable_entity)
-                  |> render("errors.json", changeset: changeset)
+                case Analysis.create_analyzed_file(file_attrs) do
+                  {:ok, file} ->
+                    # Update file status to processing
+                    {:ok, updated_file} = Analysis.update_analyzed_file_status(file, :processing)
+                    render(conn, "file.json", file: updated_file)
+
+                  {:error, changeset} ->
+                    conn
+                    |> put_status(:unprocessable_entity)
+                    |> render("errors.json", changeset: changeset)
+                end
               end
             end
           end
