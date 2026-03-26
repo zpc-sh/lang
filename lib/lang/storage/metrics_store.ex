@@ -342,21 +342,22 @@ defmodule Lang.Storage.MetricsStore do
     updates =
       records
       |> Enum.group_by(fn record -> {record.user_id, record.organization_id} end)
-      |> Enum.map(fn {{user_id, org_id}, _events} ->
+      |> Enum.map(fn {{user_id, _org_id}, _events} ->
         %{
+          task: "update_user_metrics",
           user_id: user_id,
-          organization_id: org_id,
-          update_type: "bulk_measurement_events",
-          triggered_at: DateTime.utc_now()
+          period_type: "daily",
+          date: Date.utc_today() |> Date.to_string(),
+          triggered_at: DateTime.utc_now() |> DateTime.to_iso8601()
         }
       end)
 
-    # Queue all updates
-    Enum.each(updates, fn update_attrs ->
-      update_attrs
-      |> Lang.Workers.ProductivityMetricsWorker.new(queue: :analytics, priority: 3)
-      |> Oban.insert()
+    # Queue all updates efficiently via bulk insert
+    updates
+    |> Enum.map(fn update_attrs ->
+      Lang.Workers.ProductivityMetricsWorker.new(update_attrs, queue: :analytics, priority: 3)
     end)
+    |> Oban.insert_all()
   end
 
   defp apply_measurement_filters(query, filters) do
