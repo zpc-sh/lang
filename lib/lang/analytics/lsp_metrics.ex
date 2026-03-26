@@ -568,8 +568,8 @@ defmodule Lang.Analytics.LSPMetrics do
       }
     else
       token_events = Enum.filter(events, fn e -> e.baseline_tokens && e.enhanced_tokens end)
-      total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(token_events, 0, fn e, acc -> acc + e.baseline_tokens end)
+      total_enhanced = Enum.reduce(token_events, 0, fn e, acc -> acc + e.enhanced_tokens end)
       total_saved = total_baseline - total_enhanced
 
       avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
@@ -578,7 +578,7 @@ defmodule Lang.Analytics.LSPMetrics do
 
       avg_time_saved =
         if length(time_events) > 0 do
-          Enum.sum(Enum.map(time_events, & &1.time_saved_seconds)) / length(time_events)
+          Enum.reduce(time_events, 0.0, fn e, acc -> acc + e.time_saved_seconds end) / length(time_events)
         else
           0.0
         end
@@ -609,8 +609,8 @@ defmodule Lang.Analytics.LSPMetrics do
 
       avg_reduction =
         if length(token_events) > 0 do
-          total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-          total_enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+          total_baseline = Enum.reduce(token_events, 0, fn e, acc -> acc + e.baseline_tokens end)
+          total_enhanced = Enum.reduce(token_events, 0, fn e, acc -> acc + e.enhanced_tokens end)
 
           if total_baseline > 0,
             do: (total_baseline - total_enhanced) / total_baseline * 100,
@@ -641,7 +641,7 @@ defmodule Lang.Analytics.LSPMetrics do
             0.0
 
           token_events ->
-            Enum.sum(Enum.map(token_events, &Decimal.to_float(&1.token_reduction_percent))) /
+            Enum.reduce(token_events, 0.0, fn e, acc -> acc + Decimal.to_float(e.token_reduction_percent) end) /
               length(token_events)
         end
 
@@ -654,7 +654,7 @@ defmodule Lang.Analytics.LSPMetrics do
 
           time_events ->
             avg_time =
-              Enum.sum(Enum.map(time_events, & &1.time_saved_seconds)) / length(time_events)
+              Enum.reduce(time_events, 0.0, fn e, acc -> acc + e.time_saved_seconds end) / length(time_events)
 
             # Cap at 50 for very high time savings
             min(avg_time / 60 * 10, 50)
@@ -668,7 +668,7 @@ defmodule Lang.Analytics.LSPMetrics do
             0.0
 
           quality_events ->
-            Enum.sum(Enum.map(quality_events, &Decimal.to_float(&1.quality_score))) /
+            Enum.reduce(quality_events, 0.0, fn e, acc -> acc + Decimal.to_float(e.quality_score) end) /
               length(quality_events) * 50
         end
 
@@ -687,7 +687,7 @@ defmodule Lang.Analytics.LSPMetrics do
 
       daily_savings =
         if length(token_events) > 0 do
-          Enum.sum(Enum.map(token_events, fn e -> e.baseline_tokens - e.enhanced_tokens end))
+          Enum.reduce(token_events, 0, fn e, acc -> acc + (e.baseline_tokens - e.enhanced_tokens) end)
         else
           0
         end
@@ -698,7 +698,7 @@ defmodule Lang.Analytics.LSPMetrics do
         tokens_saved: daily_savings,
         avg_reduction:
           if length(token_events) > 0 do
-            total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
+            total_baseline = Enum.reduce(token_events, 0, fn e, acc -> acc + e.baseline_tokens end)
             if total_baseline > 0, do: daily_savings / total_baseline * 100, else: 0.0
           else
             0.0
@@ -731,8 +731,8 @@ defmodule Lang.Analytics.LSPMetrics do
     else
       token_events = Enum.filter(events, fn e -> e.baseline_tokens && e.enhanced_tokens end)
 
-      total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(token_events, 0, fn e, acc -> acc + e.baseline_tokens end)
+      total_enhanced = Enum.reduce(token_events, 0, fn e, acc -> acc + e.enhanced_tokens end)
       total_saved = total_baseline - total_enhanced
 
       avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
@@ -741,7 +741,7 @@ defmodule Lang.Analytics.LSPMetrics do
 
       avg_time_saved =
         if length(time_events) > 0 do
-          Enum.sum(Enum.map(time_events, & &1.time_saved_seconds)) / length(time_events)
+          Enum.reduce(time_events, 0.0, fn e, acc -> acc + e.time_saved_seconds end) / length(time_events)
         else
           0.0
         end
@@ -750,7 +750,7 @@ defmodule Lang.Analytics.LSPMetrics do
 
       avg_quality =
         if length(quality_events) > 0 do
-          Enum.sum(Enum.map(quality_events, &Decimal.to_float(&1.quality_score))) /
+          Enum.reduce(quality_events, 0.0, fn e, acc -> acc + Decimal.to_float(e.quality_score) end) /
             length(quality_events)
         else
           0.0
