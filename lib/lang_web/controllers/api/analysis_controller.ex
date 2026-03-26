@@ -140,11 +140,18 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def show_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
+    user_id = conn.assigns.current_user.id
+
     try do
       case Analysis.get_analysis_session!(id) do
         session ->
-          render(conn, "session.json", session: session)
+          case Analysis.get_user_project(user_id, session.project_id) do
+            nil ->
+              ApiError.json(conn, :not_found, "Analysis session not found")
+
+            _project ->
+              render(conn, "session.json", session: session)
+          end
       end
     rescue
       Ecto.NoResultsError ->
@@ -184,25 +191,32 @@ defmodule LangWeb.Api.AnalysisController do
   end
 
   def cancel_session(conn, %{"id" => id}) do
-    # TODO: Add user authorization check
+    user_id = conn.assigns.current_user.id
+
     case Analysis.get_analysis_session!(id) do
       session ->
-        unless Run.in_progress?(session) do
-          ApiError.json(
-            conn,
-            :unprocessable_entity,
-            "Cannot cancel session that is not in progress"
-          )
-        else
-          case Analysis.cancel_analysis_session(session) do
-            {:ok, session} ->
-              render(conn, "session.json", session: session)
+        case Analysis.get_user_project(user_id, session.project_id) do
+          nil ->
+            ApiError.json(conn, :not_found, "Analysis session not found")
 
-            {:error, changeset} ->
-              conn
-              |> put_status(:unprocessable_entity)
-              |> render("errors.json", changeset: changeset)
-          end
+          _project ->
+            unless Run.in_progress?(session) do
+              ApiError.json(
+                conn,
+                :unprocessable_entity,
+                "Cannot cancel session that is not in progress"
+              )
+            else
+              case Analysis.cancel_analysis_session(session) do
+                {:ok, session} ->
+                  render(conn, "session.json", session: session)
+
+                {:error, changeset} ->
+                  conn
+                  |> put_status(:unprocessable_entity)
+                  |> render("errors.json", changeset: changeset)
+              end
+            end
         end
     end
   rescue
@@ -213,28 +227,35 @@ defmodule LangWeb.Api.AnalysisController do
   # File Upload and Analysis
 
   def upload_files(conn, %{"session_id" => session_id} = params) do
-    # TODO: Add user authorization check
+    user_id = conn.assigns.current_user.id
+
     try do
       case Analysis.get_analysis_session!(session_id) do
         session ->
-          unless session.status == :pending do
-            ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
-          else
-            case extract_files_from_upload(params) do
-              {:ok, files} ->
-                case Analysis.process_analysis_session(session, files) do
-                  {:ok, updated_session} ->
-                    render(conn, "session.json", session: updated_session)
+          case Analysis.get_user_project(user_id, session.project_id) do
+            nil ->
+              ApiError.json(conn, :not_found, "Analysis session not found")
 
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:unprocessable_entity)
-                    |> render("errors.json", changeset: changeset)
+            _project ->
+              unless session.status == :pending do
+                ApiError.json(conn, :unprocessable_entity, "Session is not in pending state")
+              else
+                case extract_files_from_upload(params) do
+                  {:ok, files} ->
+                    case Analysis.process_analysis_session(session, files) do
+                      {:ok, updated_session} ->
+                        render(conn, "session.json", session: updated_session)
+
+                      {:error, changeset} ->
+                        conn
+                        |> put_status(:unprocessable_entity)
+                        |> render("errors.json", changeset: changeset)
+                    end
+
+                  {:error, reason} ->
+                    ApiError.json(conn, :bad_request, to_string(reason))
                 end
-
-              {:error, reason} ->
-                ApiError.json(conn, :bad_request, to_string(reason))
-            end
+              end
           end
       end
     rescue
