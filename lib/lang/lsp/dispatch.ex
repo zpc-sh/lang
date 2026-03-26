@@ -25,7 +25,6 @@ defmodule Lang.LSP.Dispatch do
     lang.timeline.evolution
     lang.timeline.blame_semantic
     lang.timeline.predict_changes
-    lang.timeline.find_decisions
     lang.timeline.regression_risk
     lang.agent.spawn
   )
@@ -98,6 +97,7 @@ defmodule Lang.LSP.Dispatch do
       "lang.timeline.diff" -> timeline(:diff, msg)
       "lang.timeline.replay" -> timeline(:replay, msg)
       "lang.timeline.analyze" -> timeline(:analyze, msg)
+      "lang.timeline.find_decisions" -> timeline(:find_decisions, msg)
       "lang.agent.spawn" -> agent_spawn(msg)
       "lang.agent.delegate" -> agent_delegate(msg)
       "lang.agent.coordinate" -> agent_coordinate(msg)
@@ -2744,6 +2744,26 @@ defmodule Lang.LSP.Dispatch do
             end
           else
             {:error, id, -32602, "Missing required parameters for replay", %{}}
+          end
+
+        :find_decisions ->
+          timeline_id =
+            Lang.JSONLD.get(params, "timeline_id") || Lang.JSONLD.get(params, "timeline")
+
+          if timeline_id do
+            case Lang.Timeline.Decisions.handle(params, %{}) do
+              {:ok, decisions} ->
+                {:ok, id, decisions}
+
+              {:error, code, msg, reason_info} ->
+                {:error, id, code, msg, reason_info}
+              {:error, code, msg} ->
+                {:error, id, code, msg, %{}}
+              {:error, reason} ->
+                {:error, id, -32603, "Finding decisions failed", %{reason: inspect(reason)}}
+            end
+          else
+            {:error, id, -32602, "Missing timeline_id parameter", %{}}
           end
 
         :analyze ->

@@ -70,4 +70,17 @@ defmodule Lang.LSP.DispatchTest do
 
     %{"result" => %{"closed" => true}} = Dispatch.process(close)
   end
+
+
+  test "timeline.find_decisions calls decisions handler" do
+    msg = %{
+      "id" => 8,
+      "method" => "lang.timeline.find_decisions",
+      "params" => %{"timeline_id" => "123"}
+    }
+
+    # We do not have mocking set up, so we expect an error due to no history/state
+    resp = Dispatch.process(msg)
+    assert resp["error"]["message"] == "Failed to fetch timeline history"
+  end
 end

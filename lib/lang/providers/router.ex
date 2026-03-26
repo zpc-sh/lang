@@ -89,6 +89,7 @@ defmodule Lang.Providers.Router do
       # Grok for straightforward queries
       "lang.query.simple" -> :xai
       "lang.fs.explain_structure" -> route_by_cost(cost_priority)
+      "lang.timeline.find_decisions" -> route_think_method(complexity, cost_priority)
       # Default routing
       _ -> route_by_complexity_and_cost(complexity, cost_priority)
     end
