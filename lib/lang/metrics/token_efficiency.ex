@@ -304,8 +304,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         daily_breakdown: []
       }
     else
-      total_baseline = Enum.sum(Enum.map(events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(events, & &1.enhanced_tokens))
+      {total_baseline, total_enhanced} = sum_tokens(events)
       total_saved = total_baseline - total_enhanced
       avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
 
@@ -314,8 +313,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         events
         |> Enum.group_by(fn e -> DateTime.to_date(e.occurred_at) end)
         |> Enum.map(fn {date, day_events} ->
-          day_baseline = Enum.sum(Enum.map(day_events, & &1.baseline_tokens))
-          day_enhanced = Enum.sum(Enum.map(day_events, & &1.enhanced_tokens))
+          {day_baseline, day_enhanced} = sum_tokens(day_events)
           day_saved = day_baseline - day_enhanced
           day_reduction = if day_baseline > 0, do: day_saved / day_baseline * 100, else: 0.0
 
@@ -355,8 +353,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         method_breakdown: %{}
       }
     else
-      total_baseline = Enum.sum(Enum.map(events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(events, & &1.enhanced_tokens))
+      {total_baseline, total_enhanced} = sum_tokens(events)
       total_saved = total_baseline - total_enhanced
       avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
 
@@ -369,8 +366,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         events
         |> Enum.group_by(& &1.lsp_method)
         |> Enum.map(fn {method, method_events} ->
-          method_baseline = Enum.sum(Enum.map(method_events, & &1.baseline_tokens))
-          method_enhanced = Enum.sum(Enum.map(method_events, & &1.enhanced_tokens))
+          {method_baseline, method_enhanced} = sum_tokens(method_events)
           method_saved = method_baseline - method_enhanced
 
           method_reduction =
@@ -407,8 +403,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         recent_trend: "stable"
       }
     else
-      total_baseline = Enum.sum(Enum.map(events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(events, & &1.enhanced_tokens))
+      {total_baseline, total_enhanced} = sum_tokens(events)
       total_saved = total_baseline - total_enhanced
       current_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
 
@@ -458,8 +453,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp compile_efficiency_report(events, from, to, period_type, organization_id) do
-    total_baseline = Enum.sum(Enum.map(events, & &1.baseline_tokens))
-    total_enhanced = Enum.sum(Enum.map(events, & &1.enhanced_tokens))
+    {total_baseline, total_enhanced} = sum_tokens(events)
     total_saved = total_baseline - total_enhanced
     avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
 
@@ -471,8 +465,7 @@ defmodule Lang.Metrics.TokenEfficiency do
       events
       |> Enum.group_by(& &1.lsp_method)
       |> Enum.map(fn {method, method_events} ->
-        method_baseline = Enum.sum(Enum.map(method_events, & &1.baseline_tokens))
-        method_enhanced = Enum.sum(Enum.map(method_events, & &1.enhanced_tokens))
+        {method_baseline, method_enhanced} = sum_tokens(method_events)
 
         method_reduction =
           if method_baseline > 0,
@@ -492,8 +485,7 @@ defmodule Lang.Metrics.TokenEfficiency do
       events
       |> Enum.group_by(& &1.provider)
       |> Enum.map(fn {provider, provider_events} ->
-        provider_baseline = Enum.sum(Enum.map(provider_events, & &1.baseline_tokens))
-        provider_enhanced = Enum.sum(Enum.map(provider_events, & &1.enhanced_tokens))
+        {provider_baseline, provider_enhanced} = sum_tokens(provider_events)
 
         provider_reduction =
           if provider_baseline > 0,
@@ -516,7 +508,7 @@ defmodule Lang.Metrics.TokenEfficiency do
 
     avg_quality =
       if length(quality_events) > 0 do
-        Enum.sum(Enum.map(quality_events, &Decimal.to_float(&1.quality_score))) /
+        Enum.reduce(quality_events, 0.0, fn e, acc -> acc + Decimal.to_float(e.quality_score) end) /
           length(quality_events)
       else
         0.0
@@ -704,8 +696,7 @@ defmodule Lang.Metrics.TokenEfficiency do
     events
     |> Enum.group_by(& &1.lsp_method)
     |> Enum.map(fn {method, method_events} ->
-      total_baseline = Enum.sum(Enum.map(method_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(method_events, & &1.enhanced_tokens))
+      {total_baseline, total_enhanced} = sum_tokens(method_events)
 
       reduction =
         if total_baseline > 0,
@@ -758,8 +749,7 @@ defmodule Lang.Metrics.TokenEfficiency do
       events
       |> Enum.group_by(& &1.provider)
       |> Enum.map(fn {provider, provider_events} ->
-        total_baseline = Enum.sum(Enum.map(provider_events, & &1.baseline_tokens))
-        total_enhanced = Enum.sum(Enum.map(provider_events, & &1.enhanced_tokens))
+        {total_baseline, total_enhanced} = sum_tokens(provider_events)
 
         reduction =
           if total_baseline > 0,
@@ -807,16 +797,14 @@ defmodule Lang.Metrics.TokenEfficiency do
       first_half = Enum.take(sorted_events, mid_point)
       second_half = Enum.drop(sorted_events, mid_point)
 
-      first_baseline = Enum.sum(Enum.map(first_half, & &1.baseline_tokens))
-      first_enhanced = Enum.sum(Enum.map(first_half, & &1.enhanced_tokens))
+      {first_baseline, first_enhanced} = sum_tokens(first_half)
 
       first_reduction =
         if first_baseline > 0,
           do: (first_baseline - first_enhanced) / first_baseline * 100,
           else: 0.0
 
-      second_baseline = Enum.sum(Enum.map(second_half, & &1.baseline_tokens))
-      second_enhanced = Enum.sum(Enum.map(second_half, & &1.enhanced_tokens))
+      {second_baseline, second_enhanced} = sum_tokens(second_half)
 
       second_reduction =
         if second_baseline > 0,
@@ -835,8 +823,7 @@ defmodule Lang.Metrics.TokenEfficiency do
     events
     |> Enum.group_by(& &1.lsp_method)
     |> Enum.map(fn {method, method_events} ->
-      total_baseline = Enum.sum(Enum.map(method_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(method_events, & &1.enhanced_tokens))
+      {total_baseline, total_enhanced} = sum_tokens(method_events)
 
       reduction =
         if total_baseline > 0,
@@ -857,7 +844,7 @@ defmodule Lang.Metrics.TokenEfficiency do
     time_events = Enum.filter(events, &(&1.time_saved_seconds != nil))
 
     if length(time_events) > 0 do
-      total_time_saved = Enum.sum(Enum.map(time_events, & &1.time_saved_seconds))
+      total_time_saved = Enum.reduce(time_events, 0, fn e, acc -> acc + e.time_saved_seconds end)
       # Convert to hours and multiply by estimated developer hourly rate
       total_time_saved / 3600 * 100
     else
@@ -922,4 +909,12 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp percentile([], _percentile), do: 0.0
+  # Optimizes O(N) multi-pass operations by calculating both totals in a single pass
+  # to prevent unnecessary intermediate list allocations and redundant iterations
+  defp sum_tokens(events) do
+    Enum.reduce(events, {0, 0}, fn e, {b_acc, e_acc} ->
+      {b_acc + e.baseline_tokens, e_acc + e.enhanced_tokens}
+    end)
+  end
+
 end
