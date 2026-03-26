@@ -12,7 +12,6 @@ defmodule Lang.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      rustler_crates: rustler_crates(),
       dialyzer: dialyzer()
     ]
   end
@@ -87,10 +86,6 @@ defmodule Lang.MixProject do
       # For distributed orchestration
       {:libcluster, "~> 3.3"},
 
-      # Native Performance Engines
-      {:rustler, "~> 0.34.0", optional: true},
-      {:rustler_precompiled, "~> 0.7"},
-
       # Utilities
       {:number, "~> 1.0"},
 
@@ -138,43 +133,6 @@ defmodule Lang.MixProject do
     ]
   end
 
-  # Rustler configuration for native NIFs
-  defp rustler_crates do
-    if skip_nifs?() do
-      []
-    else
-      [
-        lang_parser: [
-          path: "native/lang_parser",
-          mode: rustler_mode(Mix.env())
-        ],
-        lang_perf: [
-          path: "native/lang_perf",
-          mode: rustler_mode(Mix.env())
-        ],
-        fs_watcher: [
-          path: "native/fs_watcher",
-          mode: rustler_mode(Mix.env())
-        ],
-        tree_parser: [
-          path: "native/tree_parser",
-          mode: rustler_mode(Mix.env())
-        ],
-        fs_scanner: [
-          path: "native/fs_scanner",
-          mode: rustler_mode(Mix.env())
-        ]
-      ]
-    end
-  end
-
-  defp rustler_mode(:prod), do: :release
-  defp rustler_mode(_), do: :debug
-
-  defp skip_nifs? do
-    val = System.get_env("SKIP_NIFS") || "0"
-    String.downcase(val) in ["1", "true", "yes", "on"]
-  end
 
   # Dialyzer configuration
   defp dialyzer do
@@ -224,9 +182,9 @@ defmodule Lang.MixProject do
       "assets.deploy": [
         "tailwind lang --minify",
         "esbuild lang --minify",
-        # ensure static dir exists and copy assets/static (including .well-known) to priv/static
+        # ensure static dir exists and copy assets/static to priv/static
         "cmd -- mkdir -p priv/static",
-        "cmd -- sh -lc 'cp -R assets/static/. priv/static'",
+        "cmd -- sh -lc 'cp -a assets/static/. priv/static/ || true'",
         "phx.digest"
       ],
 
@@ -236,10 +194,6 @@ defmodule Lang.MixProject do
       "dev.reset": ["dev.clean --all --deps --force"],
       "dev.quick": ["dev.clean --artifacts --format --force"],
 
-      # Native compilation
-      "compile.native": ["rustler.compile"],
-      "clean.native": ["rustler.clean"],
-      "bench.native": ["compile.native", "run -e 'Lang.Native.Benchmarks.run_all()'"],
 
       # Add this for Ash
       "ash.setup": [
