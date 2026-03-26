@@ -95,17 +95,6 @@ defmodule Lang.MCP.ToolRegistry do
             "required" => ["path"]
           }
         }
-      },
-      "shell" => %{
-        "execute" => %{
-          "description" => "Execute a shell command",
-          "function" => fn cmd -> System.cmd(cmd, []) end,
-          "schema" => %{
-            "type" => "object",
-            "properties" => %{"command" => %{"type" => "string"}},
-            "required" => ["command"]
-          }
-        }
       }
     }
   end
