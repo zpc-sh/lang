@@ -351,26 +351,12 @@ defmodule Lang.Storage.MetricsStore do
         }
       end)
 
-    # Queue all updates efficiently via bulk insert.
-    # Oban.insert_all/1 raises on invalid changesets, so we rescue to avoid
-    # crashing the bulk insert flow and instead log the failure.
-    jobs =
-      updates
-      |> Enum.map(fn update_attrs ->
-        Lang.Workers.ProductivityMetricsWorker.new(update_attrs, queue: :analytics, priority: 3)
-      end)
-
-    try do
-      Oban.insert_all(jobs)
-    rescue
-      error in Ecto.InvalidChangesetError ->
-        Logger.error(fn ->
-          "Failed to bulk schedule productivity metrics updates due to invalid job changeset: " <>
-            Exception.message(error)
-        end)
-
-        {:error, error}
-    end
+    # Queue all updates efficiently via bulk insert
+    updates
+    |> Enum.map(fn update_attrs ->
+      Lang.Workers.ProductivityMetricsWorker.new(update_attrs, queue: :analytics, priority: 3)
+    end)
+    |> Oban.insert_all()
   end
 
   defp apply_measurement_filters(query, filters) do
