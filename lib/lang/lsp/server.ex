@@ -1251,10 +1251,10 @@ defmodule Lang.LSP.Server do
         delta_line = line - pl
         delta_start = if delta_line == 0, do: start - ps, else: start
         entry = [delta_line, delta_start, len, token_type_index(type), token_mods_bitset(mods)]
-        {[acc | [entry]] |> List.flatten(), {line, start}}
+        {[entry | acc], {line, start}}
       end)
 
-    data
+    data |> Enum.reverse() |> List.flatten()
   end
 
   # Decode back to absolute tuples (used for simple range filter)
