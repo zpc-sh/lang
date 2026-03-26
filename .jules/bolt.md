@@ -1,3 +1,6 @@
-## 2024-05-24 - O(1) Membership Lookups with MapSet
-**Learning:** Changing O(N) list search to an O(1) lookup using a `MapSet` can provide immense performance gains in algorithms with nested iterative loops, effectively turning an O(N*M) calculation into an O(N+M) complexity path.
-**Action:** When calculating word preservation, intersections, or looping to perform multiple `Enum.member?` checks inside an outer `Enum.count`, preemptively wrap the inner lookup list in a `MapSet`.
+## 2024-03-24 - [Enum.sum(Enum.map(...)) vs Enum.reduce]
+**Learning:** `Enum.sum(Enum.map(collection, & &1.field))` is an anti-pattern that causes unnecessary intermediate list allocations, which can be critical memory bottlenecks for frequently calculated token/time aggregation loops in Elixir.
+**Action:** Use `Enum.reduce` to do a single-pass sum or calculate multiple field sums (like baseline + enhanced tokens) concurrently.
+## 2024-05-20 - Elixir Map+Sum Optimization
+**Learning:** In Elixir, sequential `Enum.sum(Enum.map(...))` calls over the same list create unnecessary intermediate lists and iterate the collection multiple times. Using `Enum.reduce` in a single pass is much more efficient for multiple aggregations.
+**Action:** Always replace multiple map+sum passes on the same collection with a single `Enum.reduce` that accumulates multiple values.
