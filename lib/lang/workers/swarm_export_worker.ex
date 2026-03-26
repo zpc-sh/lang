@@ -14,10 +14,16 @@ defmodule Lang.Workers.SwarmExportWorker do
   @chunk_size 1_000_000
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"kind" => kind, "format" => format, "export_id" => export_id} = args}) do
+  def perform(%Oban.Job{
+        args: %{"kind" => kind, "format" => format, "export_id" => export_id} = args
+      }) do
     case {kind, format} do
-      {"swarms", "ndjson"} -> export_swarms_ndjson(args)
-      {"agents", "ndjson"} -> export_agents_ndjson(args)
+      {"swarms", "ndjson"} ->
+        export_swarms_ndjson(args)
+
+      {"agents", "ndjson"} ->
+        export_agents_ndjson(args)
+
       other ->
         Logger.warning("Unsupported export request", request: other)
         :discard
@@ -31,16 +37,15 @@ defmodule Lang.Workers.SwarmExportWorker do
   defp export_swarms_ndjson(%{"export_id" => id, "filters" => filters}) do
     import Ash.Query
 
-    q = Lang.Agent.Swarm
-        |> maybe_filter_swarm_id(filters["swarm_id"]) 
-        |> maybe_filter_coord(filters["coordinator_id"]) 
-        |> maybe_filter_session(filters["session_id"]) 
-        |> sort(inserted_at: :desc)
-
-    {:ok, list} = Ash.read(q)
+    q =
+      Lang.Agent.Swarm
+      |> maybe_filter_swarm_id(filters["swarm_id"])
+      |> maybe_filter_coord(filters["coordinator_id"])
+      |> maybe_filter_session(filters["session_id"])
+      |> sort(inserted_at: :desc)
 
     content =
-      list
+      Ash.stream!(q)
       |> Stream.map(fn s ->
         %{
           swarm_id: s.swarm_id,
@@ -61,13 +66,15 @@ defmodule Lang.Workers.SwarmExportWorker do
   defp export_agents_ndjson(%{"export_id" => id, "swarm_id" => swarm_id, "filters" => filters}) do
     import Ash.Query
 
-    with {:ok, [swarm]} <- Lang.Agent.Swarm |> Ash.Query.for_read(:by_swarm_id, %{swarm_id: swarm_id}) |> Ash.read() do
+    with {:ok, [swarm]} <-
+           Lang.Agent.Swarm
+           |> Ash.Query.for_read(:by_swarm_id, %{swarm_id: swarm_id})
+           |> Ash.read() do
       base = Lang.Agent.Agent |> for_read(:by_swarm, %{swarm_id: swarm.id})
       q = apply_agent_filters(base, filters)
-      {:ok, list} = Ash.read(q)
 
       content =
-        list
+        Ash.stream!(q)
         |> Stream.map(fn a ->
           %{
             id: a.id,
@@ -131,11 +138,19 @@ defmodule Lang.Workers.SwarmExportWorker do
         _ = Redix.command(Lang.Redis, ["SETEX", key_base, ttl, content])
       else
         parts = chunk_binary(content, @chunk_size)
+
         Enum.with_index(parts, 1)
         |> Enum.each(fn {chunk, idx} ->
           _ = Redix.command(Lang.Redis, ["SETEX", "#{key_base}:part:#{idx}", ttl, chunk])
         end)
-        _ = Redix.command(Lang.Redis, ["SETEX", "#{key_base}:parts", ttl, Integer.to_string(length(parts))])
+
+        _ =
+          Redix.command(Lang.Redis, [
+            "SETEX",
+            "#{key_base}:parts",
+            ttl,
+            Integer.to_string(length(parts))
+          ])
       end
     rescue
       _ -> :ok
@@ -148,11 +163,17 @@ defmodule Lang.Workers.SwarmExportWorker do
   end
 
   defp do_chunk(<<>>, _size, acc), do: acc
+
   defp do_chunk(bin, size, acc) do
     <<chunk::binary-size(size), rest::binary>> =
       if byte_size(bin) >= size, do: bin, else: bin <> :binary.copy(<<0>>, size - byte_size(bin))
 
     actual = binary_part(chunk, 0, min(size, byte_size(bin)))
-    do_chunk(binary_part(bin, min(size, byte_size(bin)), byte_size(bin) - min(size, byte_size(bin))), size, [actual | acc])
+
+    do_chunk(
+      binary_part(bin, min(size, byte_size(bin)), byte_size(bin) - min(size, byte_size(bin))),
+      size,
+      [actual | acc]
+    )
   end
 end
