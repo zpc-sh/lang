@@ -430,8 +430,8 @@ defmodule Lang.Storage.MetricsStore do
     events
     |> Enum.group_by(time_grouper)
     |> Enum.map(fn {time_key, time_events} ->
-      total_baseline = Enum.sum(Enum.map(time_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(time_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(time_events, 0, fn x, acc -> acc + x.baseline_tokens end)
+      total_enhanced = Enum.reduce(time_events, 0, fn x, acc -> acc + x.enhanced_tokens end)
       total_saved = total_baseline - total_enhanced
       avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
 
@@ -504,8 +504,8 @@ defmodule Lang.Storage.MetricsStore do
     events
     |> Enum.group_by(& &1.lsp_method)
     |> Enum.map(fn {method, method_events} ->
-      total_baseline = Enum.sum(Enum.map(method_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(method_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(method_events, 0, fn x, acc -> acc + x.baseline_tokens end)
+      total_enhanced = Enum.reduce(method_events, 0, fn x, acc -> acc + x.enhanced_tokens end)
 
       reduction =
         if total_baseline > 0,
@@ -524,8 +524,8 @@ defmodule Lang.Storage.MetricsStore do
     events
     |> Enum.group_by(& &1.provider)
     |> Enum.map(fn {provider, provider_events} ->
-      total_baseline = Enum.sum(Enum.map(provider_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(provider_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(provider_events, 0, fn x, acc -> acc + x.baseline_tokens end)
+      total_enhanced = Enum.reduce(provider_events, 0, fn x, acc -> acc + x.enhanced_tokens end)
 
       reduction =
         if total_baseline > 0,
@@ -544,8 +544,8 @@ defmodule Lang.Storage.MetricsStore do
     events
     |> Enum.group_by(& &1.user_id)
     |> Enum.map(fn {user_id, user_events} ->
-      total_baseline = Enum.sum(Enum.map(user_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(user_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(user_events, 0, fn x, acc -> acc + x.baseline_tokens end)
+      total_enhanced = Enum.reduce(user_events, 0, fn x, acc -> acc + x.enhanced_tokens end)
 
       reduction =
         if total_baseline > 0,
@@ -587,8 +587,8 @@ defmodule Lang.Storage.MetricsStore do
     if length(token_events) == 0 do
       0.0
     else
-      total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+      total_baseline = Enum.reduce(token_events, 0, fn x, acc -> acc + x.baseline_tokens end)
+      total_enhanced = Enum.reduce(token_events, 0, fn x, acc -> acc + x.enhanced_tokens end)
 
       if total_baseline > 0 do
         (total_baseline - total_enhanced) / total_baseline * 100

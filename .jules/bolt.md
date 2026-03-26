@@ -1,0 +1,3 @@
+## 2024-03-25 - [Avoid Chaining Enum.map and Enum.sum]
+**Learning:** Elixir does not have a built-in `Enum.sum_by/2` function, unlike some other languages. Chaining `Enum.map/2` and `Enum.sum/1` creates unnecessary intermediate list allocations, which degrades performance through garbage collection pressure. Attempting to use `Stream.map` as an alternative can introduce complex operator precedence and typing issues if piped into arithmetic operators or appended to lists.
+**Action:** Use `Enum.reduce(collection, 0, fn x, acc -> acc + fun(x) end)` to aggregate sums efficiently in a single pass without intermediate memory allocations or typing ambiguities.

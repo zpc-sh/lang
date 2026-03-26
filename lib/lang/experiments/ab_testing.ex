@@ -183,7 +183,7 @@ defmodule Lang.Experiments.ABTesting do
         control_users = Enum.filter(cohorts, &(&1.cohort_type == :control))
 
         # Calculate engagement metrics
-        total_interactions = Enum.sum(Enum.map(cohorts, & &1.total_interactions))
+        total_interactions = Enum.reduce(cohorts, 0, fn x, acc -> acc + x.total_interactions end)
         active_users = Enum.count(cohorts, &(&1.total_interactions > 0))
 
         # Get latest measurement data
@@ -693,8 +693,8 @@ defmodule Lang.Experiments.ABTesting do
           Enum.filter(user_measurements, fn m -> m.user_id in segment_user_ids end)
 
         # Calculate segment metrics
-        total_baseline = Enum.sum(Enum.map(segment_measurements, & &1.baseline_tokens))
-        total_enhanced = Enum.sum(Enum.map(segment_measurements, & &1.enhanced_tokens))
+        total_baseline = Enum.reduce(segment_measurements, 0, fn x, acc -> acc + x.baseline_tokens end)
+        total_enhanced = Enum.reduce(segment_measurements, 0, fn x, acc -> acc + x.enhanced_tokens end)
 
         avg_reduction =
           if total_baseline > 0,

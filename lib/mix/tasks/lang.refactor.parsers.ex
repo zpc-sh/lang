@@ -151,7 +151,7 @@ defmodule Mix.Tasks.Lang.Refactor.Parsers do
 
     %{
       migrations: migrations,
-      total_effort_hours: Enum.sum(Enum.map(migrations, & &1.effort_hours)),
+      total_effort_hours: Enum.reduce(migrations, 0, fn x, acc -> acc + x.effort_hours end),
       generated_at: DateTime.utc_now()
     }
   end

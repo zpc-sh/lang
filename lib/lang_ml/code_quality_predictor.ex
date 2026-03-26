@@ -194,7 +194,7 @@ defmodule Lang.ML.CodeQualityPredictor do
     if lines == [] do
       0
     else
-      total_length = lines |> Enum.map(&String.length/1) |> Enum.sum()
+      total_length = lines |> Enum.reduce(0, fn x, acc -> acc + String.length(x) end)
       total_length / length(lines)
     end
   end

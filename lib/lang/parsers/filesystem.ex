@@ -376,7 +376,7 @@ defmodule Lang.Parsers.Filesystem do
   defp count_nodes(%{children: nil}), do: 1
 
   defp count_nodes(%{children: children}) when is_list(children) do
-    1 + Enum.sum(Enum.map(children, &count_nodes/1))
+    1 + Enum.reduce(children, 0, fn x, acc -> acc + count_nodes(x) end)
   end
 
   defp count_nodes(_), do: 1

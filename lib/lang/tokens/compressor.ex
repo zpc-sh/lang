@@ -688,7 +688,7 @@ defmodule Lang.Tokens.Compressor do
 
   defp count_compressed_tokens(%{tokens: tokens}) when is_list(tokens), do: length(tokens)
   defp count_compressed_tokens(%{groups: groups}) when is_list(groups) do
-    Enum.sum(Enum.map(groups, fn group -> length(group.tokens) end))
+    Enum.reduce(groups, 0, fn group, acc -> acc + length(group.tokens) end)
   end
   defp count_compressed_tokens(tokens) when is_list(tokens), do: length(tokens)
   defp count_compressed_tokens(_), do: 0

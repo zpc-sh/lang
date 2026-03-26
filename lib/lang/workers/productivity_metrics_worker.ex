@@ -355,37 +355,37 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
     # Token efficiency
     token_events = Enum.filter(events, fn e -> e.baseline_tokens && e.enhanced_tokens end)
-    total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-    total_enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+    total_baseline = Enum.reduce(token_events, 0, fn x, acc -> acc + x.baseline_tokens end)
+    total_enhanced = Enum.reduce(token_events, 0, fn x, acc -> acc + x.enhanced_tokens end)
     total_saved = max(0, total_baseline - total_enhanced)
 
     avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0
 
     # Time efficiency
     time_events = Enum.filter(events, & &1.time_saved_seconds)
-    total_time_saved = Enum.sum(Enum.map(time_events, & &1.time_saved_seconds))
-    total_operation_time = Enum.sum(Enum.map(events, &(&1.operation_duration_ms || 0)))
+    total_time_saved = Enum.reduce(time_events, 0, fn x, acc -> acc + x.time_saved_seconds end)
+    total_operation_time = Enum.reduce(events, 0, fn x, acc -> acc + (x.operation_duration_ms || 0) end)
 
     # Quality metrics
     quality_events = Enum.filter(events, & &1.quality_score)
 
     avg_quality =
       if length(quality_events) > 0 do
-        Enum.sum(Enum.map(quality_events, &Decimal.to_float(&1.quality_score))) /
+        Enum.reduce(quality_events, 0, fn x, acc -> acc + Decimal.to_float(x.quality_score) end) /
           length(quality_events)
       else
         nil
       end
 
-    errors_prevented = Enum.sum(Enum.map(events, &(&1.error_reduction_count || 0)))
-    iterations_saved = Enum.sum(Enum.map(events, &(&1.iterations_saved || 0)))
+    errors_prevented = Enum.reduce(events, 0, fn x, acc -> acc + (x.error_reduction_count || 0) end)
+    iterations_saved = Enum.reduce(events, 0, fn x, acc -> acc + (x.iterations_saved || 0) end)
 
     # User experience
     satisfaction_events = Enum.filter(events, & &1.user_satisfaction_score)
 
     avg_satisfaction =
       if length(satisfaction_events) > 0 do
-        Enum.sum(Enum.map(satisfaction_events, &Decimal.to_float(&1.user_satisfaction_score))) /
+        Enum.reduce(satisfaction_events, 0, fn x, acc -> acc + Decimal.to_float(x.user_satisfaction_score) end) /
           length(satisfaction_events)
       else
         nil
@@ -395,7 +395,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
     avg_completion =
       if length(completion_events) > 0 do
-        Enum.sum(Enum.map(completion_events, &Decimal.to_float(&1.completion_rate))) /
+        Enum.reduce(completion_events, 0, fn x, acc -> acc + Decimal.to_float(x.completion_rate) end) /
           length(completion_events)
       else
         nil
@@ -415,8 +415,8 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
       events
       |> Enum.group_by(& &1.provider)
       |> Enum.map(fn {provider, provider_events} ->
-        provider_baseline = Enum.sum(Enum.map(provider_events, &(&1.baseline_tokens || 0)))
-        provider_enhanced = Enum.sum(Enum.map(provider_events, &(&1.enhanced_tokens || 0)))
+        provider_baseline = Enum.reduce(provider_events, 0, fn x, acc -> acc + (x.baseline_tokens || 0) end)
+        provider_enhanced = Enum.reduce(provider_events, 0, fn x, acc -> acc + (x.enhanced_tokens || 0) end)
 
         provider_reduction =
           if provider_baseline > 0 do

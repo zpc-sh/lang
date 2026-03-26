@@ -223,7 +223,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
       deltas = generate_streaming_deltas(previous_content, content)
 
       delta_tokens =
-        Enum.sum(Enum.map(deltas, fn d -> estimate_gpt4_tokens(d["content"] || "") end))
+        Enum.reduce(deltas, 0, fn d, acc -> acc + estimate_gpt4_tokens(d["content"] || "") end)
 
       {:ok,
        %{
@@ -243,7 +243,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
          metrics: %{
            processing_time_ms: 2,
            content_size_bytes: byte_size(content),
-           delta_size_bytes: Enum.sum(Enum.map(deltas, fn d -> byte_size(d["content"] || "") end))
+           delta_size_bytes: Enum.reduce(deltas, 0, fn d, acc -> acc + byte_size(d["content"] || "") end)
          }
        }}
     end
@@ -358,7 +358,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
 
   defp calculate_avg_relevance(relevance_scores) do
     if length(relevance_scores) > 0 do
-      total = Enum.sum(Enum.map(relevance_scores, fn %{"relevance_score" => score} -> score end))
+      total = Enum.reduce(relevance_scores, 0, fn %{"relevance_score" => score}, acc -> acc + (score) end)
       total / length(relevance_scores)
     else
       0.0

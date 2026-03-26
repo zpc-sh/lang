@@ -278,7 +278,7 @@ defmodule Lang.Events.ApiUsageLogger do
       successful_requests: Enum.count(events, & &1.success),
       error_requests: Enum.count(events, &(not &1.success)),
       rate_limited_requests: Enum.count(events, & &1.rate_limited),
-      total_content_size: Enum.sum(Enum.map(events, & &1.content_size)),
+      total_content_size: Enum.reduce(events, 0, fn x, acc -> acc + x.content_size end),
       avg_processing_time: average(Enum.map(events, & &1.processing_time_ms))
     }
   end

@@ -145,8 +145,8 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Metrics.AgentEfficiency do
   end
 
   defp calculate_resource_utilization(agents) do
-    total_memory = Enum.sum(Enum.map(agents, &get_memory_usage(&1.id)))
-    total_cpu = Enum.sum(Enum.map(agents, &get_cpu_usage(&1.id, "1h")))
+    total_memory = Enum.reduce(agents, 0, fn x, acc -> acc + get_memory_usage(x.id) end)
+    total_cpu = Enum.reduce(agents, 0, fn x, acc -> acc + get_cpu_usage(x.id, "1h") end)
 
     %{
       total_memory_mb: total_memory,
@@ -184,7 +184,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Metrics.AgentEfficiency do
   # Helper functions for metric calculations
   defp calculate_avg_uptime(agents) do
     if length(agents) > 0 do
-      Enum.sum(Enum.map(agents, & &1.uptime_ms)) / length(agents)
+      Enum.reduce(agents, 0, fn x, acc -> acc + x.uptime_ms end) / length(agents)
     else
       0
     end
@@ -206,7 +206,7 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Metrics.AgentEfficiency do
   defp calculate_performance_metrics(agents, _timeframe) do
     %{
       avg_throughput:
-        Enum.sum(Enum.map(agents, &calculate_throughput(&1.id, "1h"))) / max(length(agents), 1),
+        Enum.reduce(agents, 0, fn x, acc -> acc + calculate_throughput(x.id, "1h") end) / max(length(agents), 1),
       peak_performance:
         Enum.max(Enum.map(agents, &calculate_throughput(&1.id, "1h")), fn -> 0 end),
       performance_variance: calculate_performance_variance(agents)
@@ -215,9 +215,9 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Metrics.AgentEfficiency do
 
   defp calculate_resource_metrics(agents) do
     %{
-      total_memory_usage: Enum.sum(Enum.map(agents, &get_memory_usage(&1.id))),
+      total_memory_usage: Enum.reduce(agents, 0, fn x, acc -> acc + get_memory_usage(x.id) end),
       avg_cpu_usage:
-        Enum.sum(Enum.map(agents, &get_cpu_usage(&1.id, "1h"))) / max(length(agents), 1),
+        Enum.reduce(agents, 0, fn x, acc -> acc + get_cpu_usage(x.id, "1h") end) / max(length(agents), 1),
       resource_efficiency: calculate_avg_resource_efficiency(agents)
     }
   end
@@ -225,9 +225,9 @@ defmodule Elixir.Lang.LSP.Lang.Lang.Metrics.AgentEfficiency do
   defp calculate_quality_metrics(agents, timeframe) do
     %{
       avg_accuracy:
-        Enum.sum(Enum.map(agents, &get_accuracy_score(&1.id, timeframe))) / max(length(agents), 1),
+        Enum.reduce(agents, 0, fn x, acc -> acc + get_accuracy_score(x.id, timeframe) end) / max(length(agents), 1),
       avg_user_satisfaction:
-        Enum.sum(Enum.map(agents, &get_user_satisfaction(&1.id, timeframe))) /
+        Enum.reduce(agents, 0, fn x, acc -> acc + get_user_satisfaction(x.id, timeframe) end) /
           max(length(agents), 1),
       quality_consistency: calculate_quality_consistency(agents, timeframe)
     }

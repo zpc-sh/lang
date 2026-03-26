@@ -637,7 +637,7 @@ defmodule Kyozo.Lang.UniversalParser.LinkedDataExtractor do
   defp calculate_confidence_scores(entities, relationships) do
     entity_avg =
       if length(entities) > 0 do
-        entities |> Enum.map(& &1.confidence) |> Enum.sum() |> Kernel./(length(entities))
+        entities |> Enum.reduce(0, fn x, acc -> acc + x.confidence end) |> Kernel./(length(entities))
       else
         0.0
       end
@@ -645,8 +645,7 @@ defmodule Kyozo.Lang.UniversalParser.LinkedDataExtractor do
     relationship_avg =
       if length(relationships) > 0 do
         relationships
-        |> Enum.map(& &1.confidence)
-        |> Enum.sum()
+        |> Enum.reduce(0, fn x, acc -> acc + x.confidence end)
         |> Kernel./(length(relationships))
       else
         0.0

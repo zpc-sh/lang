@@ -254,11 +254,10 @@ defmodule Lang.Stylometrics.AnalysisEngine do
 
     dot_product =
       Enum.zip(vector1, vector2)
-      |> Enum.map(fn {a, b} -> a * b end)
-      |> Enum.sum()
+      |> Enum.reduce(0, fn {a, b}, acc -> acc + (a * b) end)
 
-    magnitude1 = :math.sqrt(Enum.map(vector1, &(&1 * &1)) |> Enum.sum())
-    magnitude2 = :math.sqrt(Enum.map(vector2, &(&1 * &1)) |> Enum.sum())
+    magnitude1 = :math.sqrt(Enum.reduce(vector1, 0, fn x, acc -> acc + (x * x) end))
+    magnitude2 = :math.sqrt(Enum.reduce(vector2, 0, fn x, acc -> acc + (x * x) end))
 
     if magnitude1 == 0 or magnitude2 == 0 do
       0.0
@@ -486,14 +485,11 @@ defmodule Lang.Stylometrics.AnalysisEngine do
       suggestions
       |> Map.values()
       |> List.flatten()
-      |> Enum.map(fn suggestion ->
-        case suggestion.impact do
+      |> Enum.reduce(0, fn suggestion, acc -> acc + (case suggestion.impact do
           :high -> 3
           :medium -> 2
           :low -> 1
-        end
-      end)
-      |> Enum.sum()
+        end) end)
 
     max_possible = length(Map.values(suggestions) |> List.flatten()) * 3
 
@@ -798,7 +794,7 @@ defmodule Lang.Stylometrics.AnalysisEngine do
 
   defp calculate_avg_sentence_length(sentences) do
     if length(sentences) > 0 do
-      total_words = sentences |> Enum.map(&(String.split(&1) |> length())) |> Enum.sum()
+      total_words = sentences |> Enum.reduce(0, fn x, acc -> acc + length(String.split(x)) end)
       total_words / length(sentences)
     else
       0
@@ -807,7 +803,7 @@ defmodule Lang.Stylometrics.AnalysisEngine do
 
   defp calculate_avg_word_length(words) do
     if length(words) > 0 do
-      total_chars = words |> Enum.map(&String.length/1) |> Enum.sum()
+      total_chars = words |> Enum.reduce(0, fn x, acc -> acc + String.length(x) end)
       total_chars / length(words)
     else
       0

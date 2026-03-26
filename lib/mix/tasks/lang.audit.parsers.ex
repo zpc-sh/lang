@@ -182,7 +182,7 @@ defmodule Mix.Tasks.Lang.Audit.Parsers do
     %{
       total_files: length(files),
       total_functions: length(functions),
-      total_calls: Enum.sum(Enum.map(functions, & &1.call_count)),
+      total_calls: Enum.reduce(functions, 0, fn x, acc -> acc + x.call_count end),
       most_used_function:
         case functions do
           [%{function: func, call_count: count} | _] -> "#{func} (#{count} calls)"
