@@ -77,8 +77,7 @@ defmodule Lang.Dev.DevFSWatcher do
     with {:ok, files} <- list_files(dir) do
       stats =
         files
-        |> Enum.map(fn p -> {p, file_mtime(p)} end)
-        |> Enum.into(%{})
+        |> Map.new(fn p -> {p, file_mtime(p)} end)
 
       {:ok, stats}
     end

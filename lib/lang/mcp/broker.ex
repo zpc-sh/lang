@@ -723,10 +723,9 @@ defmodule Lang.MCP.Broker do
   end
 
   defp get_circuit_breaker_states(circuit_breakers) do
-    Enum.map(circuit_breakers, fn {type, breaker} ->
+    Map.new(circuit_breakers, fn {type, breaker} ->
       {type, breaker.state}
     end)
-    |> Enum.into(%{})
   end
 
   defp generate_connection_id do

@@ -42,8 +42,7 @@ defmodule LangWeb.Api.V2.MCPBillingController do
   defp group_by_server_type(connections) do
     connections
     |> Enum.group_by(fn c -> (c.server_config && c.server_config.server_type) || :unknown end)
-    |> Enum.map(fn {type, conns} -> {type, length(conns)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {type, conns} -> {type, length(conns)} end)
   end
 
   defp period_start("current_month") do

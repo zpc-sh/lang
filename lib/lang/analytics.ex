@@ -315,10 +315,9 @@ defmodule Lang.Analytics do
       method_breakdown =
         events
         |> Enum.group_by(& &1.lsp_method)
-        |> Enum.map(fn {method, method_events} ->
+        |> Map.new(fn {method, method_events} ->
           {method, length(method_events)}
         end)
-        |> Enum.into(%{})
 
       # Provider performance
       provider_performance =

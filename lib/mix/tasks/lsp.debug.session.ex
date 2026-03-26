@@ -70,8 +70,7 @@ defmodule Mix.Tasks.Lsp.Debug.Session do
 
   defp substitute_env(%{} = map) do
     map
-    |> Enum.map(fn {k, v} -> {k, substitute_env(v)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {k, substitute_env(v)} end)
   end
   defp substitute_env(list) when is_list(list), do: Enum.map(list, &substitute_env/1)
   defp substitute_env(val) when is_binary(val) do

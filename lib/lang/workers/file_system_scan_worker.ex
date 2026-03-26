@@ -240,8 +240,7 @@ defmodule Lang.Workers.FileSystemScanWorker do
   defp stringify_opts(opts) do
     opts
     |> Enum.into(%{})
-    |> Enum.map(fn {k, v} -> {to_string(k), v} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {to_string(k), v} end)
   end
 
   defp get_priority(opts) do

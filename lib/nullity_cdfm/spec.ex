@@ -165,8 +165,7 @@ defmodule Nullity.CDFM.Spec do
 
   defp yaml_to_elixir(term) when is_map(term) do
     term
-    |> Enum.map(fn {k, v} -> {to_string(k), yaml_to_elixir(v)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {to_string(k), yaml_to_elixir(v)} end)
   end
 
   defp yaml_to_elixir(term) when is_binary(term) or is_number(term) or is_boolean(term), do: term
@@ -200,8 +199,7 @@ defmodule Nullity.CDFM.Spec do
 
   defp stringify_keys(map) when is_map(map) do
     map
-    |> Enum.map(fn {k, v} -> {to_string(k), v} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {to_string(k), v} end)
   end
 
   defp to_atom_maybe(nil), do: nil

@@ -551,8 +551,7 @@ defmodule Lang.MCP.Security do
   defp sanitize_config(config) when is_map(config) do
     sanitized =
       config
-      |> Enum.map(fn {key, value} -> {sanitize_string(key), sanitize_value(value)} end)
-      |> Enum.into(%{})
+      |> Map.new(fn {key, value} -> {sanitize_string(key), sanitize_value(value)} end)
 
     {:ok, sanitized}
   end
@@ -560,8 +559,7 @@ defmodule Lang.MCP.Security do
   defp sanitize_request(request) when is_map(request) do
     sanitized =
       request
-      |> Enum.map(fn {key, value} -> {sanitize_string(key), sanitize_value(value)} end)
-      |> Enum.into(%{})
+      |> Map.new(fn {key, value} -> {sanitize_string(key), sanitize_value(value)} end)
 
     {:ok, sanitized}
   end
@@ -569,8 +567,7 @@ defmodule Lang.MCP.Security do
   defp sanitize_response(response) when is_map(response) do
     sanitized =
       response
-      |> Enum.map(fn {key, value} -> {sanitize_string(key), sanitize_value(value)} end)
-      |> Enum.into(%{})
+      |> Map.new(fn {key, value} -> {sanitize_string(key), sanitize_value(value)} end)
 
     {:ok, sanitized}
   end
@@ -581,8 +578,7 @@ defmodule Lang.MCP.Security do
 
   defp sanitize_value(value) when is_map(value) do
     value
-    |> Enum.map(fn {key, val} -> {sanitize_string(key), sanitize_value(val)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {key, val} -> {sanitize_string(key), sanitize_value(val)} end)
   end
 
   defp sanitize_value(value) when is_list(value) do

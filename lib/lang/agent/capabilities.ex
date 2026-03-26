@@ -12,8 +12,7 @@ defmodule Lang.Agent.Capabilities do
   def all_agent_capabilities do
     case Agent.read_all() do
       {:ok, agents} ->
-        Enum.map(agents, &{&1.id, &1.capabilities})
-        |> Enum.into(%{})
+        Map.new(agents, &{&1.id, &1.capabilities})
 
       {:error, _} ->
         %{}

@@ -82,8 +82,7 @@ defmodule Mix.Tasks.Insights.Render.Jsonld do
 
   defp deep_replace(%{} = m, from, to) do
     m
-    |> Enum.map(fn {k, v} -> {k, deep_replace(v, from, to)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {k, deep_replace(v, from, to)} end)
   end
   defp deep_replace(list, from, to) when is_list(list), do: Enum.map(list, &deep_replace(&1, from, to))
   defp deep_replace(val, from, to) when is_binary(val), do: String.replace(val, from, to)
@@ -91,11 +90,10 @@ defmodule Mix.Tasks.Insights.Render.Jsonld do
 
   defp deep_type_replace(%{"@type" => type} = m, from, to) when is_binary(type) do
     Map.put(m, "@type", String.replace(type, from, to))
-    |> Enum.map(fn {k, v} -> {k, deep_type_replace(v, from, to)} end)
-    |> Enum.into(%{})
+    |> Map.new(fn {k, v} -> {k, deep_type_replace(v, from, to)} end)
   end
   defp deep_type_replace(%{} = m, from, to) do
-    m |> Enum.map(fn {k, v} -> {k, deep_type_replace(v, from, to)} end) |> Enum.into(%{})
+    Map.new(m, fn {k, v} -> {k, deep_type_replace(v, from, to)} end)
   end
   defp deep_type_replace(list, from, to) when is_list(list), do: Enum.map(list, &deep_type_replace(&1, from, to))
   defp deep_type_replace(other, _from, _to), do: other

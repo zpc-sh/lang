@@ -437,10 +437,9 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
     language_breakdown =
       events
       |> Enum.group_by(& &1.language)
-      |> Enum.map(fn {language, lang_events} ->
+      |> Map.new(fn {language, lang_events} ->
         {language || "unknown", length(lang_events)}
       end)
-      |> Enum.into(%{})
 
     # Cohort context
     cohort_type =
