@@ -1264,10 +1264,10 @@ defmodule Lang.LSP.Server do
         line = pl + dl
         start = if dl == 0, do: ps + ds, else: ds
         type = Enum.at(semantic_token_types(), tix) || "variable"
-        {line, start, acc ++ [{line, start, len, type, mods}]}
+        {line, start, [{line, start, len, type, mods} | acc]}
       end)
 
-    out
+    Enum.reverse(out)
   end
 
   # Very lightweight Elixir tokenization; per-line regex scanning
