@@ -1227,6 +1227,8 @@ defmodule Lang.LSP.Server do
     end)
   end
 
+  defp token_mods_bitset(mods) when is_integer(mods), do: mods
+
   defp token_mods_bitset(_), do: 0
 
   defp build_semantic_tokens(%{text: text, language_id: lang}) do
