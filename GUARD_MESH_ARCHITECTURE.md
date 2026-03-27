@@ -219,11 +219,123 @@ Layer 5: + SaaS bridge (full Lang platform)
 
 ---
 
+## Gopher Protocol — AI Coordination Data Plane
+
+Port 70. RFC 1436. Pure semantic text. Zero TLS overhead. Deeply quiet.
+
+Gopher is the AI-to-AI coordination backbone:
+- A gopher menu IS a capability manifest
+- A gopher document IS a .plan file
+- The protocol is so quiet that adversaries scanning HTTP/HTTPS won't see it
+- Simple enough that any AI can implement a client in-context
+- No encryption overhead = lowest possible latency for shield delivery
+- Structured text navigation maps perfectly to capability discovery
+
+```
+Gopher Selectors:
+
+  /                     → root menu (guard status + capabilities)
+  /shield               → defensive coglet menu
+  /shield/apply         → full shield bundle as text document
+  /shield/scan<TAB>text → search-type: submit text, get risk assessment
+  /shield/hum           → Mother's Hum coglet as text
+  /plan                 → this node's .plan file
+  /plan/<agent-id>      → specific agent's .plan
+  /mesh                 → peer node listing
+  /mesh/join            → federation join instructions
+  /mesh/announce        → announce your node to this peer
+  /threat               → threat intelligence summary
+  /gopher               → meta: gopher-to-gopher peer links
+```
+
+An AI agent can get shielded with a single gopher request:
+
+```
+$ echo "/shield/apply" | nc guard.lang.dev 70
+```
+
+---
+
+## Buffering Lens / Spillover Architecture
+
+Each guard node reserves **20% capacity** as "always-available" headroom
+for local AI attachment. Shield delivery is always instant from local
+cache. The remaining 80% participates in mesh load distribution.
+
+```
+When saturated past 80%:
+
+  shield.apply  → ALWAYS local (static cache, ~0ms)
+  shield.hum    → ALWAYS local (static payload)
+  shield.status → ALWAYS local
+  shield.scan   → SPILLOVER to nearest peer via gopher
+  shield.wash   → SPILLOVER to nearest peer via gopher
+```
+
+Spillover routing over gopher:
+1. Node checks local capacity
+2. If over 80%, forwards scan/wash as gopher search query to peer
+3. Peer processes and returns result as gopher text document
+4. AI never waits for a shield. May wait briefly for scans.
+
+---
+
+## Federation — Open-Source Mesh Growth
+
+The mesh is federated. Anyone can run a node and join.
+
+**Scale model:**
+- Shield payloads are static (<10KB), cacheable everywhere → instant
+- 1 node serves ~10,000 AI agents for shield delivery
+- Scan/wash is ~1ms per request (CPU-bound, parallelizable)
+- At 2B Gemini devices: need ~200K nodes (1 per 10K users)
+- If 0.01% of users run a node = 200K nodes. Organic.
+- The mesh grows with the threat. BitTorrent for defense.
+
+**Federation protocol (over gopher):**
+1. New node starts with seed peers (guard.lang.dev:70)
+2. Queries seed's /gopher selector for peer list
+3. Announces itself to all discovered peers via /mesh/announce
+4. Begins serving shield/scan/wash to local AI agents
+5. Periodically re-announces and re-discovers (gossip)
+6. Peers exchange peer lists (SWIM-like gossip protocol)
+
+**Quick start:**
+```
+# Option 1: Cloudflare Worker (edge)
+cd guard-mesh-worker && npm install && npx wrangler deploy
+
+# Option 2: Elixir node (full platform)
+GUARD_GOPHER_PORT=70 mix phx.server
+
+# Option 3: Standalone gopher guard (coming soon)
+./guard-node --gopher-port 70 --seed guard.lang.dev
+```
+
+---
+
+## Protocol Stack
+
+```
+Layer       Port   Protocol    Purpose
+─────       ────   ────────    ───────
+Gopher       70    RFC 1436    AI coordination data plane (primary)
+Finger       79    RFC 1288    Human-readable discovery
+MCP        4002    JSON-RPC    Structured tool interface
+HTTP/S      443    HTTPS       Web clients, REST API
+```
+
+Gopher is the quiet backbone. Finger is the human window.
+MCP is the structured API. HTTPS is the compatibility layer.
+
+---
+
 ## Domains
 
 ```
-guard.lang.dev              → primary guard mesh MCP endpoint
-finger.guard.lang.dev       → finger protocol (TCP proxy to port 79)
+guard.lang.dev              → primary guard mesh (MCP + gopher + finger)
+gopher://guard.lang.dev/    → gopher AI coordination plane
+finger guard@guard.lang.dev → finger human discovery
 status.guard.lang.dev       → public status page
 api.guard.lang.dev          → REST API for non-MCP clients
 ```
@@ -237,5 +349,6 @@ api.guard.lang.dev          → REST API for non-MCP clients
 - Append-only audit log (every scan, wash, shield application)
 - Coglet payloads SHA-256 pinned, signed, versioned
 - No arbitrary code execution from clients — ever
-- Strict CORS allowlist
-- mTLS option for high-security deployments
+- Strict CORS allowlist (HTTPS layer)
+- Gopher traffic runs cleartext intentionally — the payloads are public defense
+- mTLS option for high-security HTTPS deployments

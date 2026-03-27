@@ -206,10 +206,13 @@ config :lang,
 config :lang, :guard,
   mesh_url: System.get_env("GUARD_MESH_URL") || "https://guard.lang.dev/mcp",
   finger_port: 79,
+  gopher_port: String.to_integer(System.get_env("GUARD_GOPHER_PORT") || "70"),
   scanner_enabled: true,
   washer_enabled: true,
   auto_shield: true,
-  coglet_sync_interval: :timer.minutes(15)
+  coglet_sync_interval: :timer.minutes(15),
+  federation_seeds: [{"guard.lang.dev", 70}],
+  spillover_headroom: 0.20
 
 config :nx, :default_defn_options, compiler: EXLA
 # Import environment specific config. This must remain at the bottom

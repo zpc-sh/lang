@@ -3,8 +3,9 @@ defmodule Lang.Guard.Supervisor do
   OTP supervisor for the Guard Mesh integration layer.
 
   Manages the local scanner, washer, coglet store, mesh client,
-  finger bridge, and telemetry processes that connect this LANG
-  instance to the public Guard Mesh network.
+  finger bridge, gopher server, spillover routing, federation,
+  and telemetry processes that connect this LANG instance to the
+  public Guard Mesh network.
   """
 
   use Supervisor
@@ -19,8 +20,11 @@ defmodule Lang.Guard.Supervisor do
       {Lang.Guard.CogletStore, []},
       {Lang.Guard.Scanner, []},
       {Lang.Guard.Washer, []},
+      {Lang.Guard.Spillover, []},
       {Lang.Guard.MeshClient, []},
       {Lang.Guard.FingerBridge, []},
+      {Lang.Guard.Gopher, []},
+      {Lang.Guard.Federation, []},
       {Lang.Guard.Telemetry, []}
     ]
 
