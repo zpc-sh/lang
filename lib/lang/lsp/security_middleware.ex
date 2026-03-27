@@ -44,6 +44,7 @@ defmodule Lang.LSP.SecurityMiddleware do
     with {:ok, validated_client} <- validate_client_id(client_id, method),
          {:ok, _} <- check_rate_limit(validated_client, method),
          :ok <- allow_billing(request),
+         :ok <- guard_scan(params),
          :ok <- reject_prompt_injection(method, params),
          {:ok, sanitized_params} <- validate_and_sanitize_params(method, request),
          {:ok, _} <- check_method_authorization(validated_client, method),
@@ -82,6 +83,45 @@ defmodule Lang.LSP.SecurityMiddleware do
     end
   end
   defp allow_billing(_), do: :ok
+
+  # Guard Mesh scan — detect adversarial content before processing
+  defp guard_scan(params) when is_map(params) do
+    scannable =
+      (params["text"] || params["contentChanges"] || params["query"] || "")
+      |> to_scannable_text()
+
+    if byte_size(scannable) > 0 do
+      case Lang.Guard.Scanner.quick_scan(scannable) do
+        {:ok, %{risk_score: score}} when score > 0.7 ->
+          Logger.warning("Guard: high-risk content blocked", risk_score: score)
+          Lang.Guard.Telemetry.threat_detected(%{risk_score: score, flags: []})
+          {:error, {:guard_blocked, :high_risk_content}}
+
+        {:ok, %{risk_score: score}} when score > 0.3 ->
+          Logger.info("Guard: elevated risk detected", risk_score: score)
+          :ok
+
+        _ ->
+          :ok
+      end
+    else
+      :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  defp guard_scan(_), do: :ok
+
+  defp to_scannable_text(text) when is_binary(text), do: text
+  defp to_scannable_text(list) when is_list(list) do
+    Enum.map_join(list, " ", fn
+      %{"text" => t} -> t
+      other when is_binary(other) -> other
+      _ -> ""
+    end)
+  end
+  defp to_scannable_text(_), do: ""
 
   defp reject_prompt_injection(method, params) do
     case Lang.LSP.SecurityValidator.prompt_injection?(method, params) do

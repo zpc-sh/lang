@@ -202,6 +202,15 @@ config :lang, :stripe,
 config :lang,
   redis_url: "redis://localhost:6379/0"
 
+# Guard Mesh configuration
+config :lang, :guard,
+  mesh_url: System.get_env("GUARD_MESH_URL") || "https://guard.lang.dev/mcp",
+  finger_port: 79,
+  scanner_enabled: true,
+  washer_enabled: true,
+  auto_shield: true,
+  coglet_sync_interval: :timer.minutes(15)
+
 config :nx, :default_defn_options, compiler: EXLA
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

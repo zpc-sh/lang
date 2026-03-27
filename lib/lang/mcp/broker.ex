@@ -38,7 +38,8 @@ defmodule Lang.MCP.Broker do
     "git",
     "database",
     "web_search",
-    "code_analysis"
+    "code_analysis",
+    "guard"
   ]
 
   # Connection timeouts and limits

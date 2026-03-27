@@ -26,7 +26,7 @@ defmodule Lang.MCP.Pool do
   alias Lang.Events
 
   # Pool configuration
-  @pre_warm_servers ["filesystem", "git"]
+  @pre_warm_servers ["filesystem", "git", "guard"]
   @default_pool_size 3
   @max_pool_size 10
   @idle_timeout :timer.minutes(15)
@@ -458,6 +458,9 @@ defmodule Lang.MCP.Pool do
 
       "code_analysis" ->
         {:ok, {Lang.MCP.Servers.CodeAnalysisServer, [config]}}
+
+      "guard" ->
+        {:ok, {Lang.MCP.Servers.GuardServer, [config]}}
 
       _ ->
         {:error, {:unknown_server_type, server_type}}

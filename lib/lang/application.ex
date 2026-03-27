@@ -66,6 +66,9 @@ defmodule Lang.Application do
         # Register LSP Engine defaults after the engine starts
         (if lsp_enabled?(), do: optional_child(Lang.LSP.EngineDefaultsStarter), else: nil),
 
+        # Guard Mesh - AI agent defense layer
+        optional_child({Lang.Guard.Supervisor, []}),
+
         # Security Layer - Start early for protection
         optional_child({Lang.Monitoring.SecurityMonitor, []}),
         optional_child({Lang.MCP.SessionManager, []}),
