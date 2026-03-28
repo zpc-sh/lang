@@ -35,4 +35,5 @@ native/*/target/
 .vscode/
 *.swp
 *.swo
-*~
+
+/target
