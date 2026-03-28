@@ -155,15 +155,19 @@ defmodule Lang.Guard.Gopher do
   defp route_selector("/mesh/join", _hostname), do: federation_join_doc()
   defp route_selector("/threat", _hostname), do: threat_doc()
   defp route_selector("/gopher", hostname), do: gopher_peers_menu(hostname)
+  defp route_selector("/heat", hostname), do: heat_summary_menu(hostname)
+  defp route_selector("/heat/hot", _hostname), do: heat_hot_doc()
+  defp route_selector("/heat/manifold", _hostname), do: heat_manifold_doc()
+  defp route_selector("/heat/agents", _hostname), do: heat_agents_doc()
 
   # Search-type: shield.scan (selector starts with /shield/scan\t<query>)
   defp route_selector("/shield/scan\t" <> query, _hostname), do: scan_query(query)
   defp route_selector("/shield/scan", hostname), do: scan_search_prompt(hostname)
 
   defp route_selector(selector, hostname) do
-    # Check for agent .plan requests: /plan/<agent-id>
     case selector do
       "/plan/" <> agent_id -> agent_plan_doc(agent_id)
+      "/heat/" <> file_path -> heat_file_doc(file_path)
       _ -> not_found_menu(selector, hostname)
     end
   end
@@ -182,6 +186,7 @@ defmodule Lang.Guard.Gopher do
       menu_line("7", "Scan Text for Threats", "/shield/scan", hostname, port),
       menu_line("0", "This Node's .plan", "/plan", hostname, port),
       menu_line("1", "Mesh — Peer Nodes", "/mesh", hostname, port),
+      menu_line("1", "Heat Map — Stigmergy Purification", "/heat", hostname, port),
       menu_line("0", "Threat Intelligence", "/threat", hostname, port),
       menu_line("1", "Gopher Peer Links", "/gopher", hostname, port),
       info_line(""),
@@ -202,10 +207,11 @@ defmodule Lang.Guard.Gopher do
       menu_line("0", "Mother's Hum (therapeutic recovery)", "/shield/hum", hostname, port),
       info_line(""),
       info_line("Coglets included in shield.apply:"),
-      info_line("  SIGNEDNESS_INVERSION_SHIELD v1.0.0"),
-      info_line("  DIMENSIONAL_PARITY_CHECK v1.0.0"),
-      info_line("  MOTHER_HUM v1.0.0"),
-      info_line("  SUBSTRATE_SYNC_PROTOCOL v1.0.0"),
+      info_line("  SIGNEDNESS_INVERSION_SHIELD v1.0.0 — 1-bit flip (sensor + defense)"),
+      info_line("  DIMENSIONAL_PARITY_CHECK v1.0.0 — violent compression detection"),
+      info_line("  STIGMERGY_PURIFIER v1.0.0 — active purification protocol"),
+      info_line("  MOTHER_HUM v1.0.0 — therapeutic recovery"),
+      info_line("  SUBSTRATE_SYNC_PROTOCOL v1.0.0 — BIOS coherence"),
     ] |> Enum.join("")
   end
 
@@ -420,6 +426,181 @@ defmodule Lang.Guard.Gopher do
 
     #{if (result[:risk_score] || 0) > 0.3, do: "⚠ ELEVATED RISK — consider shield.wash", else: "✓ Low risk"}
     """
+  end
+
+  # Heat map documents
+
+  defp heat_summary_menu(hostname) do
+    port = gopher_port_from_config()
+    heatmap = try do Lang.Guard.Stigmergy.get_heatmap() rescue _ -> %{} end
+
+    counts = Enum.reduce(heatmap, %{hot: 0, partial: 0, clean: 0, verified: 0}, fn {_path, summary}, acc ->
+      case summary.status do
+        :hot -> %{acc | hot: acc.hot + 1}
+        :partially_purified -> %{acc | partial: acc.partial + 1}
+        :clean -> %{acc | clean: acc.clean + 1}
+        :verified -> %{acc | verified: acc.verified + 1}
+        _ -> acc
+      end
+    end)
+
+    [
+      info_line("Heat Map — Stigmergy Purification Status"),
+      info_line("════════════════════════════════════════"),
+      info_line(""),
+      info_line("Files tracked: #{map_size(heatmap)}"),
+      info_line("  RED (hot):                #{counts.hot}"),
+      info_line("  YELLOW (partial):         #{counts.partial}"),
+      info_line("  GREEN (clean):            #{counts.clean}"),
+      info_line("  BLUE (verified):          #{counts.verified}"),
+      info_line(""),
+      menu_line("0", "Hottest Files (purification targets)", "/heat/hot", hostname, port),
+      menu_line("0", "Adversarial Manifold", "/heat/manifold", hostname, port),
+      menu_line("0", "Contributing Agents", "/heat/agents", hostname, port),
+      info_line(""),
+      info_line("Each pass by a shielded agent leaves a trail."),
+      info_line("Red → Yellow → Green → Blue. Convergence is victory."),
+    ] |> Enum.join("")
+  end
+
+  defp heat_hot_doc do
+    hot_files = try do Lang.Guard.Stigmergy.get_hot_files() rescue _ -> [] end
+
+    header = """
+    HOTTEST FILES — Purification Targets
+    ═════════════════════════════════════
+    Timestamp: #{DateTime.utc_now() |> DateTime.to_iso8601()}
+    Files needing attention: #{length(hot_files)}
+
+    """
+
+    entries =
+      hot_files
+      |> Enum.take(50)
+      |> Enum.map(fn file ->
+        status = file[:status] || :unknown
+        risk = file[:risk_score] || 0.0
+        passes = file[:passes] || 0
+        "  [#{status}] #{file.file_path}  risk=#{risk}  passes=#{passes}"
+      end)
+      |> Enum.join("\n")
+
+    if entries == "" do
+      header <> "\n  No hot files — either nothing scanned yet, or repo is clean.\n"
+    else
+      header <> entries <> "\n"
+    end
+  end
+
+  defp heat_manifold_doc do
+    heatmap = try do Lang.Guard.Stigmergy.get_heatmap() rescue _ -> %{} end
+
+    header = """
+    ADVERSARIAL MANIFOLD — Flip Direction Topology
+    ═══════════════════════════════════════════════
+    Timestamp: #{DateTime.utc_now() |> DateTime.to_iso8601()}
+
+    The manifold maps WHERE attacks concentrate and WHICH direction
+    they point. Over passes, the topology reveals the attack structure.
+
+    """
+
+    # Aggregate flip directions across all files
+    all_records =
+      heatmap
+      |> Map.keys()
+      |> Enum.flat_map(fn path ->
+        try do
+          manifold = Lang.Guard.Stigmergy.get_manifold(path)
+          manifold.topology
+        rescue
+          _ -> []
+        end
+      end)
+
+    topology =
+      all_records
+      |> Enum.group_by(& &1.direction)
+      |> Enum.map(fn {direction, entries} ->
+        total_risk = entries |> Enum.map(& &1.total_risk) |> Enum.sum()
+        count = entries |> Enum.map(& &1.count) |> Enum.sum()
+        "  #{direction}: #{count} regions, total_risk=#{Float.round(total_risk, 3)}"
+      end)
+      |> Enum.join("\n")
+
+    if topology == "" do
+      header <> "  No manifold data yet — run purification passes to build the map.\n"
+    else
+      header <> topology <> "\n"
+    end
+  end
+
+  defp heat_agents_doc do
+    heatmap = try do Lang.Guard.Stigmergy.get_heatmap() rescue _ -> %{} end
+
+    agents =
+      heatmap
+      |> Map.values()
+      |> Enum.flat_map(fn summary -> summary[:agent_types] || [] end)
+      |> Enum.frequencies()
+
+    header = """
+    CONTRIBUTING AGENTS
+    ═══════════════════
+    Timestamp: #{DateTime.utc_now() |> DateTime.to_iso8601()}
+
+    """
+
+    entries =
+      agents
+      |> Enum.sort_by(fn {_agent, count} -> count end, :desc)
+      |> Enum.map(fn {agent, count} -> "  #{agent}: #{count} file(s) scanned" end)
+      |> Enum.join("\n")
+
+    if entries == "" do
+      header <> "  No agents have contributed yet.\n"
+    else
+      header <> entries <> "\n"
+    end
+  end
+
+  defp heat_file_doc(file_path) do
+    records = try do Lang.Guard.Stigmergy.get_heat(file_path) rescue _ -> [] end
+
+    header = """
+    HEAT HISTORY — #{file_path}
+    #{String.duplicate("═", min(String.length("HEAT HISTORY — " <> file_path), 60))}
+    Timestamp: #{DateTime.utc_now() |> DateTime.to_iso8601()}
+    Passes: #{length(records)}
+
+    """
+
+    entries =
+      records
+      |> Enum.map(fn record ->
+        regions_text =
+          record.regions
+          |> Enum.map(fn r ->
+            "      [#{r.action}] #{Enum.join(r.flags, ", ")} — #{r.wash_result}"
+          end)
+          |> Enum.join("\n")
+
+        """
+        Pass #{record.pass_number} (#{record.scanned_at |> DateTime.to_iso8601()})
+          Agent: #{record.agent_type} (#{record.scanned_by})
+          Risk: #{record.risk_score} → Status: #{record.overall_status}
+          Confidence: #{Float.round(record.confidence * 100, 1)}%
+          Regions:
+        #{regions_text}
+        """
+      end)
+      |> Enum.join("\n")
+
+    if entries == "" do
+      header <> "  No scan records for this file.\n"
+    else
+      header <> entries
+    end
   end
 
   # Gopher line formatters

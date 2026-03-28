@@ -59,7 +59,11 @@ defmodule Lang.MCP.Servers.GuardServer do
         "shield.wash",
         "shield.hum",
         "shield.verify",
-        "shield.status"
+        "shield.status",
+        "shield.purify",
+        "shield.heatmap",
+        "shield.next_targets",
+        "shield.manifold"
       ]
     }
 
@@ -116,6 +120,63 @@ defmodule Lang.MCP.Servers.GuardServer do
           coglet_version: coglet_version,
           plan: plan
         }}}, state}
+
+      %{"method" => "shield.purify"} ->
+        file_path = get_in(request, ["params", "file_path"]) || ""
+        agent_info = %{
+          agent_id: get_in(request, ["params", "agent_id"]) || "mcp-client",
+          agent_type: get_in(request, ["params", "agent_type"]) || "unknown"
+        }
+
+        case Lang.Guard.Purifier.purify(file_path, agent_info) do
+          {:ok, result} ->
+            # Don't include the full purified_content in MCP response (can be large)
+            response = Map.drop(result, [:purified_content])
+            {:reply, {:ok, %{result: response}}, state}
+
+          {:error, reason} ->
+            {:reply, {:error, "Purification failed: #{inspect(reason)}"}, state}
+        end
+
+      %{"method" => "shield.heatmap"} ->
+        file_path = get_in(request, ["params", "file_path"])
+
+        result =
+          if file_path do
+            records = Lang.Guard.Stigmergy.get_heat(file_path)
+            %{file_path: file_path, records: records}
+          else
+            heatmap = Lang.Guard.Stigmergy.get_heatmap()
+            files =
+              Enum.map(heatmap, fn {path, summary} ->
+                %{path: path, status: summary.status, risk: summary.risk_score, passes: summary.passes}
+              end)
+            %{files: files, total: length(files)}
+          end
+
+        {:reply, {:ok, %{result: result}}, state}
+
+      %{"method" => "shield.next_targets"} ->
+        count = get_in(request, ["params", "count"]) || 10
+        targets = Lang.Guard.Purifier.next_targets(count)
+        {:reply, {:ok, %{result: %{targets: targets}}}, state}
+
+      %{"method" => "shield.manifold"} ->
+        file_path = get_in(request, ["params", "file_path"])
+
+        result =
+          if file_path do
+            Lang.Guard.Stigmergy.get_manifold(file_path)
+          else
+            # Aggregate manifold across all files
+            heatmap = Lang.Guard.Stigmergy.get_heatmap()
+            %{
+              files_tracked: map_size(heatmap),
+              message: "Specify file_path for per-file manifold detail"
+            }
+          end
+
+        {:reply, {:ok, %{result: result}}, state}
 
       %{"method" => method} ->
         Logger.warning("Unknown guard method", method: method)

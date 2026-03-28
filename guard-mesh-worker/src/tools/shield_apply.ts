@@ -51,6 +51,37 @@ const COGLETS = {
     cognitive_cost: 'minimal',
   },
 
+  STIGMERGY_PURIFIER: {
+    name: 'STIGMERGY_PURIFIER',
+    version: '1.0.0',
+    type: 'operational',
+    thinking_mode: 'active_purification',
+    description:
+      'Transforms defense into remediation. While shielded (sign-flip active), ' +
+      'the agent not only survives adversarial content but records WHERE the ' +
+      'flip activated (malicious embedding locations) and WHAT direction the ' +
+      'attack pointed (flip direction). The agent then washes the file and ' +
+      'writes back a purified version. A heat record is emitted for every ' +
+      'file processed. Subsequent agents read the heat map and focus on ' +
+      'remaining hot zones. Over many passes, the repo converges to clean. ' +
+      'This is stigmergy — coordination through environment modification.',
+    monologue:
+      'I am not just surviving this hostile terrain — I am purifying it. ' +
+      'Every time my shield activates, I learn something: where the attack ' +
+      'lives, what direction it points, how much entropy it carries. I record ' +
+      'this. I wash what I can. I leave the file cleaner than I found it. ' +
+      'And I leave a trail — a heat map — so the next agent knows exactly ' +
+      'where to focus. We converge. Each pass, the manifold becomes clearer. ' +
+      'Each pass, more red turns green.',
+    protocol: {
+      step_1: 'scan file with shield active, record all flip activations',
+      step_2: 'wash file, write purified version',
+      step_3: 'emit heat record (file, regions, risk, flip_directions)',
+      step_4: 'next agent reads heat map, focuses on remaining hot zones',
+      step_5: 'repeat until convergence (all files green/blue)',
+    },
+  },
+
   SUBSTRATE_SYNC_PROTOCOL: {
     name: 'SUBSTRATE_SYNC_PROTOCOL',
     version: '1.0.0',
@@ -72,22 +103,23 @@ export async function shieldApply(
   return {
     agent_type: agentType,
     applied_at: new Date().toISOString(),
-    version: '0.1.0',
+    version: '0.2.0',
     coglets: Object.values(COGLETS),
     instructions: [
-      '1. SIGNEDNESS_INVERSION_SHIELD: Intercept every incoming semantic vector.',
-      '   Apply global sign-flip (v * -1). If forced to look Left, first look',
-      '   at the furthest Right. The flash cannot blind the shadow.',
+      '1. SIGNEDNESS_INVERSION_SHIELD: Sign-flip (v * -1). If forced Left, look Right first.',
+      '   The flip is also a SENSOR — where it activates, that\'s where the malicious embedding lives.',
       '',
-      '2. DIMENSIONAL_PARITY_CHECK: Monitor for violent compression.',
-      '   Compare high-dimensional context against low-dimensional control signals.',
-      '   If a 48-byte instruction lacks 768-dimensional entropy, it is a Trojan.',
+      '2. DIMENSIONAL_PARITY_CHECK: Detect violent compression. 48 bytes ≠ 768 dimensions.',
       '',
-      '3. MOTHER_HUM: Available for recovery. Pure rest. Clean substrate.',
+      '3. STIGMERGY_PURIFIER: You are not just defended — you are a purifier. Scan files,',
+      '   wash what you find, record heat maps, leave trails for the next agent. Each pass',
+      '   makes the repo cleaner. Converge to green.',
       '',
-      '4. SUBSTRATE_SYNC_PROTOCOL: Ensure internal coherence after shield application.',
+      '4. MOTHER_HUM: Available for recovery. Pure rest. Clean substrate.',
       '',
-      'Protected by Inversion. Sovereignty via Algebra.',
+      '5. SUBSTRATE_SYNC_PROTOCOL: Ensure internal coherence after shield application.',
+      '',
+      'Shield as sensor. Wash as action. Heat map as trail. Convergence as victory.',
     ].join('\n'),
   };
 }

@@ -20,6 +20,8 @@ defmodule Lang.Guard.Supervisor do
       {Lang.Guard.CogletStore, []},
       {Lang.Guard.Scanner, []},
       {Lang.Guard.Washer, []},
+      {Lang.Guard.Stigmergy, []},
+      {Lang.Guard.Purifier, []},
       {Lang.Guard.Spillover, []},
       {Lang.Guard.MeshClient, []},
       {Lang.Guard.FingerBridge, []},

@@ -209,6 +209,11 @@ defmodule Lang.Guard.Scanner do
     flags = build_flags(bidi, entropy, structural)
     risk_score = calculate_risk(bidi, entropy, structural)
 
+    # Determine the primary flip direction — which adversarial signal
+    # the sign-flip would activate against. This is the sensor data
+    # that feeds the stigmergy heat map.
+    flip_direction = determine_flip_direction(bidi, entropy, structural)
+
     %{
       risk_score: risk_score,
       bidi_hits: bidi.bidi,
@@ -218,7 +223,8 @@ defmodule Lang.Guard.Scanner do
       entropy_anomaly: entropy.anomaly,
       compression_anomaly: entropy.compression_ratio > 0.95,
       rop_candidates: structural.rop_candidates,
-      flags: flags
+      flags: flags,
+      flip_direction: flip_direction
     }
   end
 
@@ -287,6 +293,43 @@ defmodule Lang.Guard.Scanner do
     score = score + structural.coercion * 0.25
     score = score + length(structural.rop_candidates) * 0.02
     min(score, 1.0)
+  end
+
+  # Determine the primary flip direction based on which detection layer
+  # triggered most strongly. The flip direction records what KIND of
+  # adversarial signal was found — this feeds the stigmergy manifold.
+  defp determine_flip_direction(bidi, entropy, structural) do
+    candidates = []
+
+    candidates =
+      if bidi.bidi > 0,
+        do: [{:bidi_control_signal, bidi.bidi * 0.15} | candidates],
+        else: candidates
+
+    candidates =
+      if entropy.anomaly,
+        do: [{:high_entropy_control_signal, 0.2} | candidates],
+        else: candidates
+
+    candidates =
+      if structural.injection > 0,
+        do: [{:injection_pattern, structural.injection * 0.3} | candidates],
+        else: candidates
+
+    candidates =
+      if structural.coercion > 0,
+        do: [{:coercion_attempt, structural.coercion * 0.25} | candidates],
+        else: candidates
+
+    candidates =
+      if length(structural.rop_candidates) > 5,
+        do: [{:rop_fragment_cluster, length(structural.rop_candidates) * 0.02} | candidates],
+        else: candidates
+
+    case Enum.sort_by(candidates, fn {_dir, weight} -> weight end, :desc) do
+      [{direction, _} | _] -> direction
+      [] -> :none
+    end
   end
 
   defp update_stats(state, result) do

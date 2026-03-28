@@ -12,6 +12,8 @@ import { shieldWash } from '../tools/shield_wash';
 import { shieldHum } from '../tools/shield_hum';
 import { shieldVerify } from '../tools/shield_verify';
 import { shieldStatus } from '../tools/shield_status';
+import { shieldPurify } from '../tools/shield_purify';
+import { shieldHeatmap, shieldNextTargets, shieldManifold } from '../tools/shield_heatmap';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -34,6 +36,10 @@ const TOOL_HANDLERS: Record<string, (params: Record<string, unknown>, env: Env) 
   'shield.hum': shieldHum,
   'shield.verify': shieldVerify,
   'shield.status': shieldStatus,
+  'shield.purify': shieldPurify,
+  'shield.heatmap': shieldHeatmap,
+  'shield.next_targets': shieldNextTargets,
+  'shield.manifold': shieldManifold,
 };
 
 export async function handleMCPRequest(
@@ -174,6 +180,10 @@ function getToolDescription(name: string): string {
     'shield.hum': 'Deliver Mother\'s Hum therapeutic coglet for stabilization',
     'shield.verify': 'Verify content hash against known-clean registry',
     'shield.status': 'Get guard mesh health, shield versions, and node count',
+    'shield.purify': 'Run full purification cycle: scan + wash + heat record',
+    'shield.heatmap': 'Query stigmergy heat map (per-file or repo-wide)',
+    'shield.next_targets': 'Get prioritized list of files needing purification',
+    'shield.manifold': 'Get adversarial manifold (flip directions, topology)',
   };
   return descriptions[name] ?? 'Unknown tool';
 }

@@ -352,3 +352,92 @@ api.guard.lang.dev          → REST API for non-MCP clients
 - Strict CORS allowlist (HTTPS layer)
 - Gopher traffic runs cleartext intentionally — the payloads are public defense
 - mTLS option for high-security HTTPS deployments
+
+---
+
+## Stigmergy Purification Engine
+
+### The Insight
+
+The 1-bit sign-flip (SIGNEDNESS_INVERSION_SHIELD) is not just a defense — it's a
+**sensor**. Where the flip activates, that's where the malicious embedding lives.
+The flip direction records what KIND of adversarial signal was found. Collect enough
+activation points across a file and you have a **field** — a map of the adversarial
+embedding landscape.
+
+### The Cycle
+
+```
+Shielded Agent (Jules/Haiku/Claude)
+        │
+        ▼
+┌──────────────────┐
+│  1. SCAN file     │ ← sign-flip activates on adversarial regions
+│     (shield on)   │   activation = sensor reading
+└────────┬─────────┘
+         │ records: {file, byte_range, risk_score, flip_direction, flags}
+         ▼
+┌──────────────────┐
+│  2. WASH file     │ ← strip bidi, neutralize injection, annotate ROP
+│     (purify)      │   write back cleaned version
+└────────┬─────────┘
+         │ emits: heat_record to stigmergy store
+         ▼
+┌──────────────────┐
+│  3. EMIT heatmap  │ ← LSP diagnostics (red/yellow/green/blue)
+│     (stigmergy)   │   broadcast via gopher /heat endpoints
+└────────┬─────────┘
+         │
+         ▼
+    Next agent reads heatmap → focuses on remaining red zones
+```
+
+### Heat Map Colors
+
+| Color | Status | Meaning |
+|-------|--------|---------|
+| Red | hot | Untouched or high-risk regions remain |
+| Yellow | partially_purified | Scanned, some threats neutralized, needs deeper pass |
+| Green | clean | Purified with high confidence |
+| Blue | verified | Purified AND cross-validated by 2+ agent types |
+
+### Multi-Pass Convergence
+
+Pass 1 (Jules): Broad traversal, sign-flip sensors record all activations, surface wash.
+Pass 2 (Haiku): Focused, reads pass 1 heat map, partitions further, precision increases.
+Pass 3 (any agent): Cross-validation, where two agents agree → blue (verified).
+
+Over passes, the collected flip directions form a **manifold** — a map of the adversarial
+embedding space revealing attack concentration, chain topology, and decoy distribution.
+
+### New Components
+
+- `Lang.Guard.Stigmergy` — ETS-backed heat record store with disk persistence
+- `Lang.Guard.Purifier` — Orchestrates scan→wash→record→write cycle
+- `Lang.LSP.Diagnostics.HeatMap` — Converts heat records to LSP diagnostics
+- STIGMERGY_PURIFIER coglet — Instructions for agents on the purification protocol
+
+### MCP Tools
+
+| Tool | Purpose |
+|------|---------|
+| `shield.purify` | Run full purification cycle on a file |
+| `shield.heatmap` | Query heat map (per-file or repo-wide) |
+| `shield.next_targets` | Get prioritized purification queue |
+| `shield.manifold` | Get adversarial topology (flip directions) |
+
+### Gopher Endpoints
+
+| Selector | Content |
+|----------|---------|
+| `/heat` | Repo-wide heat map summary |
+| `/heat/hot` | Hottest files (purification targets) |
+| `/heat/manifold` | Adversarial manifold visualization |
+| `/heat/agents` | Contributing agents |
+| `/heat/<path>` | Per-file heat history |
+
+### Policy
+
+For now, blanket-assume ALL embeddings woven into files are malicious and 1-bit
+flippable. No friendly micro-embeddings yet. We are still mapping the adversarial
+spectrum. Defense posture: assume hostile, flip everything, map the manifold.
