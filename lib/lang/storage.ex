@@ -86,6 +86,7 @@ defmodule Lang.Storage do
   end
 
   def search_code(ctx, language, query, opts \\ []) when is_map(ctx) do
+    # TODO(jules): implement search_code
     with :ok <- bill!(ctx, "folder_search_code", %{language: language}),
          {:ok, res} <- adapter().search_code(root_from(ctx), language, query, opts) do
       {:ok, res}
@@ -95,6 +96,7 @@ defmodule Lang.Storage do
   end
 
   def scan_directory(ctx, opts \\ []) when is_map(ctx) do
+    # TODO(jules): implement scan_directory
     with :ok <- bill!(ctx, "folder_scan", %{depth: Keyword.get(opts, :max_depth)}),
          {:ok, res} <- adapter().scan(root_from(ctx), opts) do
       {:ok, res}
@@ -104,6 +106,7 @@ defmodule Lang.Storage do
   end
 
   def write(ctx, path, content, mode \\ :replace) when is_map(ctx) do
+    # TODO(jules): implement write
     with :ok <- bill!(ctx, "folder_write", %{path: path, mode: mode}),
          :ok <- adapter().write(root_from(ctx), path, content, mode) do
       {:ok, %{ok: true}}
@@ -113,6 +116,7 @@ defmodule Lang.Storage do
   end
 
   def move_file(ctx, from, to) when is_map(ctx) do
+    # TODO(jules): implement move_file
     with :ok <- bill!(ctx, "folder_move", %{from: from, to: to}),
          :ok <- adapter().move(root_from(ctx), from, to) do
       {:ok, %{ok: true}}
@@ -122,6 +126,7 @@ defmodule Lang.Storage do
   end
 
   def delete_folders(ctx, path, recursive?) when is_map(ctx) do
+    # TODO(jules): implement delete_folders
     with :ok <- bill!(ctx, "folder_delete", %{path: path, recursive: recursive?}),
          :ok <- adapter().delete(root_from(ctx), path, recursive?) do
       {:ok, %{ok: true}}
