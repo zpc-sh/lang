@@ -195,6 +195,7 @@ defmodule LangWeb.NavbarComponent do
     ~H"""
     <a
       href={@href}
+      aria-current={if @current_page == @page_key, do: "page", else: false}
       class={[
         "text-sm font-medium transition-colors duration-200",
         nav_link_classes(@current_page == @page_key)
@@ -216,6 +217,8 @@ defmodule LangWeb.NavbarComponent do
           class="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-200"
           onclick="toggleUserMenu()"
           aria-label="User menu"
+          aria-haspopup="menu"
+          aria-expanded="false"
         >
           <%= if @current_user.avatar_url do %>
             <img
@@ -305,8 +308,11 @@ defmodule LangWeb.NavbarComponent do
       <script>
         function toggleUserMenu() {
           const menu = document.getElementById('user-menu');
-          if (menu) {
+          const button = document.querySelector('[aria-label="User menu"]');
+          if (menu && button) {
+            const isHidden = menu.classList.contains('hidden');
             menu.classList.toggle('hidden');
+            button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
           }
         }
 
@@ -319,6 +325,7 @@ defmodule LangWeb.NavbarComponent do
               !menu.contains(event.target) &&
               !button.contains(event.target)) {
             menu.classList.add('hidden');
+            button.setAttribute('aria-expanded', 'false');
           }
         });
       </script>
@@ -375,6 +382,7 @@ defmodule LangWeb.NavbarComponent do
     ~H"""
     <a
       href={@href}
+      aria-current={if @current_page == @page_key, do: "page", else: false}
       class={[
         "block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200",
         mobile_nav_link_classes(@current_page == @page_key)
