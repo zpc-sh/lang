@@ -1,3 +1,3 @@
-## 2024-03-21 - Icon-only buttons lacking ARIA labels
-**Learning:** Icon-only buttons like those in the theme toggle were missing `aria-label` and `title` attributes. Without these, screen readers announce nothing useful, preventing non-visual users from understanding the toggle's function or its current state options.
-**Action:** Always add `aria-label` (and ideally `title` for tooltip on hover) to all icon-only buttons to guarantee accessibility for screen reader and keyboard users.
+## 2025-06-12 - Navbar Accessibility Improvements
+**Learning:** Found that the main navigation bar was missing crucial `aria-current` attributes for active page indicators and the user dropdown lacked `aria-haspopup` and dynamic `aria-expanded` state tracking. These are common oversights in custom dropdowns and navigation links that severely impact screen reader users.
+**Action:** Ensure custom dropdown toggles always include `aria-expanded` that syncs with their visible state via JS, and `aria-haspopup="menu"`. Add `aria-current="page"` to active navigation items.
