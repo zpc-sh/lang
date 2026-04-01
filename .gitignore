@@ -37,3 +37,6 @@ native/*/target/
 *.swo
 
 /target
+
+.elixir_ls
+priv/native
