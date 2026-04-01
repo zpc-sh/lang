@@ -20,7 +20,7 @@ defmodule Lang.Workers.OrchestratorWorker do
     start_time = System.monotonic_time(:millisecond)
 
     try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+      result = execute_task(String.to_existing_atom(env), String.to_existing_atom(task), args)
 
       duration = System.monotonic_time(:millisecond) - start_time
 
@@ -41,6 +41,11 @@ defmodule Lang.Workers.OrchestratorWorker do
 
       :ok
     rescue
+      e in ArgumentError ->
+        Logger.error("Security warning: Invalid environment or task provided: #{env}/#{task}")
+        Master.notify_job_failed(args["job_id"], e)
+        {:error, e}
+
       error ->
         Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
         Master.notify_job_failed(args["job_id"], error)
@@ -997,7 +1002,7 @@ defmodule Lang.Workers.OrchestratorWorker do
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(String.to_existing_atom(env)))
         |> Oban.insert!()
       end
     end)
@@ -1005,7 +1010,7 @@ defmodule Lang.Workers.OrchestratorWorker do
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case String.to_existing_atom(env) do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1047,6 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    queue_for_env(String.to_existing_atom(env))
   end
 end

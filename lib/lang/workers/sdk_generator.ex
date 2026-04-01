@@ -8,11 +8,17 @@ defmodule Lang.Workers.SDKGenerator do
   @api_base "https://lang.nocsi.com/api"
 
   def perform(%Oban.Job{args: %{"environment" => env, "language" => lang}}) do
-    with {:ok, spec} <- load_openapi_spec(env),
-         {:ok, sdk_code} <- generate_sdk(spec, lang, env),
-         {:ok, _published} <- publish_sdk(sdk_code, lang, env) do
-      notify_sdk_ready(env, lang)
-      :ok
+    try do
+      with {:ok, spec} <- load_openapi_spec(env),
+           {:ok, sdk_code} <- generate_sdk(spec, lang, env),
+           {:ok, _published} <- publish_sdk(sdk_code, lang, env) do
+        notify_sdk_ready(env, lang)
+        :ok
+      end
+    rescue
+      e in ArgumentError ->
+        Logger.error("Security warning: Invalid atom string provided in SDK generation for #{env}/#{lang}")
+        {:error, e}
     end
   end
 
@@ -528,7 +534,7 @@ defmodule Lang.Workers.SDKGenerator do
           #{Map.get(operation, "summary", "API method")}
           \"\"\"
           def #{method_name}(client, data, opts \\\\ []) do
-            case request(client, :#{String.to_atom(method)}, "#{path}", data, opts) do
+            case request(client, :#{String.to_existing_atom(method)}, "#{path}", data, opts) do
               {:ok, %{status: 200, body: body}} -> {:ok, body}
               {:ok, %{status: status, body: body}} -> {:error, {status, body}}
               error -> error

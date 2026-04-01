@@ -17,7 +17,11 @@ defmodule Lang.Workers.TextEnvironment do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"task" => task} = args}) do
-    execute_task(String.to_atom(task), args)
+    execute_task(String.to_existing_atom(task), args)
+  rescue
+    e in ArgumentError ->
+      Logger.error("Security warning: Invalid task provided for text environment: #{task}")
+      {:error, e}
   end
 
   def execute_task(:generate_spec, args) do

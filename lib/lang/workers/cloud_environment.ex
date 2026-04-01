@@ -12,7 +12,11 @@ defmodule Lang.Workers.CloudEnvironment do
   Main entry point for cloud environment tasks
   """
   def perform(%Oban.Job{args: %{"task" => task} = args}) do
-    execute_task(String.to_atom(task), args)
+    execute_task(String.to_existing_atom(task), args)
+  rescue
+    e in ArgumentError ->
+      Logger.error("Security warning: Invalid task provided for cloud environment: #{task}")
+      {:error, e}
   end
 
   def execute_task(:discover_resources, args) do
