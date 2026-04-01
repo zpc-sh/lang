@@ -7,7 +7,7 @@ defmodule Lang.Workers.BillingAggregateUsageWorker do
   @impl true
   def perform(%Oban.Job{args: args}) do
     org_id = args["organization_id"]
-    gran = (args["granularity"] || "hour") |> to_string() |> String.to_atom()
+    gran = (args["granularity"] || "hour") |> to_string() |> String.to_existing_atom()
     now = DateTime.utc_now()
     {period_start, period_end} = period_bounds(now, gran)
 
@@ -48,6 +48,10 @@ defmodule Lang.Workers.BillingAggregateUsageWorker do
 
     {:ok, %{period_start: period_start, period_end: period_end, granularity: gran}}
   rescue
+    e in ArgumentError ->
+      Logger.error("Security warning: Invalid granularity provided for billing aggregation: #{inspect(args["granularity"])}")
+      {:error, e}
+
     e ->
       Logger.error("AggregateUsageWorker failed", error: Exception.message(e))
       :error

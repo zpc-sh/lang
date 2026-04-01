@@ -12,7 +12,11 @@ defmodule Lang.Workers.FilesystemEnvironment do
   Main entry point for filesystem environment tasks
   """
   def perform(%Oban.Job{args: %{"task" => task} = args}) do
-    execute_task(String.to_atom(task), args)
+    execute_task(String.to_existing_atom(task), args)
+  rescue
+    e in ArgumentError ->
+      Logger.error("Security warning: Invalid task provided for filesystem environment: #{task}")
+      {:error, e}
   end
 
   def execute_task(:generate_spec, args) do

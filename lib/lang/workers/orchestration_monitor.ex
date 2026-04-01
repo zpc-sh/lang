@@ -222,7 +222,7 @@ defmodule Lang.Workers.OrchestrationMonitor do
     # Create a new job with the same parameters
     new_args = Map.put(job.args, "restarted_from", job.id)
 
-    worker_module = String.to_atom("Elixir.#{job.worker}")
+    worker_module = String.to_existing_atom("Elixir.#{job.worker}")
 
     new_args
     |> worker_module.new()

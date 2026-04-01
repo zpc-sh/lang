@@ -15,17 +15,23 @@ defmodule Lang.Workers.SwarmExportWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"kind" => kind, "format" => format, "export_id" => export_id} = args}) do
-    case {kind, format} do
-      {"swarms", "ndjson"} -> export_swarms_ndjson(args)
-      {"agents", "ndjson"} -> export_agents_ndjson(args)
-      other ->
-        Logger.warning("Unsupported export request", request: other)
-        :discard
-    end
+    try do
+      case {kind, format} do
+        {"swarms", "ndjson"} -> export_swarms_ndjson(args)
+        {"agents", "ndjson"} -> export_agents_ndjson(args)
+        other ->
+          Logger.warning("Unsupported export request", request: other)
+          :discard
+      end
 
-    # Notify listeners
-    PubSub.broadcast(Lang.PubSub, "exports:#{export_id}", {:export_ready, export_id})
-    :ok
+      # Notify listeners
+      PubSub.broadcast(Lang.PubSub, "exports:#{export_id}", {:export_ready, export_id})
+      :ok
+    rescue
+      e in ArgumentError ->
+        Logger.error("Security warning: Invalid filter state provided in swarm export: #{export_id}")
+        {:error, e}
+    end
   end
 
   defp export_swarms_ndjson(%{"export_id" => id, "filters" => filters}) do
@@ -109,7 +115,7 @@ defmodule Lang.Workers.SwarmExportWorker do
     q =
       case String.trim(to_string(st)) do
         "" -> q
-        state -> filter(q, state == ^String.to_atom(state))
+        state -> filter(q, state == ^String.to_existing_atom(state))
       end
 
     case Float.parse(to_string(mt)) do

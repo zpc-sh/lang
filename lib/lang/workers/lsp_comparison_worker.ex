@@ -37,7 +37,7 @@ defmodule Lang.Workers.LSPComparisonWorker do
 
     try do
       # Get scenario configuration
-      scenario = ScenarioDefinitions.get_scenario(String.to_atom(scenario_id))
+      scenario = ScenarioDefinitions.get_scenario(String.to_existing_atom(scenario_id))
 
       # Reconstruct agent variant
       variant = reconstruct_agent_variant(agent_variant)
@@ -78,6 +78,10 @@ defmodule Lang.Workers.LSPComparisonWorker do
 
       :ok
     rescue
+      e in ArgumentError ->
+        Logger.error("Security warning: Invalid scenario_id or agent_module provided for LSP comparison: #{scenario_id}/#{Map.get(agent_variant, "provider_module")}")
+        {:error, e}
+
       error ->
         completion_time = System.monotonic_time(:millisecond) - start_time
 
@@ -262,7 +266,7 @@ defmodule Lang.Workers.LSPComparisonWorker do
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
     # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
+    case apply(String.to_existing_atom(agent_module), :handle_request, [method, params, []]) do
       {:ok, result} ->
         %{
           status: :success,

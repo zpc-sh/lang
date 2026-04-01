@@ -18,7 +18,7 @@ defmodule Lang.Workers.MarketingGenerator do
     start_time = System.monotonic_time(:millisecond)
 
     try do
-      result = generate_content(String.to_atom(env), String.to_atom(type), args)
+      result = generate_content(String.to_existing_atom(env), String.to_existing_atom(type), args)
       duration = System.monotonic_time(:millisecond) - start_time
 
       Logger.info("Generated #{type} for #{env} in #{duration}ms")
@@ -32,6 +32,10 @@ defmodule Lang.Workers.MarketingGenerator do
 
       :ok
     rescue
+      e in ArgumentError ->
+        Logger.error("Security warning: Invalid environment or type provided for marketing: #{env}/#{type}")
+        {:error, e}
+
       error ->
         Logger.error("Failed to generate #{type} for #{env}: #{inspect(error)}")
         {:error, error}
