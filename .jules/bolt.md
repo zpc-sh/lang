@@ -4,3 +4,6 @@
 ## 2024-05-20 - Elixir Map+Sum Optimization
 **Learning:** In Elixir, sequential `Enum.sum(Enum.map(...))` calls over the same list create unnecessary intermediate lists and iterate the collection multiple times. Using `Enum.reduce` in a single pass is much more efficient for multiple aggregations.
 **Action:** Always replace multiple map+sum passes on the same collection with a single `Enum.reduce` that accumulates multiple values.
+## 2026-04-03 - [O(1) list length checks and Map.new allocations]
+**Learning:** Checking `length(list) == 0` is an O(N) operation in Elixir. `Enum.map/2 |> Enum.into(%{})` creates an intermediate list memory allocation.
+**Action:** Use `list == []` or `list != []` for O(1) checks. Use `Map.new/2` instead of `Enum.map/2 |> Enum.into(%{})` to avoid allocating an intermediate list and iterating twice.
