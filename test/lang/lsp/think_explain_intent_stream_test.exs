@@ -31,10 +31,35 @@ defmodule Lang.LSP.ThinkExplainIntentStreamTest do
         assert {:ok, %{stream_id: "stream-mcp-1", status: "streaming"}} =
                  Lang.Think.ExplainIntent.handle(params, %{})
 
-        # Best-effort: receive at least one chunk or completion
-        assert_receive {:mcp_stream_chunk, "stream-mcp-1", %{index: _i, chunk: _c}}, 500
+        assert_receive {:mcp_stream_chunk, "stream-mcp-1",
+                        %{
+                          index: _i,
+                          chunk: _c,
+                          trait_update: %{coherence: coherence, entropy: entropy},
+                          audit_summary: chunk_summary
+                        }}, 500
+
+        assert is_float(coherence)
+        assert is_float(entropy)
+        assert String.starts_with?(chunk_summary, "chunk=")
+
+        assert_receive {:mcp_stream_complete, "stream-mcp-1",
+                        %{
+                          "trait_aggregate" => %{
+                            chunk_count: chunk_count,
+                            avg_coherence: avg_coherence,
+                            avg_entropy: avg_entropy,
+                            overall_entropy: overall_entropy
+                          },
+                          "audit_summary" => turn_summary
+                        }}, 500
+
+        assert chunk_count >= 1
+        assert is_float(avg_coherence)
+        assert is_float(avg_entropy)
+        assert is_float(overall_entropy)
+        assert String.starts_with?(turn_summary, "turn_final")
       end
     end
   end
 end
-

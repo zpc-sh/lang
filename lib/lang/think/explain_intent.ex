@@ -80,14 +80,14 @@ defmodule Lang.Think.ExplainIntent do
       Task.Supervisor.start_child(Lang.LSP.TaskSupervisor, fn ->
         case route_to_provider(params) do
           {:ok, %{"summary" => summary} = result} ->
-            emit_stream_chunks(session_id, stream_id, summary)
-            complete_stream(session_id, stream_id, result)
+            trait_aggregate = emit_stream_chunks(session_id, stream_id, summary)
+            complete_stream(session_id, stream_id, result, trait_aggregate)
 
           {:ok, other} ->
             # Fallback: stringify result
             text = inspect(other)
-            emit_stream_chunks(session_id, stream_id, text)
-            complete_stream(session_id, stream_id, other)
+            trait_aggregate = emit_stream_chunks(session_id, stream_id, text)
+            complete_stream(session_id, stream_id, other, trait_aggregate)
 
           {:error, reason} ->
             Phoenix.PubSub.broadcast(Lang.PubSub, "mcp_stream:session:#{session_id}", {:mcp_stream_error, stream_id, inspect(reason)})
@@ -103,22 +103,58 @@ defmodule Lang.Think.ExplainIntent do
 
   defp emit_stream_chunks(session_id, stream_id, text) when is_binary(text) do
     chunk_bytes = 1024
-    total = byte_size(text)
+    total_bytes = byte_size(text)
+    chunks = chunk_binary(text, chunk_bytes)
+    total_chunks = length(chunks)
 
-    text
-    |> chunk_binary(chunk_bytes)
+    chunks
     |> Enum.with_index(1)
-    |> Enum.each(fn {chunk, idx} ->
+    |> Enum.reduce(%{previous_chunk: nil, chunk_count: 0, coherence_total: 0.0, entropy_total: 0.0}, fn {chunk, idx}, acc ->
+      trait_update = incremental_trait_update(acc.previous_chunk, chunk)
+      next_acc = %{
+        previous_chunk: chunk,
+        chunk_count: acc.chunk_count + 1,
+        coherence_total: acc.coherence_total + trait_update.coherence,
+        entropy_total: acc.entropy_total + trait_update.entropy
+      }
+
       Phoenix.PubSub.broadcast(
         Lang.PubSub,
         "mcp_stream:session:#{session_id}",
-        {:mcp_stream_chunk, stream_id, %{index: idx, total_bytes: total, chunk: chunk}}
+        {:mcp_stream_chunk, stream_id,
+         %{
+           index: idx,
+           total_bytes: total_bytes,
+           total_chunks: total_chunks,
+           chunk: chunk,
+           trait_update: trait_update,
+           audit_summary: chunk_audit_summary(idx, total_chunks, trait_update)
+         }}
       )
+
+      next_acc
     end)
+    |> Map.drop([:previous_chunk])
+    |> finalize_trait_aggregate(text)
   end
 
-  defp complete_stream(session_id, stream_id, final_payload) do
-    Phoenix.PubSub.broadcast(Lang.PubSub, "mcp_stream:session:#{session_id}", {:mcp_stream_complete, stream_id, final_payload})
+  defp complete_stream(session_id, stream_id, final_payload, trait_aggregate) do
+    payload =
+      case final_payload do
+        map when is_map(map) ->
+          map
+          |> Map.put("trait_aggregate", trait_aggregate)
+          |> Map.put("audit_summary", turn_audit_summary(trait_aggregate))
+
+        other ->
+          %{
+            "result" => other,
+            "trait_aggregate" => trait_aggregate,
+            "audit_summary" => turn_audit_summary(trait_aggregate)
+          }
+      end
+
+    Phoenix.PubSub.broadcast(Lang.PubSub, "mcp_stream:session:#{session_id}", {:mcp_stream_complete, stream_id, payload})
   end
 
   defp chunk_binary(<<>> = _bin, _size), do: []
@@ -132,6 +168,63 @@ defmodule Lang.Think.ExplainIntent do
       <<chunk::binary-size(size), rest::binary>> -> do_chunk(rest, size, [chunk | acc])
       _ -> [bin | acc]
     end
+  end
+
+  defp incremental_trait_update(previous_chunk, chunk) do
+    %{coherence: coherence(previous_chunk, chunk), entropy: entropy(chunk)}
+  end
+
+  defp coherence(nil, _chunk), do: 1.0
+  defp coherence(previous_chunk, chunk) do
+    prev_tokens = token_set(previous_chunk)
+    current_tokens = token_set(chunk)
+    union_size = MapSet.union(prev_tokens, current_tokens) |> MapSet.size()
+
+    if union_size == 0 do
+      1.0
+    else
+      (MapSet.intersection(prev_tokens, current_tokens) |> MapSet.size()) / union_size
+    end
+  end
+
+  defp token_set(text) do
+    text
+    |> String.downcase()
+    |> String.split(~r/[^[:alnum:]_]+/u, trim: true)
+    |> MapSet.new()
+  end
+
+  defp entropy(text) when is_binary(text) do
+    text
+    |> String.to_charlist()
+    |> Enum.frequencies()
+    |> Enum.reduce(0.0, fn {_char, count}, acc ->
+      probability = count / max(1, String.length(text))
+      acc - probability * :math.log2(probability)
+    end)
+  end
+
+  defp finalize_trait_aggregate(acc, full_text) do
+    count = max(1, acc.chunk_count)
+
+    %{
+      chunk_count: acc.chunk_count,
+      avg_coherence: acc.coherence_total / count,
+      avg_entropy: acc.entropy_total / count,
+      overall_entropy: entropy(full_text)
+    }
+  end
+
+  defp chunk_audit_summary(idx, total_chunks, trait_update) do
+    "chunk=#{idx}/#{total_chunks} coherence=#{fmt(trait_update.coherence)} entropy=#{fmt(trait_update.entropy)}"
+  end
+
+  defp turn_audit_summary(aggregate) do
+    "turn_final chunks=#{aggregate.chunk_count} avg_coherence=#{fmt(aggregate.avg_coherence)} avg_entropy=#{fmt(aggregate.avg_entropy)} overall_entropy=#{fmt(aggregate.overall_entropy)}"
+  end
+
+  defp fmt(number) when is_number(number) do
+    :erlang.float_to_binary(number * 1.0, decimals: 4)
   end
 
   defp enqueue_request(params, ctx) do
@@ -204,4 +297,3 @@ defmodule Lang.Think.ExplainIntent do
     end
   end
 end
-
