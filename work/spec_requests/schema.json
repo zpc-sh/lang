@@ -3,21 +3,229 @@
   "$id": "https://example.org/spec-request.schema.json",
   "title": "Spec Request",
   "type": "object",
-  "required": ["project", "title", "api", "acceptance", "meta"],
+  "required": [
+    "project",
+    "title",
+    "api",
+    "acceptance",
+    "meta"
+  ],
   "properties": {
-    "project": {"type": "string", "enum": ["jsonld", "markdown_ld"]},
-    "title": {"type": "string"},
-    "motivation": {"type": "string"},
-    "background": {"type": "string"},
-    "api": {"type": "object"},
-    "errors": {"type": "array", "items": {"type": "string"}},
-    "determinism": {"type": "array", "items": {"type": "string"}},
-    "telemetry": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
-    "tests": {"type": "array", "items": {"type": "string"}},
-    "acceptance": {"type": "array", "items": {"type": "string"}},
-    "attachments": {"type": "array", "items": {"type": "string"}},
-    "contacts": {"type": "object"},
-    "meta": {"type": "object"}
+    "project": {
+      "type": "string",
+      "enum": [
+        "jsonld",
+        "markdown_ld"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "motivation": {
+      "type": "string"
+    },
+    "background": {
+      "type": "string"
+    },
+    "api": {
+      "type": "object",
+      "properties": {
+        "required_fields": {
+          "type": "array",
+          "description": "Field names that must always be present in input/output payloads.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional_fields": {
+          "type": "array",
+          "description": "Field names that may be omitted without invalidating the payload.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "numeric_ranges": {
+          "type": "array",
+          "description": "Numeric constraints and normalization rules for bounded values.",
+          "items": {
+            "type": "object",
+            "required": [
+              "field",
+              "min",
+              "max",
+              "normalization"
+            ],
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "normalization": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "zscore",
+                  "minmax",
+                  "unit_interval",
+                  "log10",
+                  "log1p",
+                  "custom"
+                ]
+              },
+              "inclusive": {
+                "type": "boolean",
+                "default": true
+              },
+              "units": {
+                "type": "string"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "normalization": {
+                      "const": "custom"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "units"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "determinism": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "telemetry": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contacts": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Source and generation metadata for traceability.",
+      "required": [
+        "source",
+        "generated_at",
+        "generated_by"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generated_by": {
+          "type": "string"
+        },
+        "upstream_commit": {
+          "type": "string"
+        },
+        "checksum": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "model_versioning": {
+      "type": "object",
+      "description": "Model version information and compatibility guarantees.",
+      "required": [
+        "version",
+        "compatibility"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "compatibility": {
+          "type": "object",
+          "required": [
+            "strategy",
+            "minimum_supported_version"
+          ],
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": [
+                "strict",
+                "backward_compatible",
+                "forward_compatible",
+                "semver"
+              ]
+            },
+            "minimum_supported_version": {
+              "type": "string"
+            },
+            "maximum_tested_version": {
+              "type": "string"
+            },
+            "breaking_changes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "meta": {
+      "type": "object"
+    }
   }
 }
-
