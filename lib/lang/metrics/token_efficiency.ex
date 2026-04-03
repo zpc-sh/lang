@@ -119,7 +119,7 @@ defmodule Lang.Metrics.TokenEfficiency do
     providers = ["xai", "openai", "anthropic"]
 
     comparisons =
-      Enum.map(providers, fn provider ->
+      Map.new(providers, fn provider ->
         case get_provider_efficiency(provider, from: from, to: to) do
           {:ok, metrics} ->
             {provider, metrics}
@@ -134,7 +134,6 @@ defmodule Lang.Metrics.TokenEfficiency do
              }}
         end
       end)
-      |> Enum.into(%{})
 
     # Find best performing provider
     best_provider =
@@ -295,7 +294,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp calculate_user_efficiency_trends(events) do
-    if length(events) == 0 do
+    if events == [] do
       %{
         total_operations: 0,
         avg_reduction_percent: 0.0,
@@ -343,7 +342,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp calculate_provider_metrics(events, provider) do
-    if length(events) == 0 do
+    if events == [] do
       %{
         provider: provider,
         total_operations: 0,
@@ -365,7 +364,7 @@ defmodule Lang.Metrics.TokenEfficiency do
       method_breakdown =
         events
         |> Enum.group_by(& &1.lsp_method)
-        |> Enum.map(fn {method, method_events} ->
+        |> Map.new(fn {method, method_events} ->
           {method_baseline, method_enhanced} = sum_tokens(method_events)
           method_saved = method_baseline - method_enhanced
 
@@ -379,7 +378,6 @@ defmodule Lang.Metrics.TokenEfficiency do
              tokens_saved: method_saved
            }}
         end)
-        |> Enum.into(%{})
 
       %{
         provider: provider,
@@ -394,7 +392,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp calculate_realtime_metrics(events) do
-    if length(events) == 0 do
+    if events == [] do
       %{
         current_hour_operations: 0,
         current_reduction_percent: 0.0,
@@ -458,13 +456,13 @@ defmodule Lang.Metrics.TokenEfficiency do
     avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
 
     successful_ops = Enum.count(events, &(&1.feature_used == true))
-    success_rate = if length(events) > 0, do: successful_ops / length(events) * 100, else: 0.0
+    success_rate = if events != [], do: successful_ops / length(events) * 100, else: 0.0
 
     # Method efficiency breakdown
     method_efficiency =
       events
       |> Enum.group_by(& &1.lsp_method)
-      |> Enum.map(fn {method, method_events} ->
+      |> Map.new(fn {method, method_events} ->
         {method_baseline, method_enhanced} = sum_tokens(method_events)
 
         method_reduction =
@@ -478,13 +476,12 @@ defmodule Lang.Metrics.TokenEfficiency do
            reduction_percent: Float.round(method_reduction, 2)
          }}
       end)
-      |> Enum.into(%{})
 
     # Provider efficiency breakdown
     provider_efficiency =
       events
       |> Enum.group_by(& &1.provider)
-      |> Enum.map(fn {provider, provider_events} ->
+      |> Map.new(fn {provider, provider_events} ->
         {provider_baseline, provider_enhanced} = sum_tokens(provider_events)
 
         provider_reduction =
@@ -498,7 +495,6 @@ defmodule Lang.Metrics.TokenEfficiency do
            reduction_percent: Float.round(provider_reduction, 2)
          }}
       end)
-      |> Enum.into(%{})
 
     # User metrics
     unique_users = events |> Enum.map(& &1.user_id) |> Enum.uniq() |> length()
@@ -507,7 +503,7 @@ defmodule Lang.Metrics.TokenEfficiency do
     quality_events = Enum.filter(events, &(&1.quality_score != nil))
 
     avg_quality =
-      if length(quality_events) > 0 do
+      if quality_events != [] do
         Enum.reduce(quality_events, 0.0, fn e, acc -> acc + Decimal.to_float(e.quality_score) end) /
           length(quality_events)
       else
@@ -544,7 +540,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp calculate_efficiency_trends(reports) do
-    if length(reports) == 0 do
+    if reports == [] do
       %{trend: "no_data", reports: []}
     else
       sorted_reports = Enum.sort_by(reports, & &1.report_date, Date)
@@ -592,7 +588,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp compile_benchmarks(events) do
-    if length(events) == 0 do
+    if events == [] do
       %{benchmarks: %{}, sample_size: 0}
     else
       # Calculate percentile benchmarks
@@ -603,7 +599,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         |> Enum.sort()
 
       benchmarks =
-        if length(reductions) > 0 do
+        if reductions != [] do
           %{
             p10: percentile(reductions, 10),
             p25: percentile(reductions, 25),
@@ -622,7 +618,7 @@ defmodule Lang.Metrics.TokenEfficiency do
       method_benchmarks =
         events
         |> Enum.group_by(& &1.lsp_method)
-        |> Enum.map(fn {method, method_events} ->
+        |> Map.new(fn {method, method_events} ->
           method_reductions =
             method_events
             |> Enum.filter(fn e -> e.baseline_tokens > 0 and e.enhanced_tokens >= 0 end)
@@ -631,7 +627,7 @@ defmodule Lang.Metrics.TokenEfficiency do
             end)
 
           method_median =
-            if length(method_reductions) > 0 do
+            if method_reductions != [] do
               percentile(method_reductions, 50)
             else
               0.0
@@ -643,7 +639,6 @@ defmodule Lang.Metrics.TokenEfficiency do
              sample_size: length(method_reductions)
            }}
         end)
-        |> Enum.into(%{})
 
       %{
         overall_benchmarks: benchmarks,
@@ -695,7 +690,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   defp calculate_method_efficiency(events) do
     events
     |> Enum.group_by(& &1.lsp_method)
-    |> Enum.map(fn {method, method_events} ->
+    |> Map.new(fn {method, method_events} ->
       {total_baseline, total_enhanced} = sum_tokens(method_events)
 
       reduction =
@@ -710,11 +705,10 @@ defmodule Lang.Metrics.TokenEfficiency do
          efficiency_grade: calculate_efficiency_grade(reduction)
        }}
     end)
-    |> Enum.into(%{})
   end
 
   defp find_best_efficiency_day(daily_breakdown) do
-    if length(daily_breakdown) == 0 do
+    if daily_breakdown == [] do
       nil
     else
       Enum.max_by(daily_breakdown, & &1.reduction_percent, fn -> nil end)
@@ -735,7 +729,7 @@ defmodule Lang.Metrics.TokenEfficiency do
       |> Enum.map(fn {method, _metrics} -> method end)
 
     opportunities =
-      if length(low_performing_methods) > 0 do
+      if low_performing_methods != [] do
         [
           "Optimize LSP enhancements for methods: #{Enum.join(low_performing_methods, ", ")}"
           | opportunities
@@ -778,7 +772,7 @@ defmodule Lang.Metrics.TokenEfficiency do
         opportunities
       end
 
-    if length(opportunities) == 0 do
+    if opportunities == [] do
       ["Current efficiency levels are good - continue monitoring"]
     else
       opportunities
@@ -843,7 +837,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   defp estimate_productivity_value(events) do
     time_events = Enum.filter(events, &(&1.time_saved_seconds != nil))
 
-    if length(time_events) > 0 do
+    if time_events != [] do
       total_time_saved = Enum.reduce(time_events, 0, fn e, acc -> acc + e.time_saved_seconds end)
       # Convert to hours and multiply by estimated developer hourly rate
       total_time_saved / 3600 * 100
@@ -853,7 +847,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp calculate_average_reduction(reports) do
-    if length(reports) == 0 do
+    if reports == [] do
       0.0
     else
       total =
@@ -868,7 +862,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp find_best_period(reports) do
-    if length(reports) == 0 do
+    if reports == [] do
       nil
     else
       Enum.max_by(
@@ -882,7 +876,7 @@ defmodule Lang.Metrics.TokenEfficiency do
   end
 
   defp find_worst_period(reports) do
-    if length(reports) == 0 do
+    if reports == [] do
       nil
     else
       Enum.min_by(
@@ -895,7 +889,7 @@ defmodule Lang.Metrics.TokenEfficiency do
     end
   end
 
-  defp percentile(list, percentile) when is_list(list) and length(list) > 0 do
+  defp percentile(list, percentile) when is_list(list) and list != [] do
     sorted = Enum.sort(list)
     length = length(sorted)
     index = (percentile / 100 * (length - 1)) |> round()
