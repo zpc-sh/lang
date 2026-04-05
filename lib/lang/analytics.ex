@@ -280,8 +280,12 @@ defmodule Lang.Analytics do
     else
       # Calculate token savings
       token_events = Enum.filter(events, fn e -> e.baseline_tokens && e.enhanced_tokens end)
-      total_baseline_tokens = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-      total_enhanced_tokens = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+      # Optimization: Replaced sequential Enum.sum(Enum.map(...)) with a single pass Enum.reduce
+      # to avoid iterating the list multiple times and to prevent intermediate list allocations.
+      {total_baseline_tokens, total_enhanced_tokens} =
+        Enum.reduce(token_events, {0, 0}, fn e, {b_acc, e_acc} ->
+          {b_acc + e.baseline_tokens, e_acc + e.enhanced_tokens}
+        end)
       total_tokens_saved = total_baseline_tokens - total_enhanced_tokens
 
       avg_token_reduction_percent =
@@ -296,7 +300,7 @@ defmodule Lang.Analytics do
 
       avg_time_saved =
         if length(time_events) > 0 do
-          Enum.sum(Enum.map(time_events, & &1.time_saved_seconds)) / length(time_events)
+          Enum.reduce(time_events, 0, fn e, acc -> acc + e.time_saved_seconds end) / length(time_events)
         else
           0.0
         end
@@ -306,7 +310,7 @@ defmodule Lang.Analytics do
 
       avg_quality =
         if length(quality_events) > 0 do
-          Enum.sum(Enum.map(quality_events, & &1.quality_score)) / length(quality_events)
+          Enum.reduce(quality_events, 0.0, fn e, acc -> acc + e.quality_score end) / length(quality_events)
         else
           0.0
         end
@@ -334,8 +338,13 @@ defmodule Lang.Analytics do
                 0.0
 
               token_events ->
-                baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-                enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+                # Optimization: Single pass Enum.reduce to aggregate both baseline and enhanced tokens
+                # without intermediate allocations.
+                {baseline, enhanced} =
+                  Enum.reduce(token_events, {0, 0}, fn e, {b_acc, e_acc} ->
+                    {b_acc + e.baseline_tokens, e_acc + e.enhanced_tokens}
+                  end)
+
                 if baseline > 0, do: (baseline - enhanced) / baseline * 100, else: 0.0
             end
 
@@ -424,8 +433,12 @@ defmodule Lang.Analytics do
     else
       token_events = Enum.filter(events, fn e -> e.baseline_tokens && e.enhanced_tokens end)
 
-      total_baseline = Enum.sum(Enum.map(token_events, & &1.baseline_tokens))
-      total_enhanced = Enum.sum(Enum.map(token_events, & &1.enhanced_tokens))
+      # Optimization: Replaced sequential Enum.sum(Enum.map(...)) with a single pass Enum.reduce
+      # to avoid iterating the list multiple times and to prevent intermediate list allocations.
+      {total_baseline, total_enhanced} =
+        Enum.reduce(token_events, {0, 0}, fn e, {b_acc, e_acc} ->
+          {b_acc + e.baseline_tokens, e_acc + e.enhanced_tokens}
+        end)
       total_saved = total_baseline - total_enhanced
 
       avg_reduction = if total_baseline > 0, do: total_saved / total_baseline * 100, else: 0.0
@@ -434,7 +447,7 @@ defmodule Lang.Analytics do
 
       avg_time_saved =
         if length(time_events) > 0 do
-          Enum.sum(Enum.map(time_events, & &1.time_saved_seconds)) / length(time_events)
+          Enum.reduce(time_events, 0, fn e, acc -> acc + e.time_saved_seconds end) / length(time_events)
         else
           0.0
         end
@@ -443,7 +456,7 @@ defmodule Lang.Analytics do
 
       avg_quality =
         if length(quality_events) > 0 do
-          Enum.sum(Enum.map(quality_events, &Decimal.to_float(&1.quality_score))) /
+          Enum.reduce(quality_events, 0.0, fn e, acc -> acc + Decimal.to_float(e.quality_score) end) /
             length(quality_events)
         else
           0.0
