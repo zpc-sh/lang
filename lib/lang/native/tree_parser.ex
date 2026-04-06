@@ -551,18 +551,6 @@ defmodule Lang.Native.TreeParser do
   ## Examples
 
       {:ok, stats_json} = Lang.Native.TreeParser.get_ast_statistics(ast)
-      # stats = Jason.decode!(stats_json)
-
-      # IO.puts("Parsed source code and generated AST")
-      # IO.puts("Statistics available in JSON format")
-
-      # if stats["error_count"] > 0 do
-      #   IO.puts("Warning: Parse errors detected")
-      # end
-
-      # if length(stats["warnings"]) > 0 do
-      #   IO.puts("Warnings found")
-      # end
 
   ## Performance Monitoring
   Statistics help monitor parser performance:
