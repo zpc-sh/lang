@@ -344,9 +344,9 @@ defmodule LangWeb.SwarmShowLive do
                     <option value="20" selected={@agents_paging.page_size == 20}>20</option>
                     <option value="50" selected={@agents_paging.page_size == 50}>50</option>
                   </select>
-                  <button phx-click="agents_set_page" phx-value-dir="prev" class="px-2 py-1 rounded border text-xs">Prev</button>
+                  <button phx-click="agents_set_page" phx-value-dir="prev" class="px-2 py-1 rounded border text-xs disabled:opacity-50" disabled={@agents_paging.page <= 1}>Prev</button>
                   <div class="text-xs">Page <%= @agents_paging.page %></div>
-                  <button phx-click="agents_set_page" phx-value-dir="next" class="px-2 py-1 rounded border text-xs">Next</button>
+                  <button phx-click="agents_set_page" phx-value-dir="next" class="px-2 py-1 rounded border text-xs disabled:opacity-50" disabled={length(@swarm.agents || []) < @agents_paging.page_size}>Next</button>
                   <button phx-click="export_agents_csv" class="px-2 py-1 rounded border text-xs">Export CSV</button>
                   <button phx-click="export_agents_json" class="px-2 py-1 rounded border text-xs">Export JSON</button>
                   <button phx-click="export_agents_ndjson_bg" class="px-2 py-1 rounded border text-xs">Export NDJSON (bg)</button>

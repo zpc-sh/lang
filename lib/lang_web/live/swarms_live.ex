@@ -303,9 +303,9 @@ defmodule LangWeb.SwarmsLive do
         </div>
 
         <div class="flex items-center justify-between">
-          <button phx-click="set_page" phx-value-dir="prev" class="px-3 py-1 rounded border">Previous</button>
+          <button phx-click="set_page" phx-value-dir="prev" class="px-3 py-1 rounded border disabled:opacity-50" disabled={@paging.page <= 1}>Previous</button>
           <div class="text-sm">Page <%= @paging.page %></div>
-          <button phx-click="set_page" phx-value-dir="next" class="px-3 py-1 rounded border">Next</button>
+          <button phx-click="set_page" phx-value-dir="next" class="px-3 py-1 rounded border disabled:opacity-50" disabled={@empty? or length(current_swarms(%{assigns: assigns})) < @paging.page_size}>Next</button>
         </div>
       </div>
       <%= if @export_ready do %>
