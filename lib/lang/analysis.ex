@@ -61,6 +61,18 @@ defmodule Lang.Analysis do
   end
 
   def get_analysis_session!(id), do: Run.by_id!(id, load: [:analyzed_files, :project])
+
+  def get_user_analysis_session(user_id, session_id) do
+    Run
+    |> Ash.Query.filter(id == ^session_id)
+    |> Ash.Query.load([:project])
+    |> Ash.read_one()
+    |> case do
+      {:ok, %{project: %{user_id: ^user_id}} = run} -> run
+      _ -> nil
+    end
+  end
+
   def create_analysis_session(attrs \\ %{}), do: Run.create(attrs)
 
   def update_analysis_session_status(run, status, attrs \\ %{}),
@@ -94,6 +106,18 @@ defmodule Lang.Analysis do
   end
 
   def get_analyzed_file!(id), do: File.by_id!(id, load: [:violations])
+
+  def get_user_analyzed_file(user_id, file_id) do
+    File
+    |> Ash.Query.filter(id == ^file_id)
+    |> Ash.Query.load(analysis_session: [:project])
+    |> Ash.read_one()
+    |> case do
+      {:ok, %{analysis_session: %{project: %{user_id: ^user_id}}} = file} -> file
+      _ -> nil
+    end
+  end
+
   def create_analyzed_file(attrs \\ %{}), do: File.create(attrs)
 
   def update_analyzed_file_status(file, status, _attrs \\ %{}),
@@ -159,6 +183,20 @@ defmodule Lang.Analysis do
   end
 
   def get_violation!(id), do: Violation.by_id!(id)
+
+  def get_user_violation(user_id, violation_id) do
+    Violation
+    |> Ash.Query.filter(id == ^violation_id)
+    |> Ash.Query.load(analyzed_file: [analysis_session: [:project]])
+    |> Ash.read_one()
+    |> case do
+      {:ok, %{analyzed_file: %{analysis_session: %{project: %{user_id: ^user_id}}}} = violation} ->
+        violation
+
+      _ ->
+        nil
+    end
+  end
   def create_violation(attrs \\ %{}), do: Violation.create(attrs)
 
   def update_violation_status(v, status, attrs \\ %{}),
@@ -175,6 +213,42 @@ defmodule Lang.Analysis do
 
   def mark_false_positive(v, who, reason),
     do: Violation.mark_false_positive(v, %{}, %{marked_by: who, reason: reason})
+
+  def get_user_analysis_stats(user_id) do
+    projects = list_projects(user_id)
+    project_ids = Enum.map(projects, & &1.id)
+
+    sessions =
+      Run
+      |> Ash.Query.filter(project_id in ^project_ids)
+      |> Ash.read!()
+
+    total_files = Enum.sum_by(sessions, &(&1.file_count || 0))
+    total_violations = Enum.sum_by(sessions, &(&1.violations_count || 0))
+    critical_violations = Enum.sum_by(sessions, &(&1.critical_issues_count || 0))
+
+    recent_sessions_count =
+      sessions
+      |> Enum.filter(fn s ->
+        s.inserted_at &&
+          DateTime.diff(DateTime.utc_now(), s.inserted_at, :day) <= 30
+      end)
+      |> length()
+
+    %{
+      total_projects: length(projects),
+      total_files: total_files,
+      total_violations: total_violations,
+      critical_violations: critical_violations,
+      recent_sessions: recent_sessions_count
+    }
+  end
+
+  def process_analysis_session(session, files) do
+    # Placeholder for actual processing logic
+    # In a real app, this would trigger background workers
+    {:ok, session}
+  end
 
   # Ephemeral/placeholder helpers (not implemented yet)
   def analyze_ephemeral(_files), do: {:error, :not_implemented}
