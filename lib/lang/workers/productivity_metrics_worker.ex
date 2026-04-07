@@ -118,14 +118,26 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   # Private handlers
 
-  defp handle_user_metrics_update(args) do
-    user_id = args["user_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
-    date = Date.from_iso8601!(args["date"])
-
-    Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
-
+  defp parse_period_type(nil), do: :daily
+  defp parse_period_type(str) when is_binary(str) do
     try do
+      String.to_existing_atom(str)
+    rescue
+      e in ArgumentError ->
+        Logger.warning("Security Warning: Attempted to convert unknown period_type to atom: #{inspect(str)}")
+        reraise e, __STACKTRACE__
+    end
+  end
+  defp parse_period_type(atom) when is_atom(atom), do: atom
+
+  defp handle_user_metrics_update(args) do
+    try do
+      user_id = args["user_id"]
+      period_type = parse_period_type(args["period_type"])
+      date = Date.from_iso8601!(args["date"])
+
+      Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
+
       case update_user_productivity_metrics(user_id, period_type, date) do
         {:ok, metrics} ->
           Logger.info("Successfully updated productivity metrics for user #{user_id}")
@@ -143,13 +155,13 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
   end
 
   defp handle_efficiency_report_generation(args) do
-    period_type = String.to_atom(args["period_type"])
-    date = Date.from_iso8601!(args["date"])
-    organization_id = args["organization_id"]
-
-    Logger.info("Generating efficiency report for #{period_type} on #{date}")
-
     try do
+      period_type = parse_period_type(args["period_type"])
+      date = Date.from_iso8601!(args["date"])
+      organization_id = args["organization_id"]
+
+      Logger.info("Generating efficiency report for #{period_type} on #{date}")
+
       opts = [date: date]
 
       opts =
@@ -188,13 +200,13 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
   end
 
   defp handle_organization_aggregation(args) do
-    organization_id = args["organization_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
-    date = Date.from_iso8601!(args["date"])
-
-    Logger.info("Aggregating organization metrics for #{organization_id}")
-
     try do
+      organization_id = args["organization_id"]
+      period_type = parse_period_type(args["period_type"])
+      date = Date.from_iso8601!(args["date"])
+
+      Logger.info("Aggregating organization metrics for #{organization_id}")
+
       case aggregate_organization_productivity(organization_id, period_type, date) do
         {:ok, results} ->
           Logger.info("Successfully aggregated organization metrics")
