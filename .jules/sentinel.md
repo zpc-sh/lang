@@ -1,0 +1,4 @@
+## 2024-05-24 - Atom Exhaustion via Unsafe Input Conversion
+**Vulnerability:** Found `String.to_atom/1` used on untrusted background job arguments (e.g., Oban `args["period_type"]`) in background workers. Since atoms are not garbage collected, malicious or malformed input can quickly exhaust the atom table limit (typically ~1M atoms), leading to node crashes (Denial of Service).
+**Learning:** Background job arguments must be treated as untrusted user input, especially since they can be injected via unvalidated parameters.
+**Prevention:** Always use `String.to_existing_atom/1` instead of `String.to_atom/1` when converting dynamic or untrusted strings to atoms. Wrap the conversion in a `try...rescue ArgumentError` block to safely handle unknown inputs without crashing the process, logging a security warning, and falling back to a safe default.

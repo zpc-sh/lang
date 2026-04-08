@@ -118,9 +118,21 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   # Private handlers
 
+  defp safe_to_atom(nil, default), do: safe_to_atom(default, nil)
+  defp safe_to_atom(str, _default) when is_binary(str) do
+    try do
+      String.to_existing_atom(str)
+    rescue
+      ArgumentError ->
+        Logger.warning("Security Warning: Attempted to convert untrusted input to atom: #{inspect(str)}")
+        # Provide a safe fallback instead of crashing
+        :unknown
+    end
+  end
+
   defp handle_user_metrics_update(args) do
     user_id = args["user_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
+    period_type = safe_to_atom(args["period_type"], "daily")
     date = Date.from_iso8601!(args["date"])
 
     Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
@@ -143,7 +155,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
   end
 
   defp handle_efficiency_report_generation(args) do
-    period_type = String.to_atom(args["period_type"])
+    period_type = safe_to_atom(args["period_type"], "daily")
     date = Date.from_iso8601!(args["date"])
     organization_id = args["organization_id"]
 
@@ -189,7 +201,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   defp handle_organization_aggregation(args) do
     organization_id = args["organization_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
+    period_type = safe_to_atom(args["period_type"], "daily")
     date = Date.from_iso8601!(args["date"])
 
     Logger.info("Aggregating organization metrics for #{organization_id}")
