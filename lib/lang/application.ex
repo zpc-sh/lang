@@ -47,6 +47,7 @@ defmodule Lang.Application do
         optional_child({Lang.Conversation.RehearsalEngine, []}),
         optional_child({Lang.Timeline.StateManager, []}),
         optional_child({Lang.Security.RateLimiter, []}),
+        optional_child({Lang.Proxy.CaptureStore, []}),
 
         # AST snapshot store (ETS-backed)
         optional_child({Lang.AST.Store, []}),
