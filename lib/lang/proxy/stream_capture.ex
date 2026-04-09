@@ -25,6 +25,32 @@ defmodule Lang.Proxy.StreamCapture do
 
   def enabled?, do: @enable || Application.get_env(:lang, :enable_proxy_stream_capture, false)
 
+  @doc "Fetch captured stream entries for a pipeline, newest-first."
+  @spec list(binary(), non_neg_integer()) :: {:ok, [map()]} | {:error, term()}
+  def list(pipeline_id, limit \\ @max) when is_binary(pipeline_id) do
+    cond do
+      not enabled?() -> {:error, :capture_disabled}
+      not Lang.Redis.available?() -> {:error, :redis_unavailable}
+      true ->
+        key = "proxy:capture:" <> pipeline_id
+
+        case Lang.Redis.command(["LRANGE", key, "0", Integer.to_string(max(limit - 1, 0))]) do
+          {:ok, rows} when is_list(rows) ->
+            decoded =
+              rows
+              |> Enum.map(&decode_entry/1)
+              |> Enum.filter(&is_map/1)
+
+            {:ok, decoded}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  rescue
+    e -> {:error, e}
+  end
+
   defp redact(map) when is_map(map) do
     Map.new(map, fn {k, v} -> {k, redact_value(k, v)} end)
   end
@@ -39,5 +65,13 @@ defmodule Lang.Proxy.StreamCapture do
       redact(v)
     end
   end
-end
 
+  defp decode_entry(json) when is_binary(json) do
+    case Jason.decode(json) do
+      {:ok, map} -> map
+      _ -> nil
+    end
+  end
+
+  defp decode_entry(_), do: nil
+end

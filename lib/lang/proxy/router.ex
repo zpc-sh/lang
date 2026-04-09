@@ -12,7 +12,7 @@ defmodule Lang.Proxy.Router do
   alias Lang.Proxy.LSPRouter
   alias Lang.Proxy.Adapters.Telnet
   alias Lang.Proxy.Adapters.SSH
-  alias Lang.Proxy.Pipeline
+  alias Lang.Proxy.{Pipeline, ChainConformance}
 
   @type result :: {:ok, any()} | {:error, integer(), String.t(), map()}
 
@@ -97,6 +97,27 @@ defmodule Lang.Proxy.Router do
     case Pipeline.run(%Envelope{env | params: params}, assigns) do
       {:ok, res} -> {:ok, %{pipeline: res}}
       {:error, code, message, data} -> {:error, code, message, data}
+    end
+  end
+
+  def dispatch(%Envelope{service: :proxy, method: "pipeline.replay", params: params} = env) do
+    assigns = Map.get(env, :meta, %{})
+    source_pipeline_id = params["source_pipeline_id"] || params[:source_pipeline_id]
+
+    case ChainConformance.replay(source_pipeline_id, params, assigns) do
+      {:ok, replay} -> {:ok, replay}
+      {:error, %{code: code, message: message, data: data}} -> {:error, code, message, data}
+      {:error, reason} -> {:error, -32060, "pipeline replay failed", %{reason: inspect(reason)}}
+    end
+  end
+
+  def dispatch(%Envelope{service: :proxy, method: "pipeline.conformance_report", params: params}) do
+    baseline = params["baseline_pipeline_id"] || params[:baseline_pipeline_id]
+    candidate = params["candidate_pipeline_id"] || params[:candidate_pipeline_id]
+
+    case ChainConformance.report(baseline, candidate, params) do
+      {:ok, report} -> {:ok, report}
+      {:error, reason} -> {:error, -32061, "conformance report failed", %{reason: inspect(reason)}}
     end
   end
 

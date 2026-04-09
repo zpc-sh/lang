@@ -27,14 +27,14 @@ defmodule Lang.Proxy.Pipeline do
   @spec run(Envelope.t(), map()) :: {:ok, [map()]} | {:error, integer(), String.t(), map()}
   def run(%Envelope{params: %{"route" => route} = params} = _env, assigns) when is_list(route) do
     pipeline_id = params["pipeline_id"] || gen_id()
-    do_run(route, Map.put(assigns, :pipeline_id, pipeline_id), [], %{})
+    do_run(route, Map.put(assigns, :pipeline_id, pipeline_id), [], %{}, 0)
   end
 
   def run(_env, _assigns), do: {:error, -32602, "invalid route", %{}}
 
-  defp do_run([], _assigns, acc, _ctx), do: {:ok, Enum.reverse(acc)}
+  defp do_run([], _assigns, acc, _ctx, _hop_index), do: {:ok, Enum.reverse(acc)}
 
-  defp do_run([hop | rest], assigns, acc, ctx) do
+  defp do_run([hop | rest], assigns, acc, ctx, hop_index) do
     hop = normalize_hop(hop)
     bound_params = bind_params(Map.get(hop, :params, %{}), ctx)
     pipeline_id = assigns[:pipeline_id]
@@ -50,7 +50,10 @@ defmodule Lang.Proxy.Pipeline do
          :ok <- maybe_require_intent(env, assigns) do
       started = System.monotonic_time()
       pipeline_id = assigns[:pipeline_id]
-      StreamBridge.hop_start(pipeline_id, prune(env))
+      StreamBridge.hop_start(pipeline_id, prune(env), %{
+        index: hop_index,
+        route_decision: route_decision(env, timeout_ms: hop[:timeout_ms] || hop["timeout_ms"], retries: hop[:retries] || hop["retries"], backoff_ms: hop[:backoff_ms] || hop["backoff_ms"])
+      })
       timeout = hop[:timeout_ms] || hop["timeout_ms"] || Application.get_env(:lang, :proxy_hop_timeout_ms, 5_000)
       retries = hop[:retries] || hop["retries"] || 0
       backoff = hop[:backoff_ms] || hop["backoff_ms"] || 0
@@ -58,13 +61,16 @@ defmodule Lang.Proxy.Pipeline do
       case dispatch_with_retry(env, timeout, retries, backoff) do
         {:ok, res} ->
           stopped = System.monotonic_time()
+          latency_ms = System.convert_time_unit(stopped - started, :native, :millisecond)
           :telemetry.execute([:lang, :proxy, :hop, :stop], %{duration: stopped - started}, %{hop: prune(env)})
-          StreamBridge.hop_stop(pipeline_id, prune(env), res)
+          StreamBridge.hop_stop(pipeline_id, prune(env), res, %{index: hop_index, latency_ms: latency_ms})
           new_ctx = Map.put(ctx, "prev", %{"result" => res, "hop" => prune(env)})
-          do_run(rest, assigns, [%{result: res, hop: prune(env)} | acc], new_ctx)
+          do_run(rest, assigns, [%{result: res, hop: prune(env), latency_ms: latency_ms} | acc], new_ctx, hop_index + 1)
 
         {:error, code, message, data} ->
-          StreamBridge.hop_error(pipeline_id, prune(env), code, message, data)
+          stopped = System.monotonic_time()
+          latency_ms = System.convert_time_unit(stopped - started, :native, :millisecond)
+          StreamBridge.hop_error(pipeline_id, prune(env), code, message, data, %{index: hop_index, latency_ms: latency_ms, reason_code: code})
           {:error, code, message, Map.put(data || %{}, :hop, prune(env))}
       end
     else
@@ -78,6 +84,17 @@ defmodule Lang.Proxy.Pipeline do
 
   defp to_envelope(%{service: s, method: m} = hop) do
     %Lang.Proxy.Envelope{v: 1, service: normalize_service(s), method: m, params: Map.get(hop, :params, %{}), opts: %{}, meta: %{}, stream?: false}
+  end
+
+  defp route_decision(%{service: service, method: method, params: params}, opts) do
+    %{
+      service: service,
+      method: method,
+      params: params,
+      timeout_ms: opts[:timeout_ms] || Application.get_env(:lang, :proxy_hop_timeout_ms, 5_000),
+      retries: opts[:retries] || 0,
+      backoff_ms: opts[:backoff_ms] || 0
+    }
   end
 
   defp normalize_service(s) when is_atom(s), do: s
