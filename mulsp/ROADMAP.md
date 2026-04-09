@@ -37,6 +37,72 @@ lang/mulsp/
 
 ---
 
+## Release Controls: Replay Determinism + Protocol SLOs
+
+Production rollout is now gated on replay conformance, not only feature completion. Every externally reachable endpoint and shim variant must publish:
+
+1. **Replay determinism tier** (R0-R3).
+2. **Current implementation status** (`done`, `partial`, `stub`, `planned`).
+3. **Protocol coverage + SLO impact** (is the protocol on a user-visible reliability path?).
+
+### Replay determinism tiers
+
+| Tier | Meaning | Expected behavior |
+|------|---------|-------------------|
+| **R0 — Non-deterministic** | No replay guarantees | Useful for experiments only; output can differ run-to-run with same input. |
+| **R1 — Input-deterministic** | Deterministic given identical payload + config | Timing/ordering side effects may still diverge. |
+| **R2 — Event-deterministic** | Deterministic under recorded event stream | Requires captured ordering metadata and stable serialization. |
+| **R3 — Byte-deterministic** | Bit-for-bit replay stability | Required for production-critical shims and migration-safe rollouts. |
+
+### Endpoint inventory (authoritative rollout checklist)
+
+| Endpoint / Surface | Protocol | Replay tier target | Current tier | Status | Owner notes |
+|--------------------|----------|--------------------|--------------|--------|-------------|
+| `Mulsp.Transport.TCP` JSON-RPC | `pg` (gateway path) | R3 | R1 | partial | Stable request semantics exist, but no byte-level replay harness yet. |
+| `Mulsp.DC.Hub` + `Mulsp.DC.Protocol` | `dc` | R3 | R1 | partial | ETF framing is stable; peer ordering and resumability not replay-verified. |
+| `Mulsp.Gopher.Server` + `Mulsp.Gopher.Handler` | gopher | R2 | R2 | done | Deterministic selector handling; menu output should remain canonicalized. |
+| `Mulsp.Finger.Server` | finger | R2 | R1 | partial | `.plan` shape is stable, but includes dynamic runtime counters. |
+| `Mulsp.Transport.Stdio` (planned) | future | R3 | R0 | planned | Must launch with deterministic I/O framing before production use. |
+| `Mulsp.Transport.UnixSocket` (planned) | future | R3 | R0 | planned | Same conformance bar as TCP `pg` path. |
+| `Mulsp.Transport.WebSocket` (planned) | future | R2 | R0 | planned | Browser clients may allow R2 while proxy metadata remains deterministic. |
+
+> `pg` is tracked as the production gateway protocol family in this roadmap. If naming changes (e.g., `proxy-gateway`), preserve this row and alias it rather than deleting historical SLO trend lines.
+
+### Protocol coverage and SLO impact
+
+| Protocol family | Coverage now | SLO impact | Why it matters |
+|-----------------|--------------|------------|----------------|
+| `pg` | Partial | **High** | Primary ingress and customer-visible latency/error budget path. |
+| `dc` | Partial | **High** | Cross-node propagation; replay drift can cascade into stale or divergent routing state. |
+| `gopher` | Implemented | Medium | Discovery/ops surface; deterministic menus are needed for machine parsing and runbooks. |
+| `finger` | Implemented | Medium | Human + bot health checks rely on stable `.plan` snapshots for automation. |
+| Future protocols (QOTD, Talk, TFTP, NNTP, WAIS, Daytime, Whois, SINS, APP, mulsp native) | Planned | Low → High (depends on promotion) | New protocol ships as low-impact until it is attached to production routing or paging automation. |
+
+### Shim rollout policy (hard gate)
+
+No new shim variant may be promoted to production unless replay conformance meets threshold:
+
+- **Critical path shims (`pg`, `dc`)**: `>= 99.95%` successful replay conformance over a rolling 7-day window, minimum 10k replay cases.
+- **Operational path shims (`gopher`, `finger`)**: `>= 99.0%` successful replay conformance over a rolling 7-day window, minimum 2k replay cases.
+- **Future protocol shims**: Start in shadow mode; require `>= 99.5%` before first production traffic and inherit stricter thresholds if promoted to critical path.
+
+If conformance drops below threshold:
+
+1. Auto-freeze rollout for affected shim variant.
+2. Pin to last known-good variant.
+3. Open regression issue with failing replay corpus attached.
+4. Require green replay suite before unfreeze.
+
+### Implementation tasks for gating
+
+- [ ] Add `mix mulsp.replay.capture` to record canonical request/response/event traces per protocol.
+- [ ] Add `mix mulsp.replay.verify` to compute per-shim conformance percentages and drift diffs.
+- [ ] Emit replay conformance metrics tagged by `protocol`, `shim_variant`, `determinism_tier`.
+- [ ] Block deployment pipeline when thresholds above are not met.
+- [ ] Publish weekly protocol coverage + SLO impact report from captured metrics.
+
+---
+
 ## Dimension 1: Protocol Archaeology
 
 Reclaim dead protocols. Each one is a separate surface for mulsp to speak through. Modern scanners don't watch these ports. They're simpler to implement than HTTP. And they're all `gen_tcp` or `gen_udp` — native AtomVM.
