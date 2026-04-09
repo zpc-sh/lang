@@ -1,0 +1,4 @@
+## 2025-04-09 - Atom Exhaustion DoS via String.to_atom on Job Arguments
+**Vulnerability:** Found `String.to_atom/1` being used on unvalidated input (`period_type` argument from Oban job params) in `Lang.Workers.ProductivityMetricsWorker`. This allows attackers to exhaust the Erlang VM's atom table, causing a Denial of Service.
+**Learning:** Background workers (like Oban jobs) often process external or delayed data; treating their arguments as trusted and converting them to atoms directly is unsafe. The Erlang node limits the maximum number of atoms (typically 1_048_576), and they are not garbage collected.
+**Prevention:** Always use `String.to_existing_atom/1` combined with a `rescue` clause for `ArgumentError` when converting dynamic or external string inputs into atoms. Log the attempt for threat intelligence.
