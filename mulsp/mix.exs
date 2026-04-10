@@ -27,8 +27,10 @@ defmodule Mulsp.MixProject do
   # merkin.wasm loaded from priv/ via port or Popcorn bridge.
   defp deps do
     [
-      # AtomVM packbeam (dev/build only)
-      # {:atomvm_packbeam, "~> 0.7", runtime: false, only: :dev},
+      # ExAtomVM: flashing + device tools (dev/build only)
+      {:exatomvm, git: "https://github.com/atomvm/ExAtomVM/", only: [:dev]},
+      # atomvm_packbeam: emits .avm packbeam from mix (dev/build only)
+      {:atomvm_packbeam, "~> 0.7", runtime: false, only: :dev}
       # Burrito for single-binary fallback
       # {:burrito, github: "burrito-elixir/burrito", only: :prod}
     ]

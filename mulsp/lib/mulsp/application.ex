@@ -26,7 +26,9 @@ defmodule Mulsp.Application do
         # Mesh clustering
         {Mulsp.Mesh.Cluster, partition: partition},
         # LSP transport (stdio or TCP based on config)
-        partition.lsp_enabled && {Mulsp.Transport.Tcp, port: partition.lsp_port}
+        partition.lsp_enabled && {Mulsp.Transport.Tcp, port: partition.lsp_port},
+        # Control channel — Lang pushes partition updates here
+        {Mulsp.Control, port: partition.control_port}
       ]
       |> Enum.filter(&(&1 != false))
 

@@ -1,0 +1,3 @@
+%{
+  "atomvm_packbeam": {:hex, :atomvm_packbeam, "0.8.2", "f981c2874df98187ee5685e5fd65e0fdc2848b35d418dce5eb0dac0a78a7574b", [:rebar3], [], "hexpm", "e60a55e2184698ec485fb1d02166b4cd173bbce5c99c7bced49a6e9be5f948ad"},
+}
