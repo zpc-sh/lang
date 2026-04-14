@@ -14,6 +14,11 @@
     "emergent",
     "finger",
     "cognitive",
-    "cave"
+    "cave",
+    "yata/grammar",
+    "yata/manifold",
+    "yata/flow_tap",
+    "yata/pg_tap",
+    "spore"
   ]
 }

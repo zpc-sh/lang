@@ -36,6 +36,9 @@ pub(all) enum Topic {
   PeerOutbound     // message to a peer node
   FingerUpdate     // finger.plan changed
   Tick             // periodic timer tick
+  FlowInbound      // raw frame from a flow adapter (PgTap, etc.)
+  GrammarObserve   // grammar tree mutation event
+  ManifoldEmit     // ManifoldFragment produced
 } derive(Eq, Debug)
 
 ///|
@@ -52,8 +55,11 @@ impl Show for Topic with output(self, logger) {
     Lifecycle     => "Lifecycle"
     PeerInbound   => "PeerInbound"
     PeerOutbound  => "PeerOutbound"
-    FingerUpdate  => "FingerUpdate"
-    Tick          => "Tick"
+    FingerUpdate   => "FingerUpdate"
+    Tick           => "Tick"
+    FlowInbound    => "FlowInbound"
+    GrammarObserve => "GrammarObserve"
+    ManifoldEmit   => "ManifoldEmit"
   })
 }
 

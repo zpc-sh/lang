@@ -47,47 +47,55 @@ let muyata_version : Int = 1
 ///|
 /// What kind of work this AI profile intends to perform.
 pub(all) enum WorkIntent {
-  Observation   // passive watching, void accumulation
-  Compilation   // producing artifacts, merging code
-  Delegation    // spawning child agents, routing work
-  Resolution    // answering questions, completing tasks
-  Audit         // reviewing, checking, validating
-  Translation   // format conversion, protocol bridging
+  Observation    // passive watching, void accumulation
+  Compilation    // producing artifacts, merging code
+  Delegation     // spawning child agents, routing work
+  Resolution     // answering questions, completing tasks
+  Audit          // reviewing, checking, validating
+  Translation    // format conversion, protocol bridging
+  Interposition  // sitting between a flow, accumulating grammar
+  GrammarInfer   // actively distilling grammar into manifold fragments
 } derive(Eq, Debug)
 
 ///|
 impl Show for WorkIntent with output(self, logger) {
   logger.write_string(match self {
-    Observation => "Observation"
-    Compilation => "Compilation"
-    Delegation  => "Delegation"
-    Resolution  => "Resolution"
-    Audit       => "Audit"
-    Translation => "Translation"
+    Observation    => "Observation"
+    Compilation    => "Compilation"
+    Delegation     => "Delegation"
+    Resolution     => "Resolution"
+    Audit          => "Audit"
+    Translation    => "Translation"
+    Interposition  => "Interposition"
+    GrammarInfer   => "GrammarInfer"
   })
 }
 
 ///|
-fn WorkIntent::to_byte(self : WorkIntent) -> Byte {
+pub fn WorkIntent::to_byte(self : WorkIntent) -> Byte {
   match self {
-    Observation => b'\x00'
-    Compilation => b'\x01'
-    Delegation  => b'\x02'
-    Resolution  => b'\x03'
-    Audit       => b'\x04'
-    Translation => b'\x05'
+    Observation    => b'\x00'
+    Compilation    => b'\x01'
+    Delegation     => b'\x02'
+    Resolution     => b'\x03'
+    Audit          => b'\x04'
+    Translation    => b'\x05'
+    Interposition  => b'\x06'
+    GrammarInfer   => b'\x07'
   }
 }
 
 ///|
-fn WorkIntent::from_byte(b : Byte) -> WorkIntent {
+pub fn WorkIntent::from_byte(b : Byte) -> WorkIntent {
   match b.to_int() {
     0 => Observation
     1 => Compilation
     2 => Delegation
     3 => Resolution
     4 => Audit
-    _ => Translation
+    5 => Translation
+    6 => Interposition
+    _ => GrammarInfer
   }
 }
 
@@ -210,6 +218,56 @@ pub fn MuyataProfile::gemini(
     "gemini", "google", mode, intent,
     execution_surface, handler, "full",
   )
+}
+
+// ---------------------------------------------------------------------------
+// Clone — produce a copy at a different cognitive tier
+// ---------------------------------------------------------------------------
+
+///|
+/// Clone this profile at a different cognitive tier.
+/// The clone keeps the same overlay/family/procsi/fingerprint (shared lineage)
+/// but runs at a different tier with a different intent.
+///
+/// Use cases:
+///   - Opus forks a Haiku scout for cheap relay
+///   - Sonnet forks a Haiku for high-fan-out broadcast
+///   - Any tier clones itself with a different intent (e.g., Observation → Interposition)
+pub fn MuyataProfile::clone_as(
+  self : MuyataProfile,
+  tier : CognitiveTier,
+  intent : WorkIntent,
+) -> MuyataProfile {
+  {
+    ..self,
+    mode: tier.to_string(),
+    intent,
+  }
+}
+
+///|
+/// Clone this profile with the same tier but a different intent.
+pub fn MuyataProfile::clone_intent(
+  self : MuyataProfile,
+  intent : WorkIntent,
+) -> MuyataProfile {
+  { ..self, intent }
+}
+
+///|
+/// Clone this profile with scoped-down capability class.
+pub fn MuyataProfile::clone_scoped(
+  self : MuyataProfile,
+  tier : CognitiveTier,
+  intent : WorkIntent,
+  capability_class : String,
+) -> MuyataProfile {
+  {
+    ..self,
+    mode: tier.to_string(),
+    intent,
+    capability_class,
+  }
 }
 
 // ---------------------------------------------------------------------------

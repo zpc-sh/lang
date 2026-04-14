@@ -23,11 +23,13 @@
 ///|
 /// Policy thresholds that trigger emergent behaviors.
 pub(all) struct EmergentPolicy {
-  seal_interval     : Int    // ticks between forced seals
-  checkpoint_interval : Int  // ticks between checkpoints
-  bloom_refresh     : Int    // ticks between bloom recalculation
-  residue_threshold : Int    // void bytes before emitting residue
-  anchor_threshold  : Int    // anchor weight before triggering attention
+  seal_interval         : Int    // ticks between forced seals
+  checkpoint_interval   : Int    // ticks between checkpoints
+  bloom_refresh         : Int    // ticks between bloom recalculation
+  residue_threshold     : Int    // void bytes before emitting residue
+  anchor_threshold      : Int    // anchor weight before triggering attention
+  grammar_seal_interval : Int    // ticks between grammar tree seals
+  manifold_threshold    : Int    // grammar tree mass before distilling manifold
 } derive(Debug)
 
 ///|
@@ -38,6 +40,8 @@ pub fn EmergentPolicy::default_policy() -> EmergentPolicy {
     bloom_refresh: 64,
     residue_threshold: 65536,
     anchor_threshold: 16,
+    grammar_seal_interval: 64,
+    manifold_threshold: 256,
   }
 }
 
@@ -49,6 +53,8 @@ pub fn EmergentPolicy::aggressive() -> EmergentPolicy {
     bloom_refresh: 16,
     residue_threshold: 16384,
     anchor_threshold: 4,
+    grammar_seal_interval: 16,
+    manifold_threshold: 64,
   }
 }
 
@@ -189,10 +195,11 @@ pub(all) struct EmergentState {
   bloom          : BloomSketch
   residues       : Array[Residue]    // emitted residues (outbox)
   mut tick_count : Int
-  mut last_seal_tick    : Int
-  mut last_ckpt_tick    : Int
-  mut last_bloom_tick   : Int
-  mut total_residues    : Int
+  mut last_seal_tick         : Int
+  mut last_ckpt_tick         : Int
+  mut last_bloom_tick        : Int
+  mut last_grammar_seal_tick : Int
+  mut total_residues         : Int
 } derive(Debug)
 
 ///|
@@ -205,6 +212,7 @@ pub fn EmergentState::new(policy : EmergentPolicy) -> EmergentState {
     last_seal_tick: 0,
     last_ckpt_tick: 0,
     last_bloom_tick: 0,
+    last_grammar_seal_tick: 0,
     total_residues: 0,
   }
 }
@@ -236,6 +244,12 @@ pub fn EmergentState::tick(
   if self.tick_count - self.last_bloom_tick >= self.policy.bloom_refresh {
     actions.push(BloomRefresh)
     self.last_bloom_tick = self.tick_count
+  }
+
+  // Grammar seal check
+  if self.tick_count - self.last_grammar_seal_tick >= self.policy.grammar_seal_interval {
+    actions.push(GrammarSeal)
+    self.last_grammar_seal_tick = self.tick_count
   }
 
   // Residue emission check — look for hot anchors
@@ -274,6 +288,8 @@ pub(all) enum EmergentAction {
   Checkpoint              // full checkpoint
   BloomRefresh            // recalculate bloom
   EmitResidue(String)     // emit residue for anchor
+  GrammarSeal             // seal grammar tree epoch
+  EmitManifold(String)    // distill + emit ManifoldFragment for a tap
 } derive(Debug)
 
 ///|
@@ -283,6 +299,8 @@ impl Show for EmergentAction with output(self, logger) {
     Checkpoint       => "Checkpoint"
     BloomRefresh     => "BloomRefresh"
     EmitResidue(a)   => "EmitResidue(\{a})"
+    GrammarSeal      => "GrammarSeal"
+    EmitManifold(t)  => "EmitManifold(\{t})"
   })
 }
 

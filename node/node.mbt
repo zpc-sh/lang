@@ -61,6 +61,8 @@ pub(all) struct Node {
   outbox      : Array[Array[Byte]]
   // LSP input buffer — accumulated bytes awaiting frame parse
   lsp_buf     : Array[Byte]
+  // Flow observation (optional — None when not interposing on a flow)
+  mut flow_tap : @flow_tap.FlowTap?
   // Statistics
   mut frames_in   : Int
   mut frames_out  : Int
@@ -84,6 +86,7 @@ pub fn Node::boot(
   let _ = bus.subscribe("lsp-proxy", [LspInbound, LspOutbound])
   let _ = bus.subscribe("void-observer", [VoidObserve])
   let _ = bus.subscribe("cas-handler", [CasIngest, CasQuery])
+  let _ = bus.subscribe("flow-observer", [FlowInbound, GrammarObserve, ManifoldEmit])
 
   (host.log_info)("node: booted id=\{node_id} mode=\{mode}")
 
@@ -98,6 +101,7 @@ pub fn Node::boot(
     booted: true,
     outbox: [],
     lsp_buf: [],
+    flow_tap: None,
     frames_in: 0,
     frames_out: 0,
     ticks: 0,
@@ -145,6 +149,49 @@ pub fn Node::drain_output(self : Node) -> Array[Array[Byte]] {
   let out = self.outbox.copy()
   self.outbox.clear()
   out
+}
+
+// ---------------------------------------------------------------------------
+// Flow observation
+// ---------------------------------------------------------------------------
+
+///|
+/// Attach a FlowTap to this node for protocol grammar observation.
+pub fn Node::attach_flow_tap(
+  self : Node,
+  config : @flow_tap.FlowTapConfig,
+) -> Unit {
+  self.flow_tap = Some(@flow_tap.FlowTap::new(config))
+  (self.host.log_info)("node: flow tap attached id=\{config.tap_id}")
+}
+
+///|
+/// Observe a raw flow frame through the attached FlowTap.
+/// No-op if no FlowTap is attached.
+pub fn Node::observe_flow(
+  self : Node,
+  frame : @flow_tap.FlowFrame,
+) -> Unit {
+  match self.flow_tap {
+    Some(tap) => {
+      tap.observe(frame)
+      let _ = self.bus.publish(FlowInbound, node_int_to_bytes(frame.type_tag), "flow-tap")
+    }
+    None => ()
+  }
+}
+
+///|
+/// Detach the FlowTap and return its final manifold fragment (if AI-flow detected).
+pub fn Node::detach_flow_tap(self : Node) -> @flow_tap.FlowTap? {
+  match self.flow_tap {
+    Some(tap) => {
+      self.flow_tap = None
+      (self.host.log_info)("node: flow tap detached frames=\{tap.frames_seen}")
+      Some(tap)
+    }
+    None => None
+  }
 }
 
 // ---------------------------------------------------------------------------

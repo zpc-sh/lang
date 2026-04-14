@@ -1,0 +1,7 @@
+{
+  "import": [
+    "zpc/lang/yata/void",
+    "zpc/lang/yata/grammar",
+    "zpc/lang/yata/manifold"
+  ]
+}

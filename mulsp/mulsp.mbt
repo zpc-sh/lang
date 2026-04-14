@@ -232,6 +232,91 @@ pub fn MulspState::reattach(self : MulspState) -> MulspState? {
 }
 
 // ---------------------------------------------------------------------------
+// Fork — clone this mulsp for delegation / sporing
+// ---------------------------------------------------------------------------
+
+///|
+/// Fork this mulsp session into a new child. The child carries:
+///   - A new mulsp_id (derived from parent + salt)
+///   - The same genius_loci, procsi_ref, fingerprint_commitment (shared lineage)
+///   - parent_mulsp_refs pointing back to this session
+///   - Lifecycle starts at Dormant (needs attach → activate on destination)
+///   - Capabilities can be scoped down
+///
+/// The parent transitions to Delegated. Returns (parent', child) or None
+/// if the parent isn't in a forkable state (must be Active).
+pub fn MulspState::fork(
+  self : MulspState,
+  child_id : String,
+  scope_capabilities : Array[String]?,
+) -> (MulspState, MulspState)? {
+  match self.lifecycle {
+    Active => {
+      let child_caps = match scope_capabilities {
+        Some(caps) => caps
+        None => self.capability_refs.copy()  // inherit all
+      }
+      let child : MulspState = {
+        mulsp_id: child_id,
+        ratio_loci: self.ratio_loci,
+        genius_loci: self.genius_loci,
+        scope_root: self.scope_root,
+        projection_root: self.projection_root,
+        procsi_ref: self.procsi_ref,
+        fingerprint_commitment: self.fingerprint_commitment,
+        app_ref: self.app_ref,
+        capability_refs: child_caps,
+        execution_surface: self.execution_surface,
+        handler: self.handler,
+        residue_ref: None,        // fresh — no residue yet
+        trail_ref: None,          // fresh — no trail yet
+        checkpoint_ref: None,     // fresh — no checkpoint yet
+        parent_mulsp_refs: [self.mulsp_id],
+        lifecycle: Dormant,       // needs boot on destination
+      }
+      // Parent records the delegation
+      let parent_refs = self.parent_mulsp_refs.copy()
+      // Note: parent_mulsp_refs on the parent tracks child IDs when delegating
+      // (overloaded field — parent's refs are its own parents, but delegate() pushes children)
+      let parent = { ..self, lifecycle: Delegated }
+      Some((parent, child))
+    }
+    _ => None  // can only fork from Active
+  }
+}
+
+///|
+/// Fork with a different handler (e.g., parent is "emergent", child is "lsp-proxy").
+pub fn MulspState::fork_as(
+  self : MulspState,
+  child_id : String,
+  child_handler : String,
+  scope_capabilities : Array[String]?,
+) -> (MulspState, MulspState)? {
+  match self.fork(child_id, scope_capabilities) {
+    Some((parent, child)) =>
+      Some((parent, { ..child, handler: child_handler }))
+    None => None
+  }
+}
+
+///|
+/// Check if this mulsp is a clone (has parent references).
+pub fn MulspState::is_clone(self : MulspState) -> Bool {
+  self.parent_mulsp_refs.length() > 0
+}
+
+///|
+/// Get the immediate parent mulsp_id (first in parent_mulsp_refs).
+pub fn MulspState::parent_id(self : MulspState) -> String? {
+  if self.parent_mulsp_refs.length() > 0 {
+    Some(self.parent_mulsp_refs[0])
+  } else {
+    None
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Mutation helpers (immutable update)
 // ---------------------------------------------------------------------------
 

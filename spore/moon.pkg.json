@@ -1,0 +1,8 @@
+{
+  "import": [
+    "zpc/lang/mulsp",
+    "zpc/lang/muyata",
+    "zpc/lang/yata/grammar",
+    "zpc/lang/yata/void"
+  ]
+}
