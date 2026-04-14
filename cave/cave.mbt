@@ -90,8 +90,8 @@ let cave_entry_magic : Array[Byte] = [b'\x43', b'\x56'] // "CV"
 pub(all) struct CaveEntry {
   key   : String
   value : Array[Byte]
-  sealed : Bool           // if true, entry is immutable
-  epoch  : Int            // monotonic write counter
+  mut sealed : Bool           // if true, entry is immutable
+  mut epoch  : Int            // monotonic write counter
 } derive(Debug)
 
 ///|
