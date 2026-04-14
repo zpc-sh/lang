@@ -1,0 +1,5 @@
+{
+  "import": [
+    "zpc/lang/cognitive"
+  ]
+}

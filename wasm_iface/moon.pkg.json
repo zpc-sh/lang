@@ -1,0 +1,10 @@
+{
+  "import": [
+    "zpc/lang/plugin",
+    "zpc/lang/cognitive"
+  ],
+  "test-import": [
+    "zpc/lang/mulsp",
+    "zpc/lang/muyata"
+  ]
+}

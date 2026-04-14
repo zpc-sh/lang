@@ -1,0 +1,6 @@
+{
+  "import": [
+    "zpc/lang/mulsp",
+    "zpc/lang/muyata"
+  ]
+}

@@ -2,5 +2,18 @@
   "name": "zpc/lang",
   "version": "0.1.0",
   "deps": {},
-  "packages": ["lsp", "yata/void", "yata/claude_process"]
+  "packages": [
+    "lsp",
+    "yata/void",
+    "yata/claude_process",
+    "node",
+    "mulsp",
+    "muyata",
+    "plugin",
+    "wasm_iface",
+    "emergent",
+    "finger",
+    "cognitive",
+    "cave"
+  ]
 }
