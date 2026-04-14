@@ -1,0 +1,159 @@
+{
+  "source_dir": "/home/locnguyen/ratio/lang",
+  "name": "zpc/lang",
+  "packages": [
+    {
+      "is-main": false,
+      "is-third-party": false,
+      "root-path": "/home/locnguyen/ratio/lang/lsp",
+      "root": "zpc/lang",
+      "rel": "lsp",
+      "files": {
+        "/home/locnguyen/ratio/lang/lsp/frame.mbt": {
+          "backend": [
+            "Wasm",
+            "WasmGC",
+            "Js",
+            "Native",
+            "LLVM"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        },
+        "/home/locnguyen/ratio/lang/lsp/message.mbt": {
+          "backend": [
+            "Wasm",
+            "WasmGC",
+            "Js",
+            "Native",
+            "LLVM"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        }
+      },
+      "wbtest-files": {},
+      "test-files": {
+        "/home/locnguyen/ratio/lang/lsp/lsp_test.mbt": {
+          "backend": [
+            "Wasm",
+            "WasmGC",
+            "Js",
+            "Native",
+            "LLVM"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        }
+      },
+      "mbt-md-files": {},
+      "deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/locnguyen/.moon/lib/core/prelude"
+        }
+      ],
+      "wbtest-deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/locnguyen/.moon/lib/core/prelude"
+        }
+      ],
+      "test-deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/locnguyen/.moon/lib/core/prelude"
+        }
+      ],
+      "artifact": "/home/locnguyen/ratio/lang/_build/wasm-gc/debug/check/lsp/lsp.mi",
+      "supported-targets": [
+        "Wasm",
+        "WasmGC",
+        "Js",
+        "Native",
+        "LLVM"
+      ]
+    },
+    {
+      "is-main": false,
+      "is-third-party": false,
+      "root-path": "/home/locnguyen/ratio/lang/yata/void",
+      "root": "zpc/lang",
+      "rel": "yata/void",
+      "files": {
+        "/home/locnguyen/ratio/lang/yata/void/void.mbt": {
+          "backend": [
+            "Wasm",
+            "WasmGC",
+            "Js",
+            "Native",
+            "LLVM"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        }
+      },
+      "wbtest-files": {},
+      "test-files": {
+        "/home/locnguyen/ratio/lang/yata/void/void_test.mbt": {
+          "backend": [
+            "Wasm",
+            "WasmGC",
+            "Js",
+            "Native",
+            "LLVM"
+          ],
+          "optlevel": [
+            "Release",
+            "Debug"
+          ]
+        }
+      },
+      "mbt-md-files": {},
+      "deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/locnguyen/.moon/lib/core/prelude"
+        }
+      ],
+      "wbtest-deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/locnguyen/.moon/lib/core/prelude"
+        }
+      ],
+      "test-deps": [
+        {
+          "path": "moonbitlang/core/prelude",
+          "alias": "prelude",
+          "fspath": "/home/locnguyen/.moon/lib/core/prelude"
+        }
+      ],
+      "artifact": "/home/locnguyen/ratio/lang/_build/wasm-gc/debug/check/yata/void/void.mi",
+      "supported-targets": [
+        "Wasm",
+        "WasmGC",
+        "Js",
+        "Native",
+        "LLVM"
+      ]
+    }
+  ],
+  "deps": [],
+  "backend": "wasm-gc",
+  "opt_level": "debug",
+  "source": null
+}
