@@ -19,32 +19,47 @@ defmodule Lang.Workers.OrchestratorWorker do
 
     start_time = System.monotonic_time(:millisecond)
 
-    try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+    # Convert to atoms defensively before the main try block to avoid masking ArgumentErrors
+    # from the core execute_task logic
+    {env_atom, task_atom} =
+      try do
+        {String.to_existing_atom(env), String.to_existing_atom(task)}
+      rescue
+        ArgumentError -> {nil, nil}
+      end
 
-      duration = System.monotonic_time(:millisecond) - start_time
+    if env_atom == nil or task_atom == nil do
+      Logger.warning("Security Warning: Unrecognized environment or task string prevented atom exhaustion. Env: #{env}, Task: #{task}")
+      Master.notify_job_failed(args["job_id"], "Unrecognized environment or task")
+      {:error, :invalid_argument}
+    else
+      try do
+        result = execute_task(env_atom, task_atom, args)
 
-      Logger.info("Successfully completed #{task} for #{env} in #{duration}ms")
+        duration = System.monotonic_time(:millisecond) - start_time
 
-      # Notify master of completion
-      Master.notify_job_completed(args["job_id"])
+        Logger.info("Successfully completed #{task} for #{env} in #{duration}ms")
 
-      # Broadcast completion event
-      Phoenix.PubSub.broadcast(
-        Lang.PubSub,
-        "orchestration:updates",
-        {:task_completed, env, task, result, duration}
-      )
+        # Notify master of completion
+        Master.notify_job_completed(args["job_id"])
 
-      # Trigger dependent tasks
-      trigger_dependent_tasks(env, task, args)
+        # Broadcast completion event
+        Phoenix.PubSub.broadcast(
+          Lang.PubSub,
+          "orchestration:updates",
+          {:task_completed, env, task, result, duration}
+        )
 
-      :ok
-    rescue
-      error ->
-        Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
-        Master.notify_job_failed(args["job_id"], error)
-        {:error, error}
+        # Trigger dependent tasks
+        trigger_dependent_tasks(env, task, args)
+
+        :ok
+      rescue
+        error ->
+          Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
+          Master.notify_job_failed(args["job_id"], error)
+          {:error, error}
+      end
     end
   end
 
@@ -992,33 +1007,42 @@ defmodule Lang.Workers.OrchestratorWorker do
       if all_dependencies_completed?(task, dependencies, env) do
         Logger.info("Triggering dependent task #{task} for #{env}")
 
-        %{
-          environment: env,
-          task: task,
-          triggered_by: completed_task
-        }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
-        |> Oban.insert!()
+        try do
+          %{
+            environment: env,
+            task: task,
+            triggered_by: completed_task
+          }
+          |> __MODULE__.new(queue: queue_for_env(String.to_existing_atom(env)))
+          |> Oban.insert!()
+        rescue
+          ArgumentError ->
+            Logger.warning("Security Warning: Unrecognized environment string when triggering dependent tasks. Env: #{env}")
+        end
       end
     end)
   end
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
-      :text ->
-        %{
-          implement_parsers: [:generate_spec],
-          build_documentation: [:generate_spec],
-          create_examples: [:generate_spec],
-          expose_api: [:implement_parsers],
-          generate_clients: [:expose_api],
-          produce_marketing: [:build_documentation, :create_examples],
-          publish: [:generate_clients, :produce_marketing]
-        }
+    try do
+      case String.to_existing_atom(env) do
+        :text ->
+          %{
+            implement_parsers: [:generate_spec],
+            build_documentation: [:generate_spec],
+            create_examples: [:generate_spec],
+            expose_api: [:implement_parsers],
+            generate_clients: [:expose_api],
+            produce_marketing: [:build_documentation, :create_examples],
+            publish: [:generate_clients, :produce_marketing]
+          }
 
-      _ ->
-        %{}
+        _ ->
+          %{}
+      end
+    rescue
+      ArgumentError -> %{}
     end
   end
 
@@ -1042,6 +1066,10 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    try do
+      queue_for_env(String.to_existing_atom(env))
+    rescue
+      ArgumentError -> :default
+    end
   end
 end

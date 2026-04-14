@@ -1,0 +1,4 @@
+## 2025-05-24 - DoS Risk with String.to_atom in Oban Workers
+**Vulnerability:** Found multiple instances where Oban worker arguments (like `env` or `task` coming from user-controlled JSON or message queues) are dynamically converted to atoms using `String.to_atom/1` (e.g., in `Lang.Workers.OrchestratorWorker`).
+**Learning:** In Elixir/Erlang, atoms are not garbage collected. If an attacker can control the input to `String.to_atom/1`, they can cause atom table exhaustion, crashing the entire VM (Denial of Service). This happens easily with background jobs where arguments are deserialized from JSON.
+**Prevention:** Always use `String.to_existing_atom/1` for untrusted input. Wrap it in a `try/rescue` block to handle the `ArgumentError` when an unrecognized string is passed, and ideally log a security warning.
