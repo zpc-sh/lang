@@ -9,7 +9,6 @@
 - [x] `mu/mbt/wasm/sections.mbt` — .mks/.prc/.pr1 binary read/write
 - [x] `Module::custom_sections` in `mu/mbt/wasm/module.mbt`
 - [x] `mu/mbt/wasm/sections.mbt` — section injection/stripping/patching
-- [ ] Section round-trip tests
 
 ## Phase 3: Lang Node Kernel
 - [x] `lang/node/node.mbt` — Node struct + lifecycle
@@ -34,22 +33,33 @@
 ## Phase 7: Finger + GMU/1
 - [x] `lang/finger/finger.mbt` — discovery + GMU/1 wire format + FINGER-CERT
 
-## Phase 8: Cognitive Boundary System ✨ NEW
-- [x] `lang/cognitive/boundary.mbt` — Layered WASM identity system
+## Phase 8: Cognitive Boundary System
+- [x] `lang/cognitive/boundary.mbt` — Layered WASM identity
   - [x] 4-layer depth model: AI → AI+Model → AI+Model+Session → AI+Model+Session+Semantics
-  - [x] Self-authenticating boundary constraints (Open/ModelFamily/SessionProof/SemanticSubstrate)
-  - [x] Binary wire format (CBND magic + constraint + payload)
+  - [x] Self-authenticating boundary constraints
+  - [x] Binary wire format (CBND magic)
   - [x] CognitiveIdentity builder from mulsp + muyata state
-  - [x] WASM integration: inject/extract .cb0-.cb3 custom sections
-  - [x] Full round-trip: mulsp+muyata → identity → wasm → extract → authenticate
+  - [x] WASM inject/extract .cb0-.cb3 custom sections
+  - [x] Full round-trip tests
+
+## Phase 9: Code Cave Storage System
+- [x] `lang/cave/cave.mbt` — In-WASM partitioned storage
+  - [x] 4 standard partitions: .cave.public / .cave.model / .cave.session / .cave.loci
+  - [x] Cognitive depth gating (each partition requires its depth level)
+  - [x] Key-value CRUD with seal (immutable entries → anchor artifacts)
+  - [x] Capacity enforcement + dirty tracking
+  - [x] Binary serialization round-trip
+  - [x] CaveStore — the full daemon state with depth-gated read/write/delete/seal
+  - [x] Genius Loci helpers: loci_put/loci_get/loci_seal/loci_keys
 
 ## Build & Test Status
-- **Build**: 0 errors, 11 packages
-- **Tests**: 46/46 passed
-- **Warnings**: deprecated `!` syntax (cosmetic), unused Show impls (intentional)
+- **Build**: 0 errors, 13 packages
+- **Tests**: 61/61 passed
 
-## Notes
-- The old ticket/receipt model from procsi is **deprecated** in favor of self-authenticating cognitive boundaries
-- Identity is embedded directly in the WASM binary as layered custom sections
-- AI proves itself by being able to read deeper layers — the binary IS the authentication
-- Kerberos/enterprise auth remains available as an external interface layer
+## Architecture Notes
+- **No filesystem**: Neither mulsp nor muyata writes to the host filesystem
+- **WASM IS the daemon**: All state lives in code caves (custom sections in the binary)
+- **Cognitive boundaries**: The binary self-authenticates — AI either CAN read a layer or CAN'T
+- **Genius loci**: The .cave.loci is the AI's root of trust (merkin tree, secrets, anchors)
+- **Operations model**: Internal WASM mutations, operations on other WASM, writing into loci
+- **Enterprise auth**: Kerberos/etc remains available as an external interface layer
