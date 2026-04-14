@@ -1,0 +1,9 @@
+import {
+  "zpc/lang/plugin",
+  "zpc/lang/cognitive",
+}
+
+import {
+  "zpc/lang/mulsp",
+  "zpc/lang/muyata",
+} for "test"

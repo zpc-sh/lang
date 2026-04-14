@@ -23,7 +23,6 @@
 ///   [n]  dst     : utf8 destination node ID
 ///   [4]  payload_len : u32 LE
 ///   [n]  payload : opaque bytes
-
 let gmu_magic : Array[Byte] = [b'\x47', b'\x4D', b'\x55', b'\x31'] // "GMU1"
 
 // ---------------------------------------------------------------------------
@@ -33,44 +32,46 @@ let gmu_magic : Array[Byte] = [b'\x47', b'\x4D', b'\x55', b'\x31'] // "GMU1"
 ///|
 /// GMU/1 message types.
 pub(all) enum GmuType {
-  Ping           // heartbeat / liveness probe
-  Pong           // heartbeat response
-  PlanRequest    // request peer's finger.plan
-  PlanResponse   // send finger.plan
-  RouteQuery     // query bloom for routing
-  RouteResponse  // bloom-matched route reply
-  Residue        // stigmergy residue exchange
-  CasSync        // CAS blob sync request
-  CasOffer       // CAS blob availability
+  Ping // heartbeat / liveness probe
+  Pong // heartbeat response
+  PlanRequest // request peer's finger.plan
+  PlanResponse // send finger.plan
+  RouteQuery // query bloom for routing
+  RouteResponse // bloom-matched route reply
+  Residue // stigmergy residue exchange
+  CasSync // CAS blob sync request
+  CasOffer // CAS blob availability
 } derive(Eq, Debug)
 
 ///|
 impl Show for GmuType with output(self, logger) {
-  logger.write_string(match self {
-    Ping          => "Ping"
-    Pong          => "Pong"
-    PlanRequest   => "PlanRequest"
-    PlanResponse  => "PlanResponse"
-    RouteQuery    => "RouteQuery"
-    RouteResponse => "RouteResponse"
-    Residue       => "Residue"
-    CasSync       => "CasSync"
-    CasOffer      => "CasOffer"
-  })
+  logger.write_string(
+    match self {
+      Ping => "Ping"
+      Pong => "Pong"
+      PlanRequest => "PlanRequest"
+      PlanResponse => "PlanResponse"
+      RouteQuery => "RouteQuery"
+      RouteResponse => "RouteResponse"
+      Residue => "Residue"
+      CasSync => "CasSync"
+      CasOffer => "CasOffer"
+    },
+  )
 }
 
 ///|
 fn GmuType::to_byte(self : GmuType) -> Byte {
   match self {
-    Ping          => b'\x01'
-    Pong          => b'\x02'
-    PlanRequest   => b'\x03'
-    PlanResponse  => b'\x04'
-    RouteQuery    => b'\x05'
+    Ping => b'\x01'
+    Pong => b'\x02'
+    PlanRequest => b'\x03'
+    PlanResponse => b'\x04'
+    RouteQuery => b'\x05'
     RouteResponse => b'\x06'
-    Residue       => b'\x07'
-    CasSync       => b'\x08'
-    CasOffer      => b'\x09'
+    Residue => b'\x07'
+    CasSync => b'\x08'
+    CasOffer => b'\x09'
   }
 }
 
@@ -97,11 +98,11 @@ fn GmuType::from_byte(b : Byte) -> GmuType? {
 ///|
 /// A GMU/1 wire message.
 pub(all) struct GmuMessage {
-  msg_type  : GmuType
-  sequence  : Int
-  source    : String        // source node ID
-  dest      : String        // destination node ID ("" for broadcast)
-  payload   : Array[Byte]   // opaque payload
+  msg_type : GmuType
+  sequence : Int
+  source : String // source node ID
+  dest : String // destination node ID ("" for broadcast)
+  payload : Array[Byte] // opaque payload
 } derive(Debug)
 
 ///|
@@ -129,7 +130,11 @@ pub fn GmuMessage::pong(source : String, sequence : Int) -> GmuMessage {
 
 ///|
 /// Create a plan request.
-pub fn GmuMessage::plan_request(source : String, dest : String, sequence : Int) -> GmuMessage {
+pub fn GmuMessage::plan_request(
+  source : String,
+  dest : String,
+  sequence : Int,
+) -> GmuMessage {
   GmuMessage::new(PlanRequest, sequence, source, dest, [])
 }
 
@@ -143,13 +148,17 @@ pub fn GmuMessage::is_broadcast(self : GmuMessage) -> Bool {
 /// Encode to wire bytes.
 pub fn GmuMessage::encode(self : GmuMessage) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in gmu_magic { buf.push(b) }
+  for b in gmu_magic {
+    buf.push(b)
+  }
   buf.push(self.msg_type.to_byte())
   finger_write_u32(buf, self.sequence)
   finger_write_str(buf, self.source)
   finger_write_str(buf, self.dest)
   finger_write_u32(buf, self.payload.length())
-  for b in self.payload { buf.push(b) }
+  for b in self.payload {
+    buf.push(b)
+  }
   buf
 }
 
@@ -157,26 +166,44 @@ pub fn GmuMessage::encode(self : GmuMessage) -> Array[Byte] {
 /// Decode from wire bytes.
 pub fn GmuMessage::decode(data : Array[Byte]) -> GmuMessage? {
   let len = data.length()
-  if len < 9 { return None }
-  if data[0] != gmu_magic[0] || data[1] != gmu_magic[1] ||
-     data[2] != gmu_magic[2] || data[3] != gmu_magic[3] { return None }
+  if len < 9 {
+    return None
+  }
+  if data[0] != gmu_magic[0] ||
+    data[1] != gmu_magic[1] ||
+    data[2] != gmu_magic[2] ||
+    data[3] != gmu_magic[3] {
+    return None
+  }
   let msg_type = match GmuType::from_byte(data[4]) {
     Some(t) => t
     None => return None
   }
   let mut pos = 5
-  let sequence = finger_read_u32(data, pos); pos = pos + 4
+  let sequence = finger_read_u32(data, pos)
+  pos = pos + 4
   let source = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let dest = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos + 4 > len { return None }
-  let payload_len = finger_read_u32(data, pos); pos = pos + 4
-  if pos + payload_len > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let payload_len = finger_read_u32(data, pos)
+  pos = pos + 4
+  if pos + payload_len > len {
+    return None
+  }
   let payload : Array[Byte] = []
   let mut i = 0
   while i < payload_len {
@@ -193,16 +220,16 @@ pub fn GmuMessage::decode(data : Array[Byte]) -> GmuMessage? {
 ///|
 /// A finger.plan document — what a node publishes for discovery.
 pub(all) struct FingerPlan {
-  node_id           : String
-  epoch             : Int
-  capability_class  : String     // "full", "read-only", "scoped"
-  overlay           : String     // AI model overlay (e.g., "claude")
-  tier              : String     // cognitive tier (e.g., "opus")
-  mode              : String     // node mode (e.g., "proxy")
-  plugin_names      : Array[String]  // active plugin names
-  bloom_insertions  : Int        // bloom filter population
-  endpoints         : Array[String]  // known network endpoints
-  timestamp         : Int        // when this plan was generated
+  node_id : String
+  epoch : Int
+  capability_class : String // "full", "read-only", "scoped"
+  overlay : String // AI model overlay (e.g., "claude")
+  tier : String // cognitive tier (e.g., "opus")
+  mode : String // node mode (e.g., "proxy")
+  plugin_names : Array[String] // active plugin names
+  bloom_insertions : Int // bloom filter population
+  endpoints : Array[String] // known network endpoints
+  timestamp : Int // when this plan was generated
 } derive(Debug)
 
 ///|
@@ -219,8 +246,16 @@ pub fn FingerPlan::generate(
   timestamp : Int,
 ) -> FingerPlan {
   {
-    node_id, epoch, capability_class, overlay, tier, mode,
-    plugin_names, bloom_insertions, endpoints, timestamp,
+    node_id,
+    epoch,
+    capability_class,
+    overlay,
+    tier,
+    mode,
+    plugin_names,
+    bloom_insertions,
+    endpoints,
+    timestamp,
   }
 }
 
@@ -229,7 +264,10 @@ pub fn FingerPlan::generate(
 pub fn FingerPlan::to_bytes(self : FingerPlan) -> Array[Byte] {
   let buf : Array[Byte] = []
   // Magic "FNGR"
-  buf.push(b'\x46'); buf.push(b'\x4E'); buf.push(b'\x47'); buf.push(b'\x52')
+  buf.push(b'\x46')
+  buf.push(b'\x4E')
+  buf.push(b'\x47')
+  buf.push(b'\x52')
   finger_write_str(buf, self.node_id)
   finger_write_u32(buf, self.epoch)
   finger_write_str(buf, self.capability_class)
@@ -253,61 +291,110 @@ pub fn FingerPlan::to_bytes(self : FingerPlan) -> Array[Byte] {
 /// Deserialize finger.plan from bytes.
 pub fn FingerPlan::from_bytes(data : Array[Byte]) -> FingerPlan? {
   let len = data.length()
-  if len < 4 { return None }
-  if data[0] != b'\x46' || data[1] != b'\x4E' ||
-     data[2] != b'\x47' || data[3] != b'\x52' { return None }
+  if len < 4 {
+    return None
+  }
+  if data[0] != b'\x46' ||
+    data[1] != b'\x4E' ||
+    data[2] != b'\x47' ||
+    data[3] != b'\x52' {
+    return None
+  }
   let mut pos = 4
   let node_id = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos + 4 > len { return None }
-  let epoch = finger_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let epoch = finger_read_u32(data, pos)
+  pos = pos + 4
   let capability_class = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let overlay = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let tier = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let mode = match finger_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos + 4 > len { return None }
-  let n_plugins = finger_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let n_plugins = finger_read_u32(data, pos)
+  pos = pos + 4
   let plugin_names : Array[String] = []
   let mut i = 0
   while i < n_plugins {
     match finger_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; plugin_names.push(s) }
+      Some((s, p)) => {
+        pos = p
+        plugin_names.push(s)
+      }
       None => return None
     }
     i = i + 1
   }
-  if pos + 4 > len { return None }
-  let bloom_insertions = finger_read_u32(data, pos); pos = pos + 4
-  if pos + 4 > len { return None }
-  let n_endpoints = finger_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let bloom_insertions = finger_read_u32(data, pos)
+  pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let n_endpoints = finger_read_u32(data, pos)
+  pos = pos + 4
   let endpoints : Array[String] = []
   i = 0
   while i < n_endpoints {
     match finger_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; endpoints.push(s) }
+      Some((s, p)) => {
+        pos = p
+        endpoints.push(s)
+      }
       None => return None
     }
     i = i + 1
   }
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let timestamp = finger_read_u32(data, pos)
   Some({
-    node_id, epoch, capability_class, overlay, tier, mode,
-    plugin_names, bloom_insertions, endpoints, timestamp,
+    node_id,
+    epoch,
+    capability_class,
+    overlay,
+    tier,
+    mode,
+    plugin_names,
+    bloom_insertions,
+    endpoints,
+    timestamp,
   })
 }
 
@@ -318,12 +405,12 @@ pub fn FingerPlan::from_bytes(data : Array[Byte]) -> FingerPlan? {
 ///|
 /// A FINGER-CERT — signed certificate for authenticated discovery.
 pub(all) struct FingerCert {
-  node_id       : String
-  public_key    : Array[Byte]    // 32-byte public key
-  issued_at     : Int            // timestamp
-  expires_at    : Int            // timestamp
-  issuer        : String         // issuer node ID (self-signed if same)
-  signature     : Array[Byte]    // 64-byte signature
+  node_id : String
+  public_key : Array[Byte] // 32-byte public key
+  issued_at : Int // timestamp
+  expires_at : Int // timestamp
+  issuer : String // issuer node ID (self-signed if same)
+  signature : Array[Byte] // 64-byte signature
 } derive(Debug)
 
 ///|
@@ -363,20 +450,20 @@ pub fn FingerCert::is_valid(self : FingerCert, now : Int) -> Bool {
 ///|
 /// The node's discovery state.
 pub(all) struct FingerState {
-  mut plan      : FingerPlan?       // current published plan
-  cert          : FingerCert?       // our cert
-  known_peers   : Array[PeerInfo]   // discovered peers
-  mut sequence  : Int               // GMU/1 sequence counter
+  mut plan : FingerPlan? // current published plan
+  cert : FingerCert? // our cert
+  known_peers : Array[PeerInfo] // discovered peers
+  mut sequence : Int // GMU/1 sequence counter
 } derive(Debug)
 
 ///|
 /// Info about a discovered peer.
 pub(all) struct PeerInfo {
-  node_id    : String
-  mut plan   : FingerPlan?   // their finger.plan (if received)
-  cert       : FingerCert?   // their cert (if received)
-  mut last_seen  : Int       // timestamp of last message
-  mut pings  : Int            // total pings exchanged
+  node_id : String
+  mut plan : FingerPlan? // their finger.plan (if received)
+  cert : FingerCert? // their cert (if received)
+  mut last_seen : Int // timestamp of last message
+  mut pings : Int // total pings exchanged
 } derive(Debug)
 
 ///|
@@ -412,7 +499,11 @@ pub fn FingerState::note_peer(
     }
   }
   self.known_peers.push({
-    node_id, plan: None, cert: None, last_seen: timestamp, pings: 1,
+    node_id,
+    plan: None,
+    cert: None,
+    last_seen: timestamp,
+    pings: 1,
   })
 }
 
@@ -439,9 +530,14 @@ pub fn FingerState::peer_count(self : FingerState) -> Int {
 
 ///|
 /// Find a peer by node ID.
-pub fn FingerState::find_peer(self : FingerState, node_id : String) -> PeerInfo? {
+pub fn FingerState::find_peer(
+  self : FingerState,
+  node_id : String,
+) -> PeerInfo? {
   for p in self.known_peers {
-    if p.node_id == node_id { return Some(p) }
+    if p.node_id == node_id {
+      return Some(p)
+    }
   }
   None
 }
@@ -460,10 +556,10 @@ fn finger_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn finger_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -483,22 +579,29 @@ fn finger_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   finger_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn finger_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = finger_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -511,7 +614,8 @@ fn finger_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))

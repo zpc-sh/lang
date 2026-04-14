@@ -1,7 +1,10 @@
 {
   "name": "zpc/lang",
   "version": "0.1.0",
-  "deps": {},
+  "deps": {
+    "moonbitlang/async": "0.16.6"
+  },
+  "readme": "README.md",
   "packages": [
     "lsp",
     "yata/void",
@@ -19,6 +22,8 @@
     "yata/manifold",
     "yata/flow_tap",
     "yata/pg_tap",
-    "spore"
+    "spore",
+    "nntp",
+    "gopher"
   ]
 }

@@ -1,6 +1,0 @@
-{
-  "import": [
-    "zpc/lang/lsp",
-    "zpc/lang/yata/void"
-  ]
-}

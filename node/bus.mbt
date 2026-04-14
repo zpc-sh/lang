@@ -23,44 +23,46 @@
 ///|
 /// Typed message topics for bus routing.
 pub(all) enum Topic {
-  LspInbound       // raw LSP frame arrived from host
-  LspOutbound      // LSP frame to send to host
-  PluginInvoke     // invoke a loaded plugin
-  PluginResponse   // plugin returned a result
-  VoidObserve      // void accumulation event
-  CasIngest        // content to seal into CAS
-  CasQuery         // query CAS by hash
-  CasResult        // CAS query result
-  Lifecycle        // node lifecycle event
-  PeerInbound      // message from a peer node
-  PeerOutbound     // message to a peer node
-  FingerUpdate     // finger.plan changed
-  Tick             // periodic timer tick
-  FlowInbound      // raw frame from a flow adapter (PgTap, etc.)
-  GrammarObserve   // grammar tree mutation event
-  ManifoldEmit     // ManifoldFragment produced
+  LspInbound // raw LSP frame arrived from host
+  LspOutbound // LSP frame to send to host
+  PluginInvoke // invoke a loaded plugin
+  PluginResponse // plugin returned a result
+  VoidObserve // void accumulation event
+  CasIngest // content to seal into CAS
+  CasQuery // query CAS by hash
+  CasResult // CAS query result
+  Lifecycle // node lifecycle event
+  PeerInbound // message from a peer node
+  PeerOutbound // message to a peer node
+  FingerUpdate // finger.plan changed
+  Tick // periodic timer tick
+  FlowInbound // raw frame from a flow adapter (PgTap, etc.)
+  GrammarObserve // grammar tree mutation event
+  ManifoldEmit // ManifoldFragment produced
 } derive(Eq, Debug)
 
 ///|
 impl Show for Topic with output(self, logger) {
-  logger.write_string(match self {
-    LspInbound    => "LspInbound"
-    LspOutbound   => "LspOutbound"
-    PluginInvoke  => "PluginInvoke"
-    PluginResponse => "PluginResponse"
-    VoidObserve   => "VoidObserve"
-    CasIngest     => "CasIngest"
-    CasQuery      => "CasQuery"
-    CasResult     => "CasResult"
-    Lifecycle     => "Lifecycle"
-    PeerInbound   => "PeerInbound"
-    PeerOutbound  => "PeerOutbound"
-    FingerUpdate   => "FingerUpdate"
-    Tick           => "Tick"
-    FlowInbound    => "FlowInbound"
-    GrammarObserve => "GrammarObserve"
-    ManifoldEmit   => "ManifoldEmit"
-  })
+  logger.write_string(
+    match self {
+      LspInbound => "LspInbound"
+      LspOutbound => "LspOutbound"
+      PluginInvoke => "PluginInvoke"
+      PluginResponse => "PluginResponse"
+      VoidObserve => "VoidObserve"
+      CasIngest => "CasIngest"
+      CasQuery => "CasQuery"
+      CasResult => "CasResult"
+      Lifecycle => "Lifecycle"
+      PeerInbound => "PeerInbound"
+      PeerOutbound => "PeerOutbound"
+      FingerUpdate => "FingerUpdate"
+      Tick => "Tick"
+      FlowInbound => "FlowInbound"
+      GrammarObserve => "GrammarObserve"
+      ManifoldEmit => "ManifoldEmit"
+    },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -70,15 +72,17 @@ impl Show for Topic with output(self, logger) {
 ///|
 /// A bus message — topic + opaque payload bytes + optional metadata.
 pub(all) struct BusMessage {
-  topic      : Topic
-  payload    : Array[Byte]   // opaque payload (interpreted by subscriber)
-  source     : String        // originator ID (e.g., "lsp-proxy", "plugin:lens", "kernel")
-  sequence   : Int           // monotonic sequence number
+  topic : Topic
+  payload : Array[Byte] // opaque payload (interpreted by subscriber)
+  source : String // originator ID (e.g., "lsp-proxy", "plugin:lens", "kernel")
+  sequence : Int // monotonic sequence number
 } derive(Debug)
 
 ///|
 impl Show for BusMessage with output(self, logger) {
-  logger.write_string("BusMessage(topic=\{self.topic}, source=\{self.source}, seq=\{self.sequence}, len=\{self.payload.length()})")
+  logger.write_string(
+    "BusMessage(topic=\{self.topic}, source=\{self.source}, seq=\{self.sequence}, len=\{self.payload.length()})",
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -88,9 +92,9 @@ impl Show for BusMessage with output(self, logger) {
 ///|
 /// A subscriber — a named handler for a set of topics.
 pub(all) struct Subscriber {
-  id       : String
-  topics   : Array[Topic]     // which topics this subscriber cares about
-  inbox    : Array[BusMessage] // pending messages
+  id : String
+  topics : Array[Topic] // which topics this subscriber cares about
+  inbox : Array[BusMessage] // pending messages
 } derive(Debug)
 
 ///|
@@ -102,7 +106,9 @@ pub fn Subscriber::new(id : String, topics : Array[Topic]) -> Subscriber {
 /// Does this subscriber want messages on the given topic?
 pub fn Subscriber::wants(self : Subscriber, topic : Topic) -> Bool {
   for t in self.topics {
-    if t == topic { return true }
+    if t == topic {
+      return true
+    }
   }
   false
 }
@@ -129,8 +135,8 @@ pub fn Subscriber::pending(self : Subscriber) -> Int {
 /// The message bus — subscribers + dispatch.
 pub(all) struct MessageBus {
   subscribers : Array[Subscriber]
-  mut sequence : Int           // global monotonic counter
-  mut total_dispatched : Int   // lifetime counter
+  mut sequence : Int // global monotonic counter
+  mut total_dispatched : Int // lifetime counter
 } derive(Debug)
 
 ///|
@@ -160,12 +166,7 @@ pub fn MessageBus::publish(
   source : String,
 ) -> Int {
   self.sequence = self.sequence + 1
-  let msg : BusMessage = {
-    topic,
-    payload,
-    source,
-    sequence: self.sequence,
-  }
+  let msg : BusMessage = { topic, payload, source, sequence: self.sequence }
   let mut delivered = 0
   for sub in self.subscribers {
     if sub.wants(topic) {
@@ -179,7 +180,10 @@ pub fn MessageBus::publish(
 
 ///|
 /// Drain messages for a specific subscriber by ID.
-pub fn MessageBus::drain_for(self : MessageBus, id : String) -> Array[BusMessage] {
+pub fn MessageBus::drain_for(
+  self : MessageBus,
+  id : String,
+) -> Array[BusMessage] {
   for sub in self.subscribers {
     if sub.id == id {
       return sub.drain()

@@ -23,12 +23,12 @@
 ///|
 /// What the host runtime can provide.
 pub(all) struct HostCapabilities {
-  has_network    : Bool   // can open TCP/UDP sockets
-  has_filesystem : Bool   // can read/write files
-  has_clock      : Bool   // has monotonic clock
-  has_logging    : Bool   // has structured logging
-  has_crypto     : Bool   // has crypto primitives (hash, sign)
-  host_name      : String // "atomvm", "wasmedge", "wasmex", "stub"
+  has_network : Bool // can open TCP/UDP sockets
+  has_filesystem : Bool // can read/write files
+  has_clock : Bool // has monotonic clock
+  has_logging : Bool // has structured logging
+  has_crypto : Bool // has crypto primitives (hash, sign)
+  host_name : String // "atomvm", "wasmedge", "wasmex", "stub"
 } derive(Debug)
 
 ///|
@@ -64,9 +64,9 @@ pub fn HostCapabilities::full(host_name : String) -> HostCapabilities {
 ///|
 /// Pending I/O operation result.
 pub(all) enum IoResult {
-  Ok(Array[Byte])       // success with data
-  Err(String)            // error message
-  Pending                // not yet complete
+  Ok(Array[Byte]) // success with data
+  Err(String) // error message
+  Pending // not yet complete
 } derive(Debug)
 
 ///|
@@ -78,22 +78,22 @@ pub(all) struct HostBridge {
   capabilities : HostCapabilities
 
   // Clock
-  mono_now_ms  : () -> Int          // monotonic time in milliseconds
+  mono_now_ms : () -> Int // monotonic time in milliseconds
 
   // Logging
-  log_trace    : (String) -> Unit   // trace-level log
-  log_info     : (String) -> Unit   // info-level log
-  log_warn     : (String) -> Unit   // warning-level log
-  log_error    : (String) -> Unit   // error-level log
+  log_trace : (String) -> Unit // trace-level log
+  log_info : (String) -> Unit // info-level log
+  log_warn : (String) -> Unit // warning-level log
+  log_error : (String) -> Unit // error-level log
 
   // Blob I/O (CAS persistence)
-  blob_put     : (String, Array[Byte]) -> Bool    // key, data → success
-  blob_get     : (String) -> Array[Byte]?         // key → data or None
-  blob_has     : (String) -> Bool                  // key → exists?
+  blob_put : (String, Array[Byte]) -> Bool // key, data → success
+  blob_get : (String) -> Array[Byte]? // key → data or None
+  blob_has : (String) -> Bool // key → exists?
 
   // Network (optional — may be no-ops)
-  net_send     : (Int, Array[Byte]) -> Bool        // fd, data → success
-  net_recv     : (Int) -> Array[Byte]?             // fd → data or None
+  net_send : (Int, Array[Byte]) -> Bool // fd, data → success
+  net_recv : (Int) -> Array[Byte]? // fd → data or None
 }
 
 ///|
@@ -115,12 +115,8 @@ pub fn HostBridge::stub() -> HostBridge {
       store[key] = data
       true
     },
-    blob_get: fn(key : String) -> Array[Byte]? {
-      store.get(key)
-    },
-    blob_has: fn(key : String) -> Bool {
-      store.get(key) is Some(_)
-    },
+    blob_get: fn(key : String) -> Array[Byte]? { store.get(key) },
+    blob_has: fn(key : String) -> Bool { store.get(key) is Some(_) },
     net_send: fn(_fd : Int, _data : Array[Byte]) -> Bool { false },
     net_recv: fn(_fd : Int) -> Array[Byte]? { None },
   }

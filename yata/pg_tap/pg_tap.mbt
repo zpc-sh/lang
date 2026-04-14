@@ -28,51 +28,51 @@
 /// Postgres message types (structural, not content).
 pub(all) enum PgMessageType {
   // Frontend messages
-  Query            // 'Q' (0x51)
-  Parse            // 'P' (0x50)
-  Bind             // 'B' (0x42)
-  Execute          // 'E' (0x45)
-  Describe         // 'D' (0x44)
-  Sync             // 'S' (0x53)
-  Close            // 'C' (0x43) — frontend Close
-  Terminate        // 'X' (0x58)
-  FrontendFlush    // 'H' (0x48)
-  Password         // 'p' (0x70)
+  Query // 'Q' (0x51)
+  Parse // 'P' (0x50)
+  Bind // 'B' (0x42)
+  Execute // 'E' (0x45)
+  Describe // 'D' (0x44)
+  Sync // 'S' (0x53)
+  Close // 'C' (0x43) — frontend Close
+  Terminate // 'X' (0x58)
+  FrontendFlush // 'H' (0x48)
+  Password // 'p' (0x70)
   // Backend messages
-  CommandComplete  // 'C' (0x43) — backend CommandComplete
-  RowDescription   // 'T' (0x54)
-  DataRow          // 'D' (0x44) — backend DataRow
-  ReadyForQuery    // 'Z' (0x5A)
-  Authentication   // 'R' (0x52)
-  BackendKeyData   // 'K' (0x4B)
-  ParameterStatus  // 'S' (0x53) — backend ParameterStatus
-  ErrorResponse    // 'E' (0x45) — backend ErrorResponse
-  NoticeResponse   // 'N' (0x4E)
-  ParseComplete    // '1' (0x31)
-  BindComplete     // '2' (0x32)
-  CloseComplete    // '3' (0x33)
-  EmptyQueryResp   // 'I' (0x49)
-  CopyInResponse   // 'G' (0x47)
-  CopyOutResponse  // 'H' (0x48) — backend CopyOutResponse
-  CopyData         // 'd' (0x64)
-  CopyDone         // 'c' (0x63)
-  Unknown(Int)     // unrecognized type byte
+  CommandComplete // 'C' (0x43) — backend CommandComplete
+  RowDescription // 'T' (0x54)
+  DataRow // 'D' (0x44) — backend DataRow
+  ReadyForQuery // 'Z' (0x5A)
+  Authentication // 'R' (0x52)
+  BackendKeyData // 'K' (0x4B)
+  ParameterStatus // 'S' (0x53) — backend ParameterStatus
+  ErrorResponse // 'E' (0x45) — backend ErrorResponse
+  NoticeResponse // 'N' (0x4E)
+  ParseComplete // '1' (0x31)
+  BindComplete // '2' (0x32)
+  CloseComplete // '3' (0x33)
+  EmptyQueryResp // 'I' (0x49)
+  CopyInResponse // 'G' (0x47)
+  CopyOutResponse // 'H' (0x48) — backend CopyOutResponse
+  CopyData // 'd' (0x64)
+  CopyDone // 'c' (0x63)
+  Unknown(Int) // unrecognized type byte
 } derive(Debug)
 
 ///|
 /// Classify a frontend (client→server) message type byte.
 pub fn pg_classify_frontend(type_byte : Int) -> PgMessageType {
   match type_byte {
-    0x51 => Query        // 'Q'
-    0x50 => Parse        // 'P'
-    0x42 => Bind         // 'B'
-    0x45 => Execute      // 'E'
-    0x44 => Describe     // 'D'
-    0x53 => Sync         // 'S'
-    0x43 => Close        // 'C'
-    0x58 => Terminate    // 'X'
+    0x51 => Query // 'Q'
+    0x50 => Parse // 'P'
+    0x42 => Bind // 'B'
+    0x45 => Execute // 'E'
+    0x44 => Describe // 'D'
+    0x53 => Sync // 'S'
+    0x43 => Close // 'C'
+    0x58 => Terminate // 'X'
     0x48 => FrontendFlush // 'H'
-    0x70 => Password     // 'p'
+    0x70 => Password // 'p'
     other => Unknown(other)
   }
 }
@@ -81,23 +81,23 @@ pub fn pg_classify_frontend(type_byte : Int) -> PgMessageType {
 /// Classify a backend (server→client) message type byte.
 pub fn pg_classify_backend(type_byte : Int) -> PgMessageType {
   match type_byte {
-    0x43 => CommandComplete  // 'C'
-    0x54 => RowDescription   // 'T'
-    0x44 => DataRow          // 'D'
-    0x5A => ReadyForQuery    // 'Z'
-    0x52 => Authentication   // 'R'
-    0x4B => BackendKeyData   // 'K'
-    0x53 => ParameterStatus  // 'S'
-    0x45 => ErrorResponse    // 'E'
-    0x4E => NoticeResponse   // 'N'
-    0x31 => ParseComplete    // '1'
-    0x32 => BindComplete     // '2'
-    0x33 => CloseComplete    // '3'
-    0x49 => EmptyQueryResp   // 'I'
-    0x47 => CopyInResponse   // 'G'
-    0x48 => CopyOutResponse  // 'H'
-    0x64 => CopyData         // 'd'
-    0x63 => CopyDone         // 'c'
+    0x43 => CommandComplete // 'C'
+    0x54 => RowDescription // 'T'
+    0x44 => DataRow // 'D'
+    0x5A => ReadyForQuery // 'Z'
+    0x52 => Authentication // 'R'
+    0x4B => BackendKeyData // 'K'
+    0x53 => ParameterStatus // 'S'
+    0x45 => ErrorResponse // 'E'
+    0x4E => NoticeResponse // 'N'
+    0x31 => ParseComplete // '1'
+    0x32 => BindComplete // '2'
+    0x33 => CloseComplete // '3'
+    0x49 => EmptyQueryResp // 'I'
+    0x47 => CopyInResponse // 'G'
+    0x48 => CopyOutResponse // 'H'
+    0x64 => CopyData // 'd'
+    0x63 => CopyDone // 'c'
     other => Unknown(other)
   }
 }
@@ -106,34 +106,34 @@ pub fn pg_classify_backend(type_byte : Int) -> PgMessageType {
 /// Short token name for a PgMessageType.
 fn pg_token_name(msg_type : PgMessageType) -> String {
   match msg_type {
-    Query           => "pg:Q"
-    Parse           => "pg:P"
-    Bind            => "pg:B"
-    Execute         => "pg:E"
-    Describe        => "pg:D"
-    Sync            => "pg:S"
-    Close           => "pg:Cf"   // frontend Close
-    Terminate       => "pg:X"
-    FrontendFlush   => "pg:Hf"   // frontend Flush
-    Password        => "pg:p"
+    Query => "pg:Q"
+    Parse => "pg:P"
+    Bind => "pg:B"
+    Execute => "pg:E"
+    Describe => "pg:D"
+    Sync => "pg:S"
+    Close => "pg:Cf" // frontend Close
+    Terminate => "pg:X"
+    FrontendFlush => "pg:Hf" // frontend Flush
+    Password => "pg:p"
     CommandComplete => "pg:C"
-    RowDescription  => "pg:T"
-    DataRow         => "pg:Dr"   // backend DataRow
-    ReadyForQuery   => "pg:Z"
-    Authentication  => "pg:R"
-    BackendKeyData  => "pg:K"
-    ParameterStatus => "pg:Sb"   // backend ParameterStatus
-    ErrorResponse   => "pg:Eb"   // backend ErrorResponse
-    NoticeResponse  => "pg:N"
-    ParseComplete   => "pg:1"
-    BindComplete    => "pg:2"
-    CloseComplete   => "pg:3"
-    EmptyQueryResp  => "pg:I"
-    CopyInResponse  => "pg:G"
-    CopyOutResponse => "pg:Ho"   // backend CopyOutResponse
-    CopyData        => "pg:d"
-    CopyDone        => "pg:c"
-    Unknown(b)      => "pg:?" + b.to_string()
+    RowDescription => "pg:T"
+    DataRow => "pg:Dr" // backend DataRow
+    ReadyForQuery => "pg:Z"
+    Authentication => "pg:R"
+    BackendKeyData => "pg:K"
+    ParameterStatus => "pg:Sb" // backend ParameterStatus
+    ErrorResponse => "pg:Eb" // backend ErrorResponse
+    NoticeResponse => "pg:N"
+    ParseComplete => "pg:1"
+    BindComplete => "pg:2"
+    CloseComplete => "pg:3"
+    EmptyQueryResp => "pg:I"
+    CopyInResponse => "pg:G"
+    CopyOutResponse => "pg:Ho" // backend CopyOutResponse
+    CopyData => "pg:d"
+    CopyDone => "pg:c"
+    Unknown(b) => "pg:?" + b.to_string()
   }
 }
 
@@ -144,9 +144,9 @@ fn pg_token_name(msg_type : PgMessageType) -> String {
 ///|
 /// Postgres wire protocol adapter wrapping a FlowTap.
 pub(all) struct PgTap {
-  flow_tap     : @flow_tap.FlowTap
-  mut last_fe  : PgMessageType?    // last frontend message
-  mut last_be  : PgMessageType?    // last backend message
+  flow_tap : @flow_tap.FlowTap
+  mut last_fe : PgMessageType? // last frontend message
+  mut last_be : PgMessageType? // last backend message
   mut fe_count : Int
   mut be_count : Int
 } derive(Debug)
@@ -191,7 +191,9 @@ pub fn PgTap::observe_raw(
   raw : Array[Byte],
   now_ms : Int,
 ) -> Unit {
-  if raw.length() < 5 { return }  // too short to be a valid message
+  if raw.length() < 5 {
+    return
+  } // too short to be a valid message
 
   let type_byte = raw[0].to_int()
   let msg_len = pg_read_u32_be(raw, 1)
@@ -257,14 +259,17 @@ pub fn PgTap::backend_count(self : PgTap) -> Int {
 pub fn pg_build_frame(type_byte : Int, payload_len : Int) -> Array[Byte] {
   let frame : Array[Byte] = []
   frame.push(type_byte.to_byte())
-  let total_len = payload_len + 4  // length includes itself
+  let total_len = payload_len + 4 // length includes itself
   frame.push(((total_len >> 24) & 0xFF).to_byte())
   frame.push(((total_len >> 16) & 0xFF).to_byte())
   frame.push(((total_len >> 8) & 0xFF).to_byte())
   frame.push((total_len & 0xFF).to_byte())
   // Payload padding (just zeros — we don't read content)
   let mut i = 0
-  while i < payload_len { frame.push(b'\x00'); i = i + 1 }
+  while i < payload_len {
+    frame.push(b'\x00')
+    i = i + 1
+  }
   frame
 }
 
@@ -274,8 +279,8 @@ pub fn pg_build_frame(type_byte : Int, payload_len : Int) -> Array[Byte] {
 
 ///|
 fn pg_read_u32_be(data : Array[Byte], pos : Int) -> Int {
-  ((data[pos].to_int() & 0xFF) << 24)
-  | ((data[pos + 1].to_int() & 0xFF) << 16)
-  | ((data[pos + 2].to_int() & 0xFF) << 8)
-  | (data[pos + 3].to_int() & 0xFF)
+  ((data[pos].to_int() & 0xFF) << 24) |
+  ((data[pos + 1].to_int() & 0xFF) << 16) |
+  ((data[pos + 2].to_int() & 0xFF) << 8) |
+  (data[pos + 3].to_int() & 0xFF)
 }

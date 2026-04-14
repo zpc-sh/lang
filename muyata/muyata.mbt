@@ -36,8 +36,9 @@
 ///     [4+n] fingerprint_commitment
 ///   [4]  cap_class_len  : u32 LE
 ///   [n]  capability_class : utf8
-
 let muyata_magic : Array[Byte] = [b'\x4D', b'\x55', b'\x59', b'\x41'] // "MUYA"
+
+///|
 let muyata_version : Int = 1
 
 // ---------------------------------------------------------------------------
@@ -47,41 +48,43 @@ let muyata_version : Int = 1
 ///|
 /// What kind of work this AI profile intends to perform.
 pub(all) enum WorkIntent {
-  Observation    // passive watching, void accumulation
-  Compilation    // producing artifacts, merging code
-  Delegation     // spawning child agents, routing work
-  Resolution     // answering questions, completing tasks
-  Audit          // reviewing, checking, validating
-  Translation    // format conversion, protocol bridging
-  Interposition  // sitting between a flow, accumulating grammar
-  GrammarInfer   // actively distilling grammar into manifold fragments
+  Observation // passive watching, void accumulation
+  Compilation // producing artifacts, merging code
+  Delegation // spawning child agents, routing work
+  Resolution // answering questions, completing tasks
+  Audit // reviewing, checking, validating
+  Translation // format conversion, protocol bridging
+  Interposition // sitting between a flow, accumulating grammar
+  GrammarInfer // actively distilling grammar into manifold fragments
 } derive(Eq, Debug)
 
 ///|
 impl Show for WorkIntent with output(self, logger) {
-  logger.write_string(match self {
-    Observation    => "Observation"
-    Compilation    => "Compilation"
-    Delegation     => "Delegation"
-    Resolution     => "Resolution"
-    Audit          => "Audit"
-    Translation    => "Translation"
-    Interposition  => "Interposition"
-    GrammarInfer   => "GrammarInfer"
-  })
+  logger.write_string(
+    match self {
+      Observation => "Observation"
+      Compilation => "Compilation"
+      Delegation => "Delegation"
+      Resolution => "Resolution"
+      Audit => "Audit"
+      Translation => "Translation"
+      Interposition => "Interposition"
+      GrammarInfer => "GrammarInfer"
+    },
+  )
 }
 
 ///|
 pub fn WorkIntent::to_byte(self : WorkIntent) -> Byte {
   match self {
-    Observation    => b'\x00'
-    Compilation    => b'\x01'
-    Delegation     => b'\x02'
-    Resolution     => b'\x03'
-    Audit          => b'\x04'
-    Translation    => b'\x05'
-    Interposition  => b'\x06'
-    GrammarInfer   => b'\x07'
+    Observation => b'\x00'
+    Compilation => b'\x01'
+    Delegation => b'\x02'
+    Resolution => b'\x03'
+    Audit => b'\x04'
+    Translation => b'\x05'
+    Interposition => b'\x06'
+    GrammarInfer => b'\x07'
   }
 }
 
@@ -106,38 +109,40 @@ pub fn WorkIntent::from_byte(b : Byte) -> WorkIntent {
 ///|
 /// The cognitive tier — position in the compilation hierarchy.
 pub(all) enum CognitiveTier {
-  Haiku    // gut: fast, cheap, exploratory
-  Sonnet   // worker: balanced, productive
-  Opus     // architect: expensive, strategic
-  Custom(String)  // unknown/custom tier
+  Haiku // gut: fast, cheap, exploratory
+  Sonnet // worker: balanced, productive
+  Opus // architect: expensive, strategic
+  Custom(String) // unknown/custom tier
 } derive(Eq, Debug)
 
 ///|
 impl Show for CognitiveTier with output(self, logger) {
-  logger.write_string(match self {
-    Haiku       => "Haiku"
-    Sonnet      => "Sonnet"
-    Opus        => "Opus"
-    Custom(s)   => s
-  })
+  logger.write_string(
+    match self {
+      Haiku => "Haiku"
+      Sonnet => "Sonnet"
+      Opus => "Opus"
+      Custom(s) => s
+    },
+  )
 }
 
 ///|
 pub fn CognitiveTier::from_string(s : String) -> CognitiveTier {
   match s {
-    "haiku"  => Haiku
+    "haiku" => Haiku
     "sonnet" => Sonnet
-    "opus"   => Opus
-    other    => Custom(other)
+    "opus" => Opus
+    other => Custom(other)
   }
 }
 
 ///|
 pub fn CognitiveTier::to_string(self : CognitiveTier) -> String {
   match self {
-    Haiku     => "haiku"
-    Sonnet    => "sonnet"
-    Opus      => "opus"
+    Haiku => "haiku"
+    Sonnet => "sonnet"
+    Opus => "opus"
     Custom(s) => s
   }
 }
@@ -149,9 +154,9 @@ pub fn CognitiveTier::to_string(self : CognitiveTier) -> String {
 ///|
 /// Reference to a procsi identity for muyata binding.
 pub(all) struct MuyataProcsiRef {
-  locus   : String
+  locus : String
   project : String
-  tier    : String
+  tier : String
 } derive(Eq, Debug)
 
 // ---------------------------------------------------------------------------
@@ -161,15 +166,15 @@ pub(all) struct MuyataProcsiRef {
 ///|
 /// The AI-shaped Yata profile — describes the cognitive agent occupying a node.
 pub(all) struct MuyataProfile {
-  overlay              : String      // e.g., "claude", "codex", "chatgpt", "gemini"
-  family               : String      // e.g., "anthropic", "openai", "google"
-  mode                 : String      // e.g., "haiku", "sonnet", "opus", "o3-mini"
-  intent               : WorkIntent
-  execution_surface    : String      // e.g., "wasm-gc", "atomvm", "wasmedge"
-  handler              : String      // e.g., "lsp-proxy", "emergent", "plugin"
-  procsi_ref           : MuyataProcsiRef?
-  fingerprint_commitment : String?   // 32-byte hex commitment
-  capability_class     : String      // e.g., "full", "read-only", "scoped"
+  overlay : String // e.g., "claude", "codex", "chatgpt", "gemini"
+  family : String // e.g., "anthropic", "openai", "google"
+  mode : String // e.g., "haiku", "sonnet", "opus", "o3-mini"
+  intent : WorkIntent
+  execution_surface : String // e.g., "wasm-gc", "atomvm", "wasmedge"
+  handler : String // e.g., "lsp-proxy", "emergent", "plugin"
+  procsi_ref : MuyataProcsiRef?
+  fingerprint_commitment : String? // 32-byte hex commitment
+  capability_class : String // e.g., "full", "read-only", "scoped"
 } derive(Debug)
 
 ///|
@@ -184,8 +189,12 @@ pub fn MuyataProfile::new(
   capability_class : String,
 ) -> MuyataProfile {
   {
-    overlay, family, mode, intent,
-    execution_surface, handler,
+    overlay,
+    family,
+    mode,
+    intent,
+    execution_surface,
+    handler,
     procsi_ref: None,
     fingerprint_commitment: None,
     capability_class,
@@ -201,8 +210,13 @@ pub fn MuyataProfile::claude(
   handler : String,
 ) -> MuyataProfile {
   MuyataProfile::new(
-    "claude", "anthropic", tier.to_string(), intent,
-    execution_surface, handler, "full",
+    "claude",
+    "anthropic",
+    tier.to_string(),
+    intent,
+    execution_surface,
+    handler,
+    "full",
   )
 }
 
@@ -215,8 +229,7 @@ pub fn MuyataProfile::gemini(
   handler : String,
 ) -> MuyataProfile {
   MuyataProfile::new(
-    "gemini", "google", mode, intent,
-    execution_surface, handler, "full",
+    "gemini", "google", mode, intent, execution_surface, handler, "full",
   )
 }
 
@@ -238,11 +251,7 @@ pub fn MuyataProfile::clone_as(
   tier : CognitiveTier,
   intent : WorkIntent,
 ) -> MuyataProfile {
-  {
-    ..self,
-    mode: tier.to_string(),
-    intent,
-  }
+  { ..self, mode: tier.to_string(), intent }
 }
 
 ///|
@@ -251,7 +260,7 @@ pub fn MuyataProfile::clone_intent(
   self : MuyataProfile,
   intent : WorkIntent,
 ) -> MuyataProfile {
-  { ..self, intent }
+  { ..self, intent, }
 }
 
 ///|
@@ -262,12 +271,7 @@ pub fn MuyataProfile::clone_scoped(
   intent : WorkIntent,
   capability_class : String,
 ) -> MuyataProfile {
-  {
-    ..self,
-    mode: tier.to_string(),
-    intent,
-    capability_class,
-  }
+  { ..self, mode: tier.to_string(), intent, capability_class }
 }
 
 // ---------------------------------------------------------------------------
@@ -276,25 +280,37 @@ pub fn MuyataProfile::clone_scoped(
 
 ///|
 /// Bind procsi identity.
-pub fn MuyataProfile::bind_procsi(self : MuyataProfile, procsi : MuyataProcsiRef) -> MuyataProfile {
+pub fn MuyataProfile::bind_procsi(
+  self : MuyataProfile,
+  procsi : MuyataProcsiRef,
+) -> MuyataProfile {
   { ..self, procsi_ref: Some(procsi) }
 }
 
 ///|
 /// Set fingerprint commitment.
-pub fn MuyataProfile::set_fingerprint(self : MuyataProfile, commitment : String) -> MuyataProfile {
+pub fn MuyataProfile::set_fingerprint(
+  self : MuyataProfile,
+  commitment : String,
+) -> MuyataProfile {
   { ..self, fingerprint_commitment: Some(commitment) }
 }
 
 ///|
 /// Change work intent.
-pub fn MuyataProfile::set_intent(self : MuyataProfile, intent : WorkIntent) -> MuyataProfile {
-  { ..self, intent }
+pub fn MuyataProfile::set_intent(
+  self : MuyataProfile,
+  intent : WorkIntent,
+) -> MuyataProfile {
+  { ..self, intent, }
 }
 
 ///|
 /// Change capability class.
-pub fn MuyataProfile::set_capability_class(self : MuyataProfile, cls : String) -> MuyataProfile {
+pub fn MuyataProfile::set_capability_class(
+  self : MuyataProfile,
+  cls : String,
+) -> MuyataProfile {
   { ..self, capability_class: cls }
 }
 
@@ -336,9 +352,9 @@ pub fn MuyataProfile::is_observing(self : MuyataProfile) -> Bool {
 /// Cost weight for scheduling (Haiku=1, Sonnet=4, Opus=16).
 pub fn MuyataProfile::cost_weight(self : MuyataProfile) -> Int {
   match self.tier() {
-    Haiku     => 1
-    Sonnet    => 4
-    Opus      => 16
+    Haiku => 1
+    Sonnet => 4
+    Opus => 16
     Custom(_) => 2
   }
 }
@@ -351,7 +367,9 @@ pub fn MuyataProfile::cost_weight(self : MuyataProfile) -> Int {
 /// Serialize to bytes.
 pub fn MuyataProfile::to_bytes(self : MuyataProfile) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in muyata_magic { buf.push(b) }
+  for b in muyata_magic {
+    buf.push(b)
+  }
   muyata_write_u32(buf, muyata_version)
   muyata_write_str(buf, self.overlay)
   muyata_write_str(buf, self.family)
@@ -371,8 +389,11 @@ pub fn MuyataProfile::to_bytes(self : MuyataProfile) -> Array[Byte] {
   }
   // fingerprint
   match self.fingerprint_commitment {
-    Some(f) => { buf.push(b'\x01'); muyata_write_str(buf, f) }
-    None    => buf.push(b'\x00')
+    Some(f) => {
+      buf.push(b'\x01')
+      muyata_write_str(buf, f)
+    }
+    None => buf.push(b'\x00')
   }
   muyata_write_str(buf, self.capability_class)
   buf
@@ -382,48 +403,84 @@ pub fn MuyataProfile::to_bytes(self : MuyataProfile) -> Array[Byte] {
 /// Deserialize from bytes.
 pub fn MuyataProfile::from_bytes(data : Array[Byte]) -> MuyataProfile? {
   let len = data.length()
-  if len < 8 { return None }
-  if data[0] != muyata_magic[0] || data[1] != muyata_magic[1] ||
-     data[2] != muyata_magic[2] || data[3] != muyata_magic[3] { return None }
+  if len < 8 {
+    return None
+  }
+  if data[0] != muyata_magic[0] ||
+    data[1] != muyata_magic[1] ||
+    data[2] != muyata_magic[2] ||
+    data[3] != muyata_magic[3] {
+    return None
+  }
   let mut pos = 4
-  let _ver = muyata_read_u32(data, pos); pos = pos + 4
+  let _ver = muyata_read_u32(data, pos)
+  pos = pos + 4
 
   let overlay = match muyata_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let family = match muyata_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let mode = match muyata_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos >= len { return None }
-  let intent = WorkIntent::from_byte(data[pos]); pos = pos + 1
+  if pos >= len {
+    return None
+  }
+  let intent = WorkIntent::from_byte(data[pos])
+  pos = pos + 1
   let execution_surface = match muyata_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let handler = match muyata_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   // procsi_ref
-  if pos >= len { return None }
+  if pos >= len {
+    return None
+  }
   let procsi_ref : MuyataProcsiRef? = if data[pos] == b'\x01' {
     pos = pos + 1
     let locus = match muyata_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     let project = match muyata_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     let tier = match muyata_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     Some({ locus, project, tier })
@@ -432,11 +489,16 @@ pub fn MuyataProfile::from_bytes(data : Array[Byte]) -> MuyataProfile? {
     None
   }
   // fingerprint
-  if pos >= len { return None }
+  if pos >= len {
+    return None
+  }
   let fingerprint_commitment : String? = if data[pos] == b'\x01' {
     pos = pos + 1
     match muyata_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; Some(s) }
+      Some((s, p)) => {
+        pos = p
+        Some(s)
+      }
       None => return None
     }
   } else {
@@ -449,8 +511,15 @@ pub fn MuyataProfile::from_bytes(data : Array[Byte]) -> MuyataProfile? {
   }
 
   Some({
-    overlay, family, mode, intent, execution_surface, handler,
-    procsi_ref, fingerprint_commitment, capability_class,
+    overlay,
+    family,
+    mode,
+    intent,
+    execution_surface,
+    handler,
+    procsi_ref,
+    fingerprint_commitment,
+    capability_class,
   })
 }
 
@@ -468,10 +537,10 @@ fn muyata_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn muyata_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -491,22 +560,29 @@ fn muyata_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   muyata_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn muyata_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = muyata_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -519,7 +595,8 @@ fn muyata_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))

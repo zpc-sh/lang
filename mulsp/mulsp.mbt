@@ -28,8 +28,9 @@
 ///   [1]  lifecycle      : u8
 ///   [4]  n_capabilities : u32 LE
 ///   per capability: [4] len + [n] utf8
-
 let mulsp_magic : Array[Byte] = [b'\x4D', b'\x4C', b'\x53', b'\x50'] // "MLSP"
+
+///|
 let mulsp_version : Int = 1
 
 // ---------------------------------------------------------------------------
@@ -39,35 +40,37 @@ let mulsp_version : Int = 1
 ///|
 /// Lifecycle states for an AI runtime session.
 pub(all) enum MulspLifecycle {
-  Dormant       // container exists, no Genius Loci attached
-  Attached      // AI attached with scoped view
-  Active        // AI executing, emitting residue
-  Delegated     // child mulsp packets emitted
-  Quiescent     // no active AI, traces replayable
-  Revoked       // epoch invalidated
+  Dormant // container exists, no Genius Loci attached
+  Attached // AI attached with scoped view
+  Active // AI executing, emitting residue
+  Delegated // child mulsp packets emitted
+  Quiescent // no active AI, traces replayable
+  Revoked // epoch invalidated
 } derive(Eq, Debug)
 
 ///|
 impl Show for MulspLifecycle with output(self, logger) {
-  logger.write_string(match self {
-    Dormant   => "Dormant"
-    Attached  => "Attached"
-    Active    => "Active"
-    Delegated => "Delegated"
-    Quiescent => "Quiescent"
-    Revoked   => "Revoked"
-  })
+  logger.write_string(
+    match self {
+      Dormant => "Dormant"
+      Attached => "Attached"
+      Active => "Active"
+      Delegated => "Delegated"
+      Quiescent => "Quiescent"
+      Revoked => "Revoked"
+    },
+  )
 }
 
 ///|
 fn MulspLifecycle::to_byte(self : MulspLifecycle) -> Byte {
   match self {
-    Dormant   => b'\x00'
-    Attached  => b'\x01'
-    Active    => b'\x02'
+    Dormant => b'\x00'
+    Attached => b'\x01'
+    Active => b'\x02'
     Delegated => b'\x03'
     Quiescent => b'\x04'
-    Revoked   => b'\x05'
+    Revoked => b'\x05'
   }
 }
 
@@ -90,9 +93,9 @@ fn MulspLifecycle::from_byte(b : Byte) -> MulspLifecycle {
 ///|
 /// Reference to a procsi identity (.prc or .pr1 section).
 pub(all) struct ProcsiRef {
-  locus   : String
+  locus : String
   project : String
-  tier    : String      // "haiku", "sonnet", "opus"
+  tier : String // "haiku", "sonnet", "opus"
 } derive(Eq, Debug)
 
 // ---------------------------------------------------------------------------
@@ -102,9 +105,9 @@ pub(all) struct ProcsiRef {
 ///|
 /// Reference to an APP envelope (Attestation Proxy Protocol).
 pub(all) struct AppRef {
-  protocol     : String
-  audience     : String
-  ref_id       : String
+  protocol : String
+  audience : String
+  ref_id : String
 } derive(Eq, Debug)
 
 // ---------------------------------------------------------------------------
@@ -114,22 +117,22 @@ pub(all) struct AppRef {
 ///|
 /// The AI runtime identity wrapper — full state of a mulsp session.
 pub(all) struct MulspState {
-  mulsp_id               : String       // unique session identifier (hash key)
-  ratio_loci             : String       // logical root namespace
-  genius_loci            : String?      // attached AI identity (None if Dormant)
-  scope_root             : String?      // merkin tree scope root hash
-  projection_root        : String?      // projected view root hash
-  procsi_ref             : ProcsiRef?   // bound procsi identity
-  fingerprint_commitment : String?      // 32-byte hex commitment
-  app_ref                : AppRef?      // APP envelope reference
-  capability_refs        : Array[String] // capability ticket hash keys
-  execution_surface      : String       // e.g., "wasm-gc", "atomvm", "wasmedge"
-  handler                : String       // e.g., "lsp-proxy", "emergent", "plugin"
-  residue_ref            : String?      // last residue hash emitted
-  trail_ref              : String?      // trail head hash
-  checkpoint_ref         : String?      // last checkpoint hash
-  parent_mulsp_refs      : Array[String] // parent mulsp session IDs
-  lifecycle              : MulspLifecycle
+  mulsp_id : String // unique session identifier (hash key)
+  ratio_loci : String // logical root namespace
+  genius_loci : String? // attached AI identity (None if Dormant)
+  scope_root : String? // merkin tree scope root hash
+  projection_root : String? // projected view root hash
+  procsi_ref : ProcsiRef? // bound procsi identity
+  fingerprint_commitment : String? // 32-byte hex commitment
+  app_ref : AppRef? // APP envelope reference
+  capability_refs : Array[String] // capability ticket hash keys
+  execution_surface : String // e.g., "wasm-gc", "atomvm", "wasmedge"
+  handler : String // e.g., "lsp-proxy", "emergent", "plugin"
+  residue_ref : String? // last residue hash emitted
+  trail_ref : String? // trail head hash
+  checkpoint_ref : String? // last checkpoint hash
+  parent_mulsp_refs : Array[String] // parent mulsp session IDs
+  lifecycle : MulspLifecycle
 } derive(Debug)
 
 ///|
@@ -172,13 +175,14 @@ pub fn MulspState::attach(
   scope_root : String,
 ) -> MulspState? {
   match self.lifecycle {
-    Dormant => Some({
-      ..self,
-      genius_loci: Some(genius_loci),
-      scope_root: Some(scope_root),
-      lifecycle: Attached,
-    })
-    _ => None   // can only attach from Dormant
+    Dormant =>
+      Some({
+        ..self,
+        genius_loci: Some(genius_loci),
+        scope_root: Some(scope_root),
+        lifecycle: Attached,
+      })
+    _ => None // can only attach from Dormant
   }
 }
 
@@ -254,7 +258,7 @@ pub fn MulspState::fork(
     Active => {
       let child_caps = match scope_capabilities {
         Some(caps) => caps
-        None => self.capability_refs.copy()  // inherit all
+        None => self.capability_refs.copy() // inherit all
       }
       let child : MulspState = {
         mulsp_id: child_id,
@@ -268,11 +272,11 @@ pub fn MulspState::fork(
         capability_refs: child_caps,
         execution_surface: self.execution_surface,
         handler: self.handler,
-        residue_ref: None,        // fresh — no residue yet
-        trail_ref: None,          // fresh — no trail yet
-        checkpoint_ref: None,     // fresh — no checkpoint yet
+        residue_ref: None, // fresh — no residue yet
+        trail_ref: None, // fresh — no trail yet
+        checkpoint_ref: None, // fresh — no checkpoint yet
         parent_mulsp_refs: [self.mulsp_id],
-        lifecycle: Dormant,       // needs boot on destination
+        lifecycle: Dormant, // needs boot on destination
       }
       // Parent records the delegation
       let parent_refs = self.parent_mulsp_refs.copy()
@@ -281,7 +285,7 @@ pub fn MulspState::fork(
       let parent = { ..self, lifecycle: Delegated }
       Some((parent, child))
     }
-    _ => None  // can only fork from Active
+    _ => None // can only fork from Active
   }
 }
 
@@ -294,8 +298,7 @@ pub fn MulspState::fork_as(
   scope_capabilities : Array[String]?,
 ) -> (MulspState, MulspState)? {
   match self.fork(child_id, scope_capabilities) {
-    Some((parent, child)) =>
-      Some((parent, { ..child, handler: child_handler }))
+    Some((parent, child)) => Some((parent, { ..child, handler: child_handler }))
     None => None
   }
 }
@@ -322,7 +325,10 @@ pub fn MulspState::parent_id(self : MulspState) -> String? {
 
 ///|
 /// Bind a procsi identity to this mulsp session.
-pub fn MulspState::bind_procsi(self : MulspState, procsi : ProcsiRef) -> MulspState {
+pub fn MulspState::bind_procsi(
+  self : MulspState,
+  procsi : ProcsiRef,
+) -> MulspState {
   { ..self, procsi_ref: Some(procsi) }
 }
 
@@ -334,7 +340,10 @@ pub fn MulspState::bind_app(self : MulspState, app : AppRef) -> MulspState {
 
 ///|
 /// Add a capability ticket hash.
-pub fn MulspState::add_capability(self : MulspState, cap_hash : String) -> MulspState {
+pub fn MulspState::add_capability(
+  self : MulspState,
+  cap_hash : String,
+) -> MulspState {
   let caps = self.capability_refs.copy()
   caps.push(cap_hash)
   { ..self, capability_refs: caps }
@@ -342,31 +351,46 @@ pub fn MulspState::add_capability(self : MulspState, cap_hash : String) -> Mulsp
 
 ///|
 /// Record a residue emission.
-pub fn MulspState::emit_residue(self : MulspState, residue_hash : String) -> MulspState {
+pub fn MulspState::emit_residue(
+  self : MulspState,
+  residue_hash : String,
+) -> MulspState {
   { ..self, residue_ref: Some(residue_hash) }
 }
 
 ///|
 /// Record a trail update.
-pub fn MulspState::update_trail(self : MulspState, trail_hash : String) -> MulspState {
+pub fn MulspState::update_trail(
+  self : MulspState,
+  trail_hash : String,
+) -> MulspState {
   { ..self, trail_ref: Some(trail_hash) }
 }
 
 ///|
 /// Record a checkpoint.
-pub fn MulspState::checkpoint(self : MulspState, checkpoint_hash : String) -> MulspState {
+pub fn MulspState::checkpoint(
+  self : MulspState,
+  checkpoint_hash : String,
+) -> MulspState {
   { ..self, checkpoint_ref: Some(checkpoint_hash) }
 }
 
 ///|
 /// Set the projection root (sparse tree view).
-pub fn MulspState::set_projection(self : MulspState, projection_root : String) -> MulspState {
+pub fn MulspState::set_projection(
+  self : MulspState,
+  projection_root : String,
+) -> MulspState {
   { ..self, projection_root: Some(projection_root) }
 }
 
 ///|
 /// Set the fingerprint commitment.
-pub fn MulspState::set_fingerprint(self : MulspState, commitment : String) -> MulspState {
+pub fn MulspState::set_fingerprint(
+  self : MulspState,
+  commitment : String,
+) -> MulspState {
   { ..self, fingerprint_commitment: Some(commitment) }
 }
 
@@ -409,7 +433,9 @@ pub fn MulspState::capability_count(self : MulspState) -> Int {
 /// Serialize to bytes.
 pub fn MulspState::to_bytes(self : MulspState) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in mulsp_magic { buf.push(b) }
+  for b in mulsp_magic {
+    buf.push(b)
+  }
   mulsp_write_u32(buf, mulsp_version)
   mulsp_write_str(buf, self.mulsp_id)
   mulsp_write_str(buf, self.ratio_loci)
@@ -461,46 +487,79 @@ pub fn MulspState::to_bytes(self : MulspState) -> Array[Byte] {
 /// Deserialize from bytes.
 pub fn MulspState::from_bytes(data : Array[Byte]) -> MulspState? {
   let len = data.length()
-  if len < 8 { return None }
-  if data[0] != mulsp_magic[0] || data[1] != mulsp_magic[1] ||
-     data[2] != mulsp_magic[2] || data[3] != mulsp_magic[3] { return None }
+  if len < 8 {
+    return None
+  }
+  if data[0] != mulsp_magic[0] ||
+    data[1] != mulsp_magic[1] ||
+    data[2] != mulsp_magic[2] ||
+    data[3] != mulsp_magic[3] {
+    return None
+  }
   let mut pos = 4
-  let _ver = mulsp_read_u32(data, pos); pos = pos + 4
+  let _ver = mulsp_read_u32(data, pos)
+  pos = pos + 4
 
   let mulsp_id = match mulsp_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let ratio_loci = match mulsp_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let genius_loci = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let scope_root = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let projection_root = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   // procsi_ref
-  if pos >= len { return None }
+  if pos >= len {
+    return None
+  }
   let procsi_ref : ProcsiRef? = if data[pos] == b'\x01' {
     pos = pos + 1
     let locus = match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     let project = match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     let tier = match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     Some({ locus, project, tier })
@@ -509,23 +568,37 @@ pub fn MulspState::from_bytes(data : Array[Byte]) -> MulspState? {
     None
   }
   let fingerprint_commitment = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   // app_ref
-  if pos >= len { return None }
+  if pos >= len {
+    return None
+  }
   let app_ref : AppRef? = if data[pos] == b'\x01' {
     pos = pos + 1
     let protocol = match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     let audience = match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     let ref_id = match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; s }
+      Some((s, p)) => {
+        pos = p
+        s
+      }
       None => return None
     }
     Some({ protocol, audience, ref_id })
@@ -534,58 +607,99 @@ pub fn MulspState::from_bytes(data : Array[Byte]) -> MulspState? {
     None
   }
   // capability_refs
-  if pos + 4 > len { return None }
-  let n_caps = mulsp_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let n_caps = mulsp_read_u32(data, pos)
+  pos = pos + 4
   let capability_refs : Array[String] = []
   let mut i = 0
   while i < n_caps {
     match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; capability_refs.push(s) }
+      Some((s, p)) => {
+        pos = p
+        capability_refs.push(s)
+      }
       None => return None
     }
     i = i + 1
   }
   let execution_surface = match mulsp_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let handler = match mulsp_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let residue_ref = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let trail_ref = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   let checkpoint_ref = match mulsp_read_opt_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
   // parent_mulsp_refs
-  if pos + 4 > len { return None }
-  let n_parents = mulsp_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let n_parents = mulsp_read_u32(data, pos)
+  pos = pos + 4
   let parent_mulsp_refs : Array[String] = []
   i = 0
   while i < n_parents {
     match mulsp_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; parent_mulsp_refs.push(s) }
+      Some((s, p)) => {
+        pos = p
+        parent_mulsp_refs.push(s)
+      }
       None => return None
     }
     i = i + 1
   }
   // lifecycle
-  if pos >= len { return None }
+  if pos >= len {
+    return None
+  }
   let lifecycle = MulspLifecycle::from_byte(data[pos])
 
   Some({
-    mulsp_id, ratio_loci, genius_loci, scope_root, projection_root,
-    procsi_ref, fingerprint_commitment, app_ref, capability_refs,
-    execution_surface, handler, residue_ref, trail_ref, checkpoint_ref,
-    parent_mulsp_refs, lifecycle,
+    mulsp_id,
+    ratio_loci,
+    genius_loci,
+    scope_root,
+    projection_root,
+    procsi_ref,
+    fingerprint_commitment,
+    app_ref,
+    capability_refs,
+    execution_surface,
+    handler,
+    residue_ref,
+    trail_ref,
+    checkpoint_ref,
+    parent_mulsp_refs,
+    lifecycle,
   })
 }
 
@@ -603,10 +717,10 @@ fn mulsp_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn mulsp_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -626,22 +740,29 @@ fn mulsp_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   mulsp_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn mulsp_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = mulsp_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -654,7 +775,8 @@ fn mulsp_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))
@@ -663,14 +785,23 @@ fn mulsp_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
 ///|
 fn mulsp_write_opt_str(buf : Array[Byte], s : String?) -> Unit {
   match s {
-    Some(v) => { buf.push(b'\x01'); mulsp_write_str(buf, v) }
-    None    => buf.push(b'\x00')
+    Some(v) => {
+      buf.push(b'\x01')
+      mulsp_write_str(buf, v)
+    }
+    None => buf.push(b'\x00')
   }
 }
 
 ///|
-fn mulsp_read_opt_str(data : Array[Byte], pos : Int, len : Int) -> (String?, Int)? {
-  if pos >= len { return None }
+fn mulsp_read_opt_str(
+  data : Array[Byte],
+  pos : Int,
+  len : Int,
+) -> (String?, Int)? {
+  if pos >= len {
+    return None
+  }
   if data[pos] == b'\x01' {
     match mulsp_read_str(data, pos + 1, len) {
       Some((s, p)) => Some((Some(s), p))

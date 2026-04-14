@@ -23,13 +23,13 @@
 ///|
 /// A parsed WASM module descriptor — the node's view of a wasm binary.
 pub(all) struct ModuleDesc {
-  total_size     : Int
-  section_count  : Int
-  export_count   : Int
+  total_size : Int
+  section_count : Int
+  export_count : Int
   function_count : Int
-  type_count     : Int
-  code_size      : Int
-  exports        : Array[ExportDesc]
+  type_count : Int
+  code_size : Int
+  exports : Array[ExportDesc]
   custom_sections : Array[CustomSectionDesc]
 } derive(Debug)
 
@@ -37,7 +37,7 @@ pub(all) struct ModuleDesc {
 /// An export from a wasm module.
 pub(all) struct ExportDesc {
   name : String
-  kind : ExportKindDesc    // func, table, memory, global
+  kind : ExportKindDesc // func, table, memory, global
   index : Int
 } derive(Debug)
 
@@ -52,18 +52,20 @@ pub(all) enum ExportKindDesc {
 
 ///|
 impl Show for ExportKindDesc with output(self, logger) {
-  logger.write_string(match self {
-    Func   => "Func"
-    Table  => "Table"
-    Memory => "Memory"
-    Global => "Global"
-  })
+  logger.write_string(
+    match self {
+      Func => "Func"
+      Table => "Table"
+      Memory => "Memory"
+      Global => "Global"
+    },
+  )
 }
 
 ///|
 /// A custom section found in a wasm module.
 pub(all) struct CustomSectionDesc {
-  name         : String
+  name : String
   payload_size : Int
 } derive(Debug)
 
@@ -76,12 +78,22 @@ pub(all) struct CustomSectionDesc {
 /// Returns None if the binary is not valid wasm.
 pub fn parse_module(wasm : Array[Byte]) -> ModuleDesc? {
   // Verify wasm magic: \0asm
-  if wasm.length() < 8 { return None }
-  if wasm[0] != b'\x00' || wasm[1] != b'\x61' ||
-     wasm[2] != b'\x73' || wasm[3] != b'\x6D' { return None }
+  if wasm.length() < 8 {
+    return None
+  }
+  if wasm[0] != b'\x00' ||
+    wasm[1] != b'\x61' ||
+    wasm[2] != b'\x73' ||
+    wasm[3] != b'\x6D' {
+    return None
+  }
   // Verify version 1
-  if wasm[4] != b'\x01' || wasm[5] != b'\x00' ||
-     wasm[6] != b'\x00' || wasm[7] != b'\x00' { return None }
+  if wasm[4] != b'\x01' ||
+    wasm[5] != b'\x00' ||
+    wasm[6] != b'\x00' ||
+    wasm[7] != b'\x00' {
+    return None
+  }
 
   // Walk sections
   let mut pos = 8
@@ -116,7 +128,10 @@ pub fn parse_module(wasm : Array[Byte]) -> ModuleDesc? {
           i = i + 1
         }
         let payload_data_size = payload_end - (name_pos + name_len)
-        custom_sections.push({ name: sb.to_string(), payload_size: payload_data_size })
+        custom_sections.push({
+          name: sb.to_string(),
+          payload_size: payload_data_size,
+        })
       }
       1 => {
         // Type section — count entries
@@ -149,7 +164,9 @@ pub fn parse_module(wasm : Array[Byte]) -> ModuleDesc? {
               3 => Global
               _ => Func
             }
-          } else { Func }
+          } else {
+            Func
+          }
           epos = epos + 1
           let r3 = iface_read_leb128(wasm, epos)
           let index = r3.0
@@ -195,7 +212,9 @@ pub fn inject_section(
   payload : Array[Byte],
 ) -> Array[Byte] {
   let out : Array[Byte] = []
-  for b in wasm { out.push(b) }
+  for b in wasm {
+    out.push(b)
+  }
 
   // Custom section id = 0x00
   out.push(b'\x00')
@@ -206,16 +225,22 @@ pub fn inject_section(
     name_bytes.push(ch.to_int().to_byte())
   }
 
-  let body_size = iface_leb128_size(name_bytes.length()) + name_bytes.length() + payload.length()
+  let body_size = iface_leb128_size(name_bytes.length()) +
+    name_bytes.length() +
+    payload.length()
 
   // Section size as LEB128
   iface_write_leb128(out, body_size)
   // Name length as LEB128
   iface_write_leb128(out, name_bytes.length())
   // Name bytes
-  for b in name_bytes { out.push(b) }
+  for b in name_bytes {
+    out.push(b)
+  }
   // Payload
-  for b in payload { out.push(b) }
+  for b in payload {
+    out.push(b)
+  }
 
   out
 }
@@ -227,7 +252,8 @@ pub fn strip_section(wasm : Array[Byte], name : String) -> Array[Byte] {
   // Copy header
   let mut i = 0
   while i < 8 && i < wasm.length() {
-    out.push(wasm[i]); i = i + 1
+    out.push(wasm[i])
+    i = i + 1
   }
 
   let mut pos = 8
@@ -250,13 +276,18 @@ pub fn strip_section(wasm : Array[Byte], name : String) -> Array[Byte] {
           sb.write_char(wasm[name_pos + j].to_int().unsafe_to_char())
           j = j + 1
         }
-        if sb.to_string() == name { skip = true }
+        if sb.to_string() == name {
+          skip = true
+        }
       }
     }
 
     if !skip {
       let mut j = id_pos
-      while j < payload_end { out.push(wasm[j]); j = j + 1 }
+      while j < payload_end {
+        out.push(wasm[j])
+        j = j + 1
+      }
     }
 
     pos = payload_end
@@ -271,7 +302,9 @@ pub fn has_section(wasm : Array[Byte], name : String) -> Bool {
   match parse_module(wasm) {
     Some(desc) => {
       for cs in desc.custom_sections {
-        if cs.name == name { return true }
+        if cs.name == name {
+          return true
+        }
       }
       false
     }
@@ -283,7 +316,9 @@ pub fn has_section(wasm : Array[Byte], name : String) -> Bool {
 /// Find an export by name in a module descriptor.
 pub fn find_export(desc : ModuleDesc, name : String) -> ExportDesc? {
   for e in desc.exports {
-    if e.name == name { return Some(e) }
+    if e.name == name {
+      return Some(e)
+    }
   }
   None
 }
@@ -298,10 +333,10 @@ pub fn validate_plugin_abi(desc : ModuleDesc) -> @plugin.PluginAbi {
   let mut has_dispose = false
   for e in desc.exports {
     match e.name {
-      "plugin_init"    => has_init = true
-      "plugin_handle"  => has_handle = true
-      "plugin_query"   => has_query = true
-      "plugin_tick"    => has_tick = true
+      "plugin_init" => has_init = true
+      "plugin_handle" => has_handle = true
+      "plugin_query" => has_query = true
+      "plugin_tick" => has_tick = true
       "plugin_dispose" => has_dispose = true
       _ => ()
     }
@@ -332,7 +367,9 @@ pub fn inject_cognitive_identity(
 ///|
 /// Extract a cognitive identity from a wasm binary's custom sections.
 /// Reads .cb0, .cb1, .cb2, .cb3 sections and deserializes the boundaries.
-pub fn extract_cognitive_identity(wasm : Array[Byte]) -> @cognitive.CognitiveIdentity {
+pub fn extract_cognitive_identity(
+  wasm : Array[Byte],
+) -> @cognitive.CognitiveIdentity {
   let identity = @cognitive.CognitiveIdentity::new()
   let desc = parse_module(wasm)
   match desc {
@@ -379,7 +416,9 @@ fn extract_cognitive_sections(
 ) -> Array[(String, Array[Byte])] {
   let results : Array[(String, Array[Byte])] = []
   let len = wasm.length()
-  if len < 8 { return results }
+  if len < 8 {
+    return results
+  }
   let mut pos = 8
   while pos < len {
     let section_id = wasm[pos].to_int()
@@ -434,7 +473,9 @@ fn iface_read_leb128(bytes : Array[Byte], start : Int) -> (Int, Int) {
     let b = bytes[pos].to_int()
     result = result | ((b & 0x7F) << shift)
     pos = pos + 1
-    if (b & 0x80) == 0 { break }
+    if (b & 0x80) == 0 {
+      break
+    }
     shift = shift + 7
   }
   (result, pos)
@@ -462,7 +503,9 @@ fn iface_leb128_size(value : Int) -> Int {
   while true {
     v = v >> 7
     size = size + 1
-    if v == 0 { break }
+    if v == 0 {
+      break
+    }
   }
   size
 }

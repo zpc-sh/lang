@@ -48,10 +48,10 @@
 ///|
 /// Well-known cave partition names.
 pub(all) enum CavePartition {
-  Public     // .cave.public  — open data, any AI
-  Model      // .cave.model   — model-family gated
-  Session    // .cave.session — session-bound
-  Loci       // .cave.loci    — genius loci, deepest sanctum
+  Public // .cave.public  — open data, any AI
+  Model // .cave.model   — model-family gated
+  Session // .cave.session — session-bound
+  Loci // .cave.loci    — genius loci, deepest sanctum
   Custom(String) // arbitrary named cave
 } derive(Eq, Show, Debug)
 
@@ -59,39 +59,42 @@ pub(all) enum CavePartition {
 /// Section name for a cave partition.
 pub fn CavePartition::section_name(self : CavePartition) -> String {
   match self {
-    Public      => ".cave.public"
-    Model       => ".cave.model"
-    Session     => ".cave.session"
-    Loci        => ".cave.loci"
+    Public => ".cave.public"
+    Model => ".cave.model"
+    Session => ".cave.session"
+    Loci => ".cave.loci"
     Custom(name) => ".cave." + name
   }
 }
 
 ///|
 /// The cognitive depth required to access this partition.
-pub fn CavePartition::required_depth(self : CavePartition) -> @cognitive.CognitiveDepth {
+pub fn CavePartition::required_depth(
+  self : CavePartition,
+) -> @cognitive.CognitiveDepth {
   match self {
-    Public     => @cognitive.Ai
-    Model      => @cognitive.AiModel
-    Session    => @cognitive.AiModelSession
-    Loci       => @cognitive.AiModelSessionSemantic
-    Custom(_)  => @cognitive.AiModel  // custom caves default to model-gated
-  }
+    Public => @cognitive.Ai
+    Model => @cognitive.AiModel
+    Session => @cognitive.AiModelSession
+    Loci => @cognitive.AiModelSessionSemantic
+    Custom(_) => @cognitive.AiModel
+  } // custom caves default to model-gated
 }
 
 // ---------------------------------------------------------------------------
 // Cave entry — a single key-value pair in a cave
 // ---------------------------------------------------------------------------
 
+///|
 let cave_entry_magic : Array[Byte] = [b'\x43', b'\x56'] // "CV"
 
 ///|
 /// A single entry in a cave partition.
 pub(all) struct CaveEntry {
-  key   : String
+  key : String
   value : Array[Byte]
-  mut sealed : Bool           // if true, entry is immutable
-  mut epoch  : Int            // monotonic write counter
+  mut sealed : Bool // if true, entry is immutable
+  mut epoch : Int // monotonic write counter
 } derive(Debug)
 
 ///|
@@ -102,10 +105,14 @@ pub fn CaveEntry::new(key : String, value : Array[Byte]) -> CaveEntry {
 ///|
 fn CaveEntry::to_bytes(self : CaveEntry) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in cave_entry_magic { buf.push(b) }
+  for b in cave_entry_magic {
+    buf.push(b)
+  }
   cave_write_str(buf, self.key)
   cave_write_u32(buf, self.value.length())
-  for b in self.value { buf.push(b) }
+  for b in self.value {
+    buf.push(b)
+  }
   buf.push(if self.sealed { b'\x01' } else { b'\x00' })
   cave_write_u32(buf, self.epoch)
   buf
@@ -114,26 +121,45 @@ fn CaveEntry::to_bytes(self : CaveEntry) -> Array[Byte] {
 ///|
 fn CaveEntry::from_bytes(data : Array[Byte], pos : Int) -> (CaveEntry, Int)? {
   let len = data.length()
-  if pos + 2 > len { return None }
+  if pos + 2 > len {
+    return None
+  }
   if data[pos] != cave_entry_magic[0] || data[pos + 1] != cave_entry_magic[1] {
     return None
   }
   let mut p = pos + 2
   let key = match cave_read_str(data, p, len) {
-    Some((k, np)) => { p = np; k }
+    Some((k, np)) => {
+      p = np
+      k
+    }
     None => return None
   }
-  if p + 4 > len { return None }
-  let vlen = cave_read_u32(data, p); p = p + 4
-  if p + vlen > len { return None }
+  if p + 4 > len {
+    return None
+  }
+  let vlen = cave_read_u32(data, p)
+  p = p + 4
+  if p + vlen > len {
+    return None
+  }
   let value : Array[Byte] = []
   let mut i = 0
-  while i < vlen { value.push(data[p + i]); i = i + 1 }
+  while i < vlen {
+    value.push(data[p + i])
+    i = i + 1
+  }
   p = p + vlen
-  if p >= len { return None }
-  let sealed = data[p].to_int() != 0; p = p + 1
-  if p + 4 > len { return None }
-  let epoch = cave_read_u32(data, p); p = p + 4
+  if p >= len {
+    return None
+  }
+  let sealed = data[p].to_int() != 0
+  p = p + 1
+  if p + 4 > len {
+    return None
+  }
+  let epoch = cave_read_u32(data, p)
+  p = p + 4
   Some(({ key, value, sealed, epoch }, p))
 }
 
@@ -146,10 +172,10 @@ fn CaveEntry::from_bytes(data : Array[Byte], pos : Int) -> (CaveEntry, Int)? {
 /// Gated by a cognitive boundary depth.
 pub(all) struct Cave {
   partition : CavePartition
-  entries   : Array[CaveEntry]
-  mut epoch : Int              // global write counter for this cave
-  capacity  : Int              // max bytes (0 = unlimited)
-  mut dirty : Bool             // has unserialized changes
+  entries : Array[CaveEntry]
+  mut epoch : Int // global write counter for this cave
+  capacity : Int // max bytes (0 = unlimited)
+  mut dirty : Bool // has unserialized changes
 } derive(Debug)
 
 ///|
@@ -161,7 +187,9 @@ pub fn Cave::new(partition : CavePartition, capacity : Int) -> Cave {
 /// Read a key from the cave. Returns None if not found.
 pub fn Cave::get(self : Cave, key : String) -> Array[Byte]? {
   for entry in self.entries {
-    if entry.key == key { return Some(entry.value) }
+    if entry.key == key {
+      return Some(entry.value)
+    }
   }
   None
 }
@@ -174,17 +202,23 @@ pub fn Cave::put(self : Cave, key : String, value : Array[Byte]) -> Bool {
   if self.capacity > 0 {
     let current_size = self.byte_size()
     let new_size = current_size + key.to_array().length() + value.length() + 16
-    if new_size > self.capacity { return false }
+    if new_size > self.capacity {
+      return false
+    }
   }
 
   // Check if entry exists
   for entry in self.entries {
     if entry.key == key {
-      if entry.sealed { return false }
+      if entry.sealed {
+        return false
+      }
       // Update in place
       // Since Array is mutable, we clear and refill
       entry.value.clear()
-      for b in value { entry.value.push(b) }
+      for b in value {
+        entry.value.push(b)
+      }
       self.epoch = self.epoch + 1
       entry.epoch = self.epoch
       self.dirty = true
@@ -206,7 +240,9 @@ pub fn Cave::delete(self : Cave, key : String) -> Bool {
   let mut i = 0
   for entry in self.entries {
     if entry.key == key {
-      if entry.sealed { return false }
+      if entry.sealed {
+        return false
+      }
       idx = i
       break
     }
@@ -217,11 +253,15 @@ pub fn Cave::delete(self : Cave, key : String) -> Bool {
     let new_entries : Array[CaveEntry] = []
     let mut j = 0
     while j < self.entries.length() {
-      if j != idx { new_entries.push(self.entries[j]) }
+      if j != idx {
+        new_entries.push(self.entries[j])
+      }
       j = j + 1
     }
     self.entries.clear()
-    for e in new_entries { self.entries.push(e) }
+    for e in new_entries {
+      self.entries.push(e)
+    }
     self.dirty = true
     true
   } else {
@@ -277,19 +317,20 @@ pub fn Cave::to_bytes(self : Cave) -> Array[Byte] {
   cave_write_u32(buf, self.capacity)
   for entry in self.entries {
     let entry_bytes = entry.to_bytes()
-    for b in entry_bytes { buf.push(b) }
+    for b in entry_bytes {
+      buf.push(b)
+    }
   }
   buf
 }
 
 ///|
 /// Deserialize a cave from bytes.
-pub fn Cave::from_bytes(
-  partition : CavePartition,
-  data : Array[Byte],
-) -> Cave? {
+pub fn Cave::from_bytes(partition : CavePartition, data : Array[Byte]) -> Cave? {
   let len = data.length()
-  if len < 12 { return None }
+  if len < 12 {
+    return None
+  }
   let count = cave_read_u32(data, 0)
   let epoch = cave_read_u32(data, 4)
   let capacity = cave_read_u32(data, 8)
@@ -329,18 +370,23 @@ pub fn CaveStore::new() -> CaveStore {
 /// Initialize with the standard 4 partitions.
 pub fn CaveStore::standard() -> CaveStore {
   let store = CaveStore::new()
-  store.caves.push(Cave::new(Public, 0))     // unlimited public
-  store.caves.push(Cave::new(Model, 0))      // unlimited model
-  store.caves.push(Cave::new(Session, 0))    // unlimited session
-  store.caves.push(Cave::new(Loci, 0))       // unlimited loci (genius loci)
+  store.caves.push(Cave::new(Public, 0)) // unlimited public
+  store.caves.push(Cave::new(Model, 0)) // unlimited model
+  store.caves.push(Cave::new(Session, 0)) // unlimited session
+  store.caves.push(Cave::new(Loci, 0)) // unlimited loci (genius loci)
   store
 }
 
 ///|
 /// Get a cave by partition.
-pub fn CaveStore::get_cave(self : CaveStore, partition : CavePartition) -> Cave? {
+pub fn CaveStore::get_cave(
+  self : CaveStore,
+  partition : CavePartition,
+) -> Cave? {
   for cave in self.caves {
-    if cave.partition == partition { return Some(cave) }
+    if cave.partition == partition {
+      return Some(cave)
+    }
   }
   None
 }
@@ -356,7 +402,7 @@ pub fn CaveStore::read(
 ) -> Array[Byte]? {
   let required = partition.required_depth()
   if authenticated_depth.level() < required.level() {
-    return None  // not deep enough
+    return None // not deep enough
   }
   match self.get_cave(partition) {
     Some(cave) => cave.get(key)
@@ -424,7 +470,9 @@ pub fn CaveStore::seal(
 /// Check if any cave has unserialized changes.
 pub fn CaveStore::is_dirty(self : CaveStore) -> Bool {
   for cave in self.caves {
-    if cave.dirty { return true }
+    if cave.dirty {
+      return true
+    }
   }
   false
 }
@@ -453,9 +501,9 @@ pub fn CaveStore::stats(self : CaveStore) -> CaveStoreStats {
 
 ///|
 pub(all) struct CaveStoreStats {
-  partitions    : Int
+  partitions : Int
   total_entries : Int
-  total_bytes   : Int
+  total_bytes : Int
 } derive(Show, Debug)
 
 // ---------------------------------------------------------------------------
@@ -507,26 +555,34 @@ fn cave_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn cave_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
 fn cave_write_str(buf : Array[Byte], s : String) -> Unit {
   let bytes : Array[Byte] = []
-  for ch in s { bytes.push(ch.to_int().to_byte()) }
+  for ch in s {
+    bytes.push(ch.to_int().to_byte())
+  }
   cave_write_u32(buf, bytes.length())
-  for b in bytes { buf.push(b) }
+  for b in bytes {
+    buf.push(b)
+  }
 }
 
 ///|
 fn cave_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = cave_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = 0
   while i < n {

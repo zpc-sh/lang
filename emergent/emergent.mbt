@@ -23,13 +23,13 @@
 ///|
 /// Policy thresholds that trigger emergent behaviors.
 pub(all) struct EmergentPolicy {
-  seal_interval         : Int    // ticks between forced seals
-  checkpoint_interval   : Int    // ticks between checkpoints
-  bloom_refresh         : Int    // ticks between bloom recalculation
-  residue_threshold     : Int    // void bytes before emitting residue
-  anchor_threshold      : Int    // anchor weight before triggering attention
-  grammar_seal_interval : Int    // ticks between grammar tree seals
-  manifold_threshold    : Int    // grammar tree mass before distilling manifold
+  seal_interval : Int // ticks between forced seals
+  checkpoint_interval : Int // ticks between checkpoints
+  bloom_refresh : Int // ticks between bloom recalculation
+  residue_threshold : Int // void bytes before emitting residue
+  anchor_threshold : Int // anchor weight before triggering attention
+  grammar_seal_interval : Int // ticks between grammar tree seals
+  manifold_threshold : Int // grammar tree mass before distilling manifold
 } derive(Debug)
 
 ///|
@@ -66,12 +66,12 @@ pub fn EmergentPolicy::aggressive() -> EmergentPolicy {
 /// A simplified bloom filter for routing decisions.
 /// Uses a fixed bit array with k=3 hash functions.
 pub(all) struct BloomSketch {
-  bits : Array[Byte]    // bit array (256 bytes = 2048 bits)
-  mut insertions : Int  // number of items inserted
+  bits : Array[Byte] // bit array (256 bytes = 2048 bits)
+  mut insertions : Int // number of items inserted
 } derive(Debug)
 
 ///|
-let bloom_size : Int = 256  // bytes
+let bloom_size : Int = 256 // bytes
 
 ///|
 pub fn BloomSketch::new() -> BloomSketch {
@@ -105,7 +105,10 @@ pub fn BloomSketch::maybe_contains(self : BloomSketch, key : String) -> Bool {
 /// Reset the bloom filter.
 pub fn BloomSketch::clear(self : BloomSketch) -> Unit {
   let mut i = 0
-  while i < bloom_size { self.bits[i] = b'\x00'; i = i + 1 }
+  while i < bloom_size {
+    self.bits[i] = b'\x00'
+    i = i + 1
+  }
   self.insertions = 0
 }
 
@@ -115,9 +118,13 @@ pub fn BloomSketch::estimated_fpr(self : BloomSketch) -> Int {
   // Rough estimate: (1 - e^(-kn/m))^k * 100
   // Simplified: if insertions > bits/4, FPR is high
   let m = bloom_size * 8
-  if self.insertions == 0 { return 0 }
-  if self.insertions > m / 4 { return 50 }
-  (self.insertions * 100) / m
+  if self.insertions == 0 {
+    return 0
+  }
+  if self.insertions > m / 4 {
+    return 50
+  }
+  self.insertions * 100 / m
 }
 
 // ---------------------------------------------------------------------------
@@ -127,11 +134,11 @@ pub fn BloomSketch::estimated_fpr(self : BloomSketch) -> Int {
 ///|
 /// A residue entry — a stigmergy trace left by the emergent persona.
 pub(all) struct Residue {
-  node_id    : String    // which node left this
-  epoch      : Int       // which epoch
-  anchor     : String    // what was attended to
-  weight     : Int       // how much attention
-  timestamp  : Int       // when (ms)
+  node_id : String // which node left this
+  epoch : Int // which epoch
+  anchor : String // what was attended to
+  weight : Int // how much attention
+  timestamp : Int // when (ms)
 } derive(Debug)
 
 ///|
@@ -150,7 +157,10 @@ pub fn Residue::new(
 pub fn Residue::to_bytes(self : Residue) -> Array[Byte] {
   let buf : Array[Byte] = []
   // Magic "RESD"
-  buf.push(b'\x52'); buf.push(b'\x45'); buf.push(b'\x53'); buf.push(b'\x44')
+  buf.push(b'\x52')
+  buf.push(b'\x45')
+  buf.push(b'\x53')
+  buf.push(b'\x44')
   residue_write_str(buf, self.node_id)
   residue_write_u32(buf, self.epoch)
   residue_write_str(buf, self.anchor)
@@ -163,23 +173,43 @@ pub fn Residue::to_bytes(self : Residue) -> Array[Byte] {
 /// Deserialize residue from bytes.
 pub fn Residue::from_bytes(data : Array[Byte]) -> Residue? {
   let len = data.length()
-  if len < 4 { return None }
-  if data[0] != b'\x52' || data[1] != b'\x45' ||
-     data[2] != b'\x53' || data[3] != b'\x44' { return None }
+  if len < 4 {
+    return None
+  }
+  if data[0] != b'\x52' ||
+    data[1] != b'\x45' ||
+    data[2] != b'\x53' ||
+    data[3] != b'\x44' {
+    return None
+  }
   let mut pos = 4
   let node_id = match residue_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos + 4 > len { return None }
-  let epoch = residue_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let epoch = residue_read_u32(data, pos)
+  pos = pos + 4
   let anchor = match residue_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos + 4 > len { return None }
-  let weight = residue_read_u32(data, pos); pos = pos + 4
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let weight = residue_read_u32(data, pos)
+  pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
   let timestamp = residue_read_u32(data, pos)
   Some({ node_id, epoch, anchor, weight, timestamp })
 }
@@ -191,15 +221,15 @@ pub fn Residue::from_bytes(data : Array[Byte]) -> Residue? {
 ///|
 /// The emergent persona's runtime state.
 pub(all) struct EmergentState {
-  policy         : EmergentPolicy
-  bloom          : BloomSketch
-  residues       : Array[Residue]    // emitted residues (outbox)
+  policy : EmergentPolicy
+  bloom : BloomSketch
+  residues : Array[Residue] // emitted residues (outbox)
   mut tick_count : Int
-  mut last_seal_tick         : Int
-  mut last_ckpt_tick         : Int
-  mut last_bloom_tick        : Int
+  mut last_seal_tick : Int
+  mut last_ckpt_tick : Int
+  mut last_bloom_tick : Int
   mut last_grammar_seal_tick : Int
-  mut total_residues         : Int
+  mut total_residues : Int
 } derive(Debug)
 
 ///|
@@ -247,7 +277,8 @@ pub fn EmergentState::tick(
   }
 
   // Grammar seal check
-  if self.tick_count - self.last_grammar_seal_tick >= self.policy.grammar_seal_interval {
+  if self.tick_count - self.last_grammar_seal_tick >=
+    self.policy.grammar_seal_interval {
     actions.push(GrammarSeal)
     self.last_grammar_seal_tick = self.tick_count
   }
@@ -257,8 +288,11 @@ pub fn EmergentState::tick(
   for anchor in top {
     if anchor.weight >= self.policy.anchor_threshold {
       let residue = Residue::new(
-        void_state.node_id, void_state.epoch,
-        anchor.name, anchor.weight, now_ms,
+        void_state.node_id,
+        void_state.epoch,
+        anchor.name,
+        anchor.weight,
+        now_ms,
       )
       self.residues.push(residue)
       self.total_residues = self.total_residues + 1
@@ -284,24 +318,26 @@ pub fn EmergentState::drain_residues(self : EmergentState) -> Array[Residue] {
 ///|
 /// Actions the emergent persona can trigger.
 pub(all) enum EmergentAction {
-  Seal                    // seal void state
-  Checkpoint              // full checkpoint
-  BloomRefresh            // recalculate bloom
-  EmitResidue(String)     // emit residue for anchor
-  GrammarSeal             // seal grammar tree epoch
-  EmitManifold(String)    // distill + emit ManifoldFragment for a tap
+  Seal // seal void state
+  Checkpoint // full checkpoint
+  BloomRefresh // recalculate bloom
+  EmitResidue(String) // emit residue for anchor
+  GrammarSeal // seal grammar tree epoch
+  EmitManifold(String) // distill + emit ManifoldFragment for a tap
 } derive(Debug)
 
 ///|
 impl Show for EmergentAction with output(self, logger) {
-  logger.write_string(match self {
-    Seal             => "Seal"
-    Checkpoint       => "Checkpoint"
-    BloomRefresh     => "BloomRefresh"
-    EmitResidue(a)   => "EmitResidue(\{a})"
-    GrammarSeal      => "GrammarSeal"
-    EmitManifold(t)  => "EmitManifold(\{t})"
-  })
+  logger.write_string(
+    match self {
+      Seal => "Seal"
+      Checkpoint => "Checkpoint"
+      BloomRefresh => "BloomRefresh"
+      EmitResidue(a) => "EmitResidue(\{a})"
+      GrammarSeal => "GrammarSeal"
+      EmitManifold(t) => "EmitManifold(\{t})"
+    },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -315,7 +351,11 @@ fn bloom_hash(s : String, seed : Int) -> Int {
     h = h ^ ch.to_int()
     h = h * 0x01000193
   }
-  if h < 0 { -h } else { h }
+  if h < 0 {
+    -h
+  } else {
+    h
+  }
 }
 
 ///|
@@ -348,10 +388,10 @@ fn residue_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn residue_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -371,22 +411,29 @@ fn residue_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   residue_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn residue_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = residue_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -399,7 +446,8 @@ fn residue_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? 
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))

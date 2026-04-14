@@ -21,24 +21,26 @@
 ///|
 /// Lifecycle state of a loaded plugin.
 pub(all) enum PluginState {
-  Loading      // wasm bytes being fetched/parsed
-  Ready        // parsed, exports validated, not yet started
-  Active       // running, receiving bus messages
-  Suspended    // temporarily paused
-  Unloaded     // removed from registry
+  Loading // wasm bytes being fetched/parsed
+  Ready // parsed, exports validated, not yet started
+  Active // running, receiving bus messages
+  Suspended // temporarily paused
+  Unloaded // removed from registry
   Failed(String) // load or runtime error
 } derive(Eq, Debug)
 
 ///|
 impl Show for PluginState with output(self, logger) {
-  logger.write_string(match self {
-    Loading     => "Loading"
-    Ready       => "Ready"
-    Active      => "Active"
-    Suspended   => "Suspended"
-    Unloaded    => "Unloaded"
-    Failed(msg) => "Failed(\{msg})"
-  })
+  logger.write_string(
+    match self {
+      Loading => "Loading"
+      Ready => "Ready"
+      Active => "Active"
+      Suspended => "Suspended"
+      Unloaded => "Unloaded"
+      Failed(msg) => "Failed(\{msg})"
+    },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -48,16 +50,22 @@ impl Show for PluginState with output(self, logger) {
 ///|
 /// The exports a plugin wasm must provide.
 pub(all) struct PluginAbi {
-  has_init    : Bool   // plugin_init() -> i32
-  has_handle  : Bool   // plugin_handle(topic: i32, payload_ptr: i32, len: i32) -> i32
-  has_query   : Bool   // plugin_query(query_ptr: i32, len: i32) -> i32
-  has_tick    : Bool   // plugin_tick(now_ms: i32) -> i32
-  has_dispose : Bool   // plugin_dispose() -> void
+  has_init : Bool // plugin_init() -> i32
+  has_handle : Bool // plugin_handle(topic: i32, payload_ptr: i32, len: i32) -> i32
+  has_query : Bool // plugin_query(query_ptr: i32, len: i32) -> i32
+  has_tick : Bool // plugin_tick(now_ms: i32) -> i32
+  has_dispose : Bool // plugin_dispose() -> void
 } derive(Debug)
 
 ///|
 pub fn PluginAbi::empty() -> PluginAbi {
-  { has_init: false, has_handle: false, has_query: false, has_tick: false, has_dispose: false }
+  {
+    has_init: false,
+    has_handle: false,
+    has_query: false,
+    has_tick: false,
+    has_dispose: false,
+  }
 }
 
 ///|
@@ -74,20 +82,20 @@ pub fn PluginAbi::is_valid(self : PluginAbi) -> Bool {
 ///|
 /// A registered plugin in the node.
 pub(all) struct PluginEntry {
-  id            : String         // unique plugin ID (hash of wasm bytes)
-  name          : String         // human-readable name
-  mut state     : PluginState
-  abi           : PluginAbi
-  cas_key       : String         // CAS hash of the wasm bytes
-  topics        : Array[@node.Topic]  // bus topics this plugin subscribes to
+  id : String // unique plugin ID (hash of wasm bytes)
+  name : String // human-readable name
+  mut state : PluginState
+  abi : PluginAbi
+  cas_key : String // CAS hash of the wasm bytes
+  topics : Array[@node.Topic] // bus topics this plugin subscribes to
   // Procsi identity (extracted from .prc section)
-  mut procsi_locus  : String?
-  mut procsi_tier   : String?
+  mut procsi_locus : String?
+  mut procsi_tier : String?
   // Runtime state
-  mut invocations  : Int         // total handle() calls
-  mut last_tick_ms : Int         // last tick timestamp
+  mut invocations : Int // total handle() calls
+  mut last_tick_ms : Int // last tick timestamp
   // Output buffer
-  output        : Array[Array[Byte]]
+  output : Array[Array[Byte]]
 } derive(Debug)
 
 ///|
@@ -99,9 +107,12 @@ pub fn PluginEntry::new(
   topics : Array[@node.Topic],
 ) -> PluginEntry {
   {
-    id, name,
+    id,
+    name,
     state: Loading,
-    abi, cas_key, topics,
+    abi,
+    cas_key,
+    topics,
     procsi_locus: None,
     procsi_tier: None,
     invocations: 0,
@@ -172,7 +183,11 @@ pub fn PluginEntry::record_invocation(self : PluginEntry, now_ms : Int) -> Unit 
 
 ///|
 /// Set procsi identity from extracted .prc section.
-pub fn PluginEntry::set_procsi(self : PluginEntry, locus : String, tier : String) -> Unit {
+pub fn PluginEntry::set_procsi(
+  self : PluginEntry,
+  locus : String,
+  tier : String,
+) -> Unit {
   self.procsi_locus = Some(locus)
   self.procsi_tier = Some(tier)
 }
@@ -184,9 +199,9 @@ pub fn PluginEntry::set_procsi(self : PluginEntry, locus : String, tier : String
 ///|
 /// The node's plugin registry — manages all loaded plugins.
 pub(all) struct PluginRegistry {
-  plugins         : Array[PluginEntry]
-  mut load_count  : Int
-  mut fail_count  : Int
+  plugins : Array[PluginEntry]
+  mut load_count : Int
+  mut fail_count : Int
 } derive(Debug)
 
 ///|
@@ -214,26 +229,37 @@ pub fn PluginRegistry::register(
 /// Find a plugin by ID.
 pub fn PluginRegistry::find(self : PluginRegistry, id : String) -> PluginEntry? {
   for p in self.plugins {
-    if p.id == id { return Some(p) }
+    if p.id == id {
+      return Some(p)
+    }
   }
   None
 }
 
 ///|
 /// Find a plugin by name.
-pub fn PluginRegistry::find_by_name(self : PluginRegistry, name : String) -> PluginEntry? {
+pub fn PluginRegistry::find_by_name(
+  self : PluginRegistry,
+  name : String,
+) -> PluginEntry? {
   for p in self.plugins {
-    if p.name == name { return Some(p) }
+    if p.name == name {
+      return Some(p)
+    }
   }
   None
 }
 
 ///|
 /// Get all active plugins.
-pub fn PluginRegistry::active_plugins(self : PluginRegistry) -> Array[PluginEntry] {
+pub fn PluginRegistry::active_plugins(
+  self : PluginRegistry,
+) -> Array[PluginEntry] {
   let out : Array[PluginEntry] = []
   for p in self.plugins {
-    if p.is_active() { out.push(p) }
+    if p.is_active() {
+      out.push(p)
+    }
   }
   out
 }
@@ -248,7 +274,10 @@ pub fn PluginRegistry::subscribers_for(
   for p in self.plugins {
     if p.is_active() {
       for t in p.topics {
-        if t == topic { out.push(p); break }
+        if t == topic {
+          out.push(p)
+          break
+        }
       }
     }
   }
@@ -266,7 +295,9 @@ pub fn PluginRegistry::count(self : PluginRegistry) -> Int {
 pub fn PluginRegistry::active_count(self : PluginRegistry) -> Int {
   let mut n = 0
   for p in self.plugins {
-    if p.is_active() { n = n + 1 }
+    if p.is_active() {
+      n = n + 1
+    }
   }
   n
 }
@@ -274,12 +305,12 @@ pub fn PluginRegistry::active_count(self : PluginRegistry) -> Int {
 ///|
 /// Registry statistics.
 pub(all) struct RegistryStats {
-  total     : Int
-  active    : Int
-  loading   : Int
+  total : Int
+  active : Int
+  loading : Int
   suspended : Int
-  failed    : Int
-  unloaded  : Int
+  failed : Int
+  unloaded : Int
 } derive(Debug)
 
 ///|
@@ -291,12 +322,12 @@ pub fn PluginRegistry::stats(self : PluginRegistry) -> RegistryStats {
   let mut unloaded = 0
   for p in self.plugins {
     match p.state {
-      Active    => active = active + 1
-      Loading   => loading = loading + 1
-      Ready     => loading = loading + 1
+      Active => active = active + 1
+      Loading => loading = loading + 1
+      Ready => loading = loading + 1
       Suspended => suspended = suspended + 1
       Failed(_) => failed = failed + 1
-      Unloaded  => unloaded = unloaded + 1
+      Unloaded => unloaded = unloaded + 1
     }
   }
   { total: self.plugins.length(), active, loading, suspended, failed, unloaded }

@@ -26,20 +26,22 @@
 ///|
 /// Operating mode of the node.
 pub(all) enum NodeMode {
-  Proxy       // LSP proxy — the default mode
-  Emergent    // emergent persona — self-directed
-  Plugin      // running as a plugin inside another node
-  Headless    // no persona — pure CAS/store operations
+  Proxy // LSP proxy — the default mode
+  Emergent // emergent persona — self-directed
+  Plugin // running as a plugin inside another node
+  Headless // no persona — pure CAS/store operations
 } derive(Eq, Debug)
 
 ///|
 impl Show for NodeMode with output(self, logger) {
-  logger.write_string(match self {
-    Proxy    => "Proxy"
-    Emergent => "Emergent"
-    Plugin   => "Plugin"
-    Headless => "Headless"
-  })
+  logger.write_string(
+    match self {
+      Proxy => "Proxy"
+      Emergent => "Emergent"
+      Plugin => "Plugin"
+      Headless => "Headless"
+    },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -49,34 +51,30 @@ impl Show for NodeMode with output(self, logger) {
 ///|
 /// The node kernel — the Lang binary's central state.
 pub(all) struct Node {
-  node_id     : String
-  mode        : NodeMode
-  host        : HostBridge
-  cas         : CasStore
-  bus         : MessageBus
-  mut void_state  : @void.Void
-  mut epoch   : Int
-  mut booted  : Bool
+  node_id : String
+  mode : NodeMode
+  host : HostBridge
+  cas : CasStore
+  bus : MessageBus
+  mut void_state : @void.Void
+  mut epoch : Int
+  mut booted : Bool
   // Output buffer — frames to send to host
-  outbox      : Array[Array[Byte]]
+  outbox : Array[Array[Byte]]
   // LSP input buffer — accumulated bytes awaiting frame parse
-  lsp_buf     : Array[Byte]
+  lsp_buf : Array[Byte]
   // Flow observation (optional — None when not interposing on a flow)
   mut flow_tap : @flow_tap.FlowTap?
   // Statistics
-  mut frames_in   : Int
-  mut frames_out  : Int
-  mut ticks       : Int
+  mut frames_in : Int
+  mut frames_out : Int
+  mut ticks : Int
   mut last_tick_ms : Int
 }
 
 ///|
 /// Boot a new node with the given host bridge and identity.
-pub fn Node::boot(
-  node_id : String,
-  mode : NodeMode,
-  host : HostBridge,
-) -> Node {
+pub fn Node::boot(node_id : String, mode : NodeMode, host : HostBridge) -> Node {
   let cas = CasStore::new(host)
   let bus = MessageBus::new()
   let void_state = @void.Void::new(node_id)
@@ -86,7 +84,11 @@ pub fn Node::boot(
   let _ = bus.subscribe("lsp-proxy", [LspInbound, LspOutbound])
   let _ = bus.subscribe("void-observer", [VoidObserve])
   let _ = bus.subscribe("cas-handler", [CasIngest, CasQuery])
-  let _ = bus.subscribe("flow-observer", [FlowInbound, GrammarObserve, ManifoldEmit])
+  let _ = bus.subscribe("flow-observer", [
+    FlowInbound,
+    GrammarObserve,
+    ManifoldEmit,
+  ])
 
   (host.log_info)("node: booted id=\{node_id} mode=\{mode}")
 
@@ -118,12 +120,16 @@ pub fn Node::boot(
 /// buffer and parses complete frames.
 pub fn Node::ingest_lsp(self : Node, bytes : Array[Byte]) -> Unit {
   // Append to buffer
-  for b in bytes { self.lsp_buf.push(b) }
+  for b in bytes {
+    self.lsp_buf.push(b)
+  }
 
   // Drain complete frames
   let (frames, rest) = @lsp.frame_drain(self.lsp_buf)
   self.lsp_buf.clear()
-  for b in rest { self.lsp_buf.push(b) }
+  for b in rest {
+    self.lsp_buf.push(b)
+  }
 
   for frame in frames {
     self.frames_in = self.frames_in + 1
@@ -168,14 +174,15 @@ pub fn Node::attach_flow_tap(
 ///|
 /// Observe a raw flow frame through the attached FlowTap.
 /// No-op if no FlowTap is attached.
-pub fn Node::observe_flow(
-  self : Node,
-  frame : @flow_tap.FlowFrame,
-) -> Unit {
+pub fn Node::observe_flow(self : Node, frame : @flow_tap.FlowFrame) -> Unit {
   match self.flow_tap {
     Some(tap) => {
       tap.observe(frame)
-      let _ = self.bus.publish(FlowInbound, node_int_to_bytes(frame.type_tag), "flow-tap")
+      let _ = self.bus.publish(
+        FlowInbound,
+        node_int_to_bytes(frame.type_tag),
+        "flow-tap",
+      )
     }
     None => ()
   }
@@ -279,18 +286,18 @@ pub fn Node::checkpoint(self : Node) -> String {
 ///|
 /// Node runtime statistics.
 pub(all) struct NodeStats {
-  node_id      : String
-  mode         : NodeMode
-  epoch        : Int
-  frames_in    : Int
-  frames_out   : Int
-  ticks        : Int
+  node_id : String
+  mode : NodeMode
+  epoch : Int
+  frames_in : Int
+  frames_out : Int
+  ticks : Int
   last_tick_ms : Int
   bus_dispatched : Int
-  bus_pending    : Int
-  cas          : CasStats
+  bus_pending : Int
+  cas : CasStats
   void_anchors : Int
-  void_bytes   : Int
+  void_bytes : Int
 } derive(Debug)
 
 ///|

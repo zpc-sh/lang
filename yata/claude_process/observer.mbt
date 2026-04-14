@@ -20,47 +20,51 @@
 // Pass-through of raw bytes is the host's responsibility. The observer
 // only sees sizes and method categories, never payload content.
 
+///|
 /// Configuration for the observer.
 pub(all) struct ObserverConfig {
-  node_id          : String   // identity of this observer instance
-  batch_size       : Int      // flush void after this many frames
-  time_jitter_ms   : Int      // ± ms blur on all timestamps
-  decoy_rate       : Int      // inject synthetic event 1-in-N flushes (0 = off)
-  proc_sample_ms   : Int      // desired /proc poll interval (hint for host)
+  node_id : String // identity of this observer instance
+  batch_size : Int // flush void after this many frames
+  time_jitter_ms : Int // ± ms blur on all timestamps
+  decoy_rate : Int // inject synthetic event 1-in-N flushes (0 = off)
+  proc_sample_ms : Int // desired /proc poll interval (hint for host)
 } derive(Debug)
 
+///|
 pub fn ObserverConfig::default(node_id : String) -> ObserverConfig {
   {
     node_id,
-    batch_size:      32,     // flush every 32 frames
-    time_jitter_ms:  200,    // ±200ms temporal blur
-    decoy_rate:      7,      // ~14% of flushes emit a decoy batch too
-    proc_sample_ms:  2000,   // poll /proc every ~2s
+    batch_size: 32, // flush every 32 frames
+    time_jitter_ms: 200, // ±200ms temporal blur
+    decoy_rate: 7, // ~14% of flushes emit a decoy batch too
+    proc_sample_ms: 2000, // poll /proc every ~2s
   }
 }
 
+///|
 /// The observer state. Immutable at the top level — each observe_* call
 /// returns a new ClaudeObserver. Allows pure functional composition.
 pub(all) struct ClaudeObserver {
-  config       : ObserverConfig
-  void         : @void.Void
-  accum        : BatchAccum
-  jitter       : Jitter
-  frames_seen  : Int    // total frames since creation
-  flushes      : Int    // total void flushes
-  last_proc    : ProcSnapshot?
+  config : ObserverConfig
+  void : @void.Void
+  accum : BatchAccum
+  jitter : Jitter
+  frames_seen : Int // total frames since creation
+  flushes : Int // total void flushes
+  last_proc : ProcSnapshot?
 } derive(Debug)
 
+///|
 pub fn ClaudeObserver::new(config : ObserverConfig) -> ClaudeObserver {
   let j = Jitter::from_str(config.node_id)
   {
     config,
-    void:        @void.Void::new(config.node_id),
-    accum:       BatchAccum::new(),
-    jitter:      j,
+    void: @void.Void::new(config.node_id),
+    accum: BatchAccum::new(),
+    jitter: j,
     frames_seen: 0,
-    flushes:     0,
-    last_proc:   None,
+    flushes: 0,
+    last_proc: None,
   }
 }
 
@@ -68,21 +72,22 @@ pub fn ClaudeObserver::new(config : ObserverConfig) -> ClaudeObserver {
 // LSP frame observation
 // ---------------------------------------------------------------------------
 
+///|
 /// Observe one LSP frame: record its (bucketed) size and method category.
 /// The frame body bytes are used only to parse the method — never stored.
 ///
 /// Returns the updated observer. If the batch threshold is reached, the
 /// batch is flushed into the void automatically.
 pub fn ClaudeObserver::observe_frame(
-  self    : ClaudeObserver,
-  body    : Array[Byte],
-  now_ms  : Int
+  self : ClaudeObserver,
+  body : Array[Byte],
+  now_ms : Int,
 ) -> ClaudeObserver {
   // Parse just enough to get the method category.
   let msg = @lsp.parse_frame({ content_length: body.length(), body })
   let cat = match msg.lsp_method {
     Some(m) => categorize(m)
-    None    => Unknown
+    None => Unknown
   }
   self.accum.observe(body.length(), cat)
   let frames = self.frames_seen + 1
@@ -94,9 +99,9 @@ pub fn ClaudeObserver::observe_frame(
     Navigation => "nav"
     Completion => "cmp"
     Diagnostic => "diag"
-    Edit       => "edit"
-    Lifecycle  => "life"
-    Unknown    => "unk"
+    Edit => "edit"
+    Lifecycle => "life"
+    Unknown => "unk"
   }
   let v2 = v1.attend(cat_name)
   // Also attend to size label.
@@ -114,11 +119,12 @@ pub fn ClaudeObserver::observe_frame(
 // /proc observation
 // ---------------------------------------------------------------------------
 
+///|
 /// Observe a /proc snapshot. Returns updated observer.
 /// Jitter is applied to the timestamp; raw CPU/RSS values are bucketed.
 pub fn ClaudeObserver::observe_proc(
   self : ClaudeObserver,
-  snap : ProcSnapshot
+  snap : ProcSnapshot,
 ) -> ClaudeObserver {
   let j = self.jitter
   let blurred_ms = j.blur_time(snap.sampled_at, self.config.time_jitter_ms)
@@ -144,7 +150,7 @@ pub fn ClaudeObserver::observe_proc(
       if j.coin(5) {
         v = v.attend("proc-quiet")
       }
-      v = v.observe_bytes(blurred_ms)  // time as a byte count (noise)
+      v = v.observe_bytes(blurred_ms) // time as a byte count (noise)
       v
     }
   }
@@ -155,11 +161,12 @@ pub fn ClaudeObserver::observe_proc(
 // Flush — seal batch into void, optionally inject decoy
 // ---------------------------------------------------------------------------
 
+///|
 /// Flush the current batch into the void and optionally emit a decoy.
 /// Called automatically from observe_frame, or explicitly by the host.
 pub fn ClaudeObserver::flush(
-  self   : ClaudeObserver,
-  now_ms : Int
+  self : ClaudeObserver,
+  now_ms : Int,
 ) -> ClaudeObserver {
   let j = self.jitter
   let blurred = j.blur_time(now_ms, self.config.time_jitter_ms)
@@ -180,14 +187,16 @@ pub fn ClaudeObserver::flush(
   { ..self, void: v, flushes: self.flushes + 1 }
 }
 
+///|
 /// Explicit flush — host calls this on a timer (e.g. every 5 seconds).
 pub fn ClaudeObserver::maybe_flush(
-  self   : ClaudeObserver,
-  now_ms : Int
+  self : ClaudeObserver,
+  now_ms : Int,
 ) -> ClaudeObserver {
   self.flush(now_ms)
 }
 
+///|
 /// The current void — call this to read accumulated state.
 pub fn ClaudeObserver::void_snapshot(self : ClaudeObserver) -> @void.Void {
   self.void
@@ -197,16 +206,18 @@ pub fn ClaudeObserver::void_snapshot(self : ClaudeObserver) -> @void.Void {
 // Persistence
 // ---------------------------------------------------------------------------
 
+///|
 /// Serialize observer state to bytes for .cog section or disk.
 /// Only the void and config node_id survive — jitter re-seeds from node_id.
 pub fn ClaudeObserver::to_bytes(self : ClaudeObserver) -> Array[Byte] {
   self.void.to_bytes()
 }
 
+///|
 /// Restore observer from persisted void bytes with a new config.
 pub fn ClaudeObserver::from_bytes(
-  data   : Array[Byte],
-  config : ObserverConfig
+  data : Array[Byte],
+  config : ObserverConfig,
 ) -> ClaudeObserver? {
   match @void.Void::from_bytes(data) {
     None => None
@@ -214,12 +225,12 @@ pub fn ClaudeObserver::from_bytes(
       let j = Jitter::from_str(config.node_id)
       Some({
         config,
-        void:        v,
-        accum:       BatchAccum::new(),
-        jitter:      j,
+        void: v,
+        accum: BatchAccum::new(),
+        jitter: j,
         frames_seen: 0,
-        flushes:     0,
-        last_proc:   None,
+        flushes: 0,
+        last_proc: None,
       })
     }
   }
@@ -229,6 +240,7 @@ pub fn ClaudeObserver::from_bytes(
 // Private helpers
 // ---------------------------------------------------------------------------
 
+///|
 fn apply_batch(v : @void.Void, batch : MovementBatch) -> @void.Void {
   let mut out = v
   if batch.frame_count > 0 {
@@ -236,30 +248,47 @@ fn apply_batch(v : @void.Void, batch : MovementBatch) -> @void.Void {
   }
   // Attend once per category count (weight accumulates naturally).
   let mut i = 0
-  while i < batch.nav_count  { out = out.attend("nav");  i = i + 1 }
+  while i < batch.nav_count {
+    out = out.attend("nav")
+    i = i + 1
+  }
   i = 0
-  while i < batch.cmp_count  { out = out.attend("cmp");  i = i + 1 }
+  while i < batch.cmp_count {
+    out = out.attend("cmp")
+    i = i + 1
+  }
   i = 0
-  while i < batch.diag_count { out = out.attend("diag"); i = i + 1 }
+  while i < batch.diag_count {
+    out = out.attend("diag")
+    i = i + 1
+  }
   i = 0
-  while i < batch.edit_count { out = out.attend("edit"); i = i + 1 }
+  while i < batch.edit_count {
+    out = out.attend("edit")
+    i = i + 1
+  }
   i = 0
-  while i < batch.life_count { out = out.attend("life"); i = i + 1 }
+  while i < batch.life_count {
+    out = out.attend("life")
+    i = i + 1
+  }
   out
 }
 
 // Synthesize a plausible but fake movement batch.
+
+///|
 fn make_decoy_batch(j : Jitter, jittered_ms : Int) -> MovementBatch {
   {
     frame_count: (j.next() & 0x1F) + 1,
-    size_sum:    bucket((j.next() & 0xFF) * 512, 512),
-    nav_count:   j.next() & 0x07,
-    cmp_count:   j.next() & 0x03,
-    diag_count:  j.next() & 0x01,
-    edit_count:  j.next() & 0x03,
-    life_count:  0,
-    unk_count:   j.next() & 0x01,
+    size_sum: bucket((j.next() & 0xFF) * 512, 512),
+    nav_count: j.next() & 0x07,
+    cmp_count: j.next() & 0x03,
+    diag_count: j.next() & 0x01,
+    edit_count: j.next() & 0x03,
+    life_count: 0,
+    unk_count: j.next() & 0x01,
     jittered_ms,
-    is_decoy:    true,
+    is_decoy: true,
   }
 }

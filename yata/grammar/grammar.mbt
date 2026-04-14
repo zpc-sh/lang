@@ -32,8 +32,9 @@
 ///     [4]  mass          : u32 LE
 ///     [4]  heat          : u32 LE
 ///     [1]  state         : u8
-
 let gram_magic : Array[Byte] = [b'\x47', b'\x52', b'\x41', b'\x4D'] // "GRAM"
+
+///|
 let gram_version : Int = 1
 
 // ---------------------------------------------------------------------------
@@ -44,20 +45,23 @@ let gram_version : Int = 1
 /// Integer-scaled gaussian for timing salience. Avoids floating point.
 /// Values are in milliunits (multiply by 1000).
 pub(all) struct GaussianPair {
-  mu    : Int    // mean * 1000
-  sigma : Int    // stddev * 1000 (always >= 0)
-  n     : Int    // observation count
+  mu : Int // mean * 1000
+  sigma : Int // stddev * 1000 (always >= 0)
+  n : Int // observation count
 } derive(Eq, Debug)
 
 ///|
 pub fn GaussianPair::new() -> GaussianPair {
-  { mu: 0, sigma: 1000, n: 0 }  // uninformative prior: mu=0, sigma=1.0
+  { mu: 0, sigma: 1000, n: 0 } // uninformative prior: mu=0, sigma=1.0
 }
 
 ///|
 /// Update with a new observation using Welford's algorithm in integer arithmetic.
 /// `observation_milli` is the observed value * 1000.
-pub fn GaussianPair::update(self : GaussianPair, observation_milli : Int) -> GaussianPair {
+pub fn GaussianPair::update(
+  self : GaussianPair,
+  observation_milli : Int,
+) -> GaussianPair {
   let count = self.n + 1
   let delta = observation_milli - self.mu
   let new_mu = self.mu + delta / count
@@ -65,7 +69,7 @@ pub fn GaussianPair::update(self : GaussianPair, observation_milli : Int) -> Gau
     self.sigma
   } else {
     // EMA estimate of sigma
-    let alpha_inv = count  // 1/alpha = count
+    let alpha_inv = count // 1/alpha = count
     let diff = if observation_milli > new_mu {
       observation_milli - new_mu
     } else {
@@ -92,9 +96,16 @@ pub fn GaussianPair::should_execute(
 ///|
 /// Merge two gaussian pairs (take the one with more observations,
 /// or combine if both have observations).
-pub fn GaussianPair::merge(self : GaussianPair, other : GaussianPair) -> GaussianPair {
-  if self.n == 0 { return other }
-  if other.n == 0 { return self }
+pub fn GaussianPair::merge(
+  self : GaussianPair,
+  other : GaussianPair,
+) -> GaussianPair {
+  if self.n == 0 {
+    return other
+  }
+  if other.n == 0 {
+    return self
+  }
   let total = self.n + other.n
   let new_mu = (self.mu * self.n + other.mu * other.n) / total
   let new_sigma = gram_int_max(self.sigma, other.sigma)
@@ -106,14 +117,16 @@ pub fn GaussianPair::merge(self : GaussianPair, other : GaussianPair) -> Gaussia
 // ---------------------------------------------------------------------------
 
 ///|
-pub let gram_bloom_size : Int = 256  // bits (same as merkin default)
+pub let gram_bloom_size : Int = 256 // bits (same as merkin default)
+
+///|
 let gram_bloom_hashes : Int = 3
 
 ///|
 /// Bloom filter for probabilistic routing token membership.
 pub(all) struct GrammarBloom {
-  bits       : Array[Bool]
-  mut count  : Int          // insertions (not distinct)
+  bits : Array[Bool]
+  mut count : Int // insertions (not distinct)
 } derive(Debug)
 
 ///|
@@ -133,17 +146,25 @@ pub fn GrammarBloom::add(self : GrammarBloom, token : String) -> Unit {
 
 ///|
 /// Probabilistic membership test.
-pub fn GrammarBloom::maybe_contains(self : GrammarBloom, token : String) -> Bool {
+pub fn GrammarBloom::maybe_contains(
+  self : GrammarBloom,
+  token : String,
+) -> Bool {
   let positions = gram_bloom_positions(token)
   for pos in positions {
-    if !self.bits[pos] { return false }
+    if !self.bits[pos] {
+      return false
+    }
   }
   true
 }
 
 ///|
 /// Merge two blooms (OR of bits).
-pub fn GrammarBloom::merge(self : GrammarBloom, other : GrammarBloom) -> GrammarBloom {
+pub fn GrammarBloom::merge(
+  self : GrammarBloom,
+  other : GrammarBloom,
+) -> GrammarBloom {
   let merged = Array::make(gram_bloom_size, false)
   let mut i = 0
   while i < gram_bloom_size {
@@ -158,7 +179,9 @@ pub fn GrammarBloom::merge(self : GrammarBloom, other : GrammarBloom) -> Grammar
 pub fn GrammarBloom::popcount(self : GrammarBloom) -> Int {
   let mut c = 0
   for b in self.bits {
-    if b { c = c + 1 }
+    if b {
+      c = c + 1
+    }
   }
   c
 }
@@ -169,7 +192,9 @@ pub fn GrammarBloom::overlap(self : GrammarBloom, other : GrammarBloom) -> Int {
   let mut c = 0
   let mut i = 0
   while i < gram_bloom_size {
-    if self.bits[i] && other.bits[i] { c = c + 1 }
+    if self.bits[i] && other.bits[i] {
+      c = c + 1
+    }
     i = i + 1
   }
   c
@@ -208,8 +233,8 @@ pub(all) enum GrammarNodeState {
 ///|
 fn GrammarNodeState::to_byte(self : GrammarNodeState) -> Byte {
   match self {
-    Fresh  => b'\x00'
-    Dirty  => b'\x01'
+    Fresh => b'\x00'
+    Dirty => b'\x01'
     Sealed => b'\x02'
   }
 }
@@ -230,13 +255,13 @@ fn GrammarNodeState::from_byte(b : Byte) -> GrammarNodeState {
 ///|
 /// A grammar tree node with bloom routing, gaussian salience, and mass/heat.
 pub(all) struct GrammarNode {
-  node_id        : String
-  children       : Array[String]      // child node keys
+  node_id : String
+  children : Array[String] // child node keys
   routing_sketch : GrammarBloom
-  salience       : GaussianPair
-  mass           : Int                // observation count at this node
-  heat           : Int                // activity counter
-  state          : GrammarNodeState
+  salience : GaussianPair
+  mass : Int // observation count at this node
+  heat : Int // activity counter
+  state : GrammarNodeState
 } derive(Debug)
 
 ///|
@@ -311,10 +336,10 @@ pub fn GrammarNode::maybe_routes(self : GrammarNode, token : String) -> Bool {
 ///|
 /// Protocol grammar accumulated as a probabilistic tree.
 pub(all) struct GrammarTree {
-  nodes        : Map[String, GrammarNode]
+  nodes : Map[String, GrammarNode]
   mut hot_root : String?
-  mut epoch    : Int
-  mut total_tokens : Int    // lifetime routing token insertions
+  mut epoch : Int
+  mut total_tokens : Int // lifetime routing token insertions
 } derive(Debug)
 
 ///|
@@ -374,10 +399,7 @@ pub fn GrammarTree::ingest_with_salience(
 
 ///|
 /// Add a child node under the root.
-pub fn GrammarTree::add_child(
-  self : GrammarTree,
-  child_key : String,
-) -> Bool {
+pub fn GrammarTree::add_child(self : GrammarTree, child_key : String) -> Bool {
   match self.hot_root {
     None => false
     Some(root_key) =>
@@ -462,7 +484,11 @@ pub fn GrammarTree::active_root_key(self : GrammarTree) -> String? {
     Some(key) => Some(key)
     None => {
       let key = gram_default_root_key()
-      if self.nodes.get(key) is None { None } else { Some(key) }
+      if self.nodes.get(key) is None {
+        None
+      } else {
+        Some(key)
+      }
     }
   }
 }
@@ -475,7 +501,7 @@ pub fn GrammarTree::active_root_key(self : GrammarTree) -> String? {
 /// A filtered projection of the grammar tree.
 pub(all) struct SparseGrammar {
   root_key : String?
-  nodes    : Map[String, GrammarNode]
+  nodes : Map[String, GrammarNode]
 } derive(Debug)
 
 ///|
@@ -557,7 +583,9 @@ pub fn GrammarTree::sparse(
 ///|
 fn gram_node_matches(node : GrammarNode, tokens : Array[String]) -> Bool {
   for token in tokens {
-    if !node.maybe_routes(token) { return false }
+    if !node.maybe_routes(token) {
+      return false
+    }
   }
   true
 }
@@ -569,9 +597,9 @@ fn gram_node_matches(node : GrammarNode, tokens : Array[String]) -> Bool {
 ///|
 /// Diff between two grammar trees.
 pub(all) struct GrammarDiff {
-  added     : Array[String]
-  removed   : Array[String]
-  changed   : Array[String]
+  added : Array[String]
+  removed : Array[String]
+  changed : Array[String]
   unchanged : Int
 } derive(Debug)
 
@@ -584,7 +612,10 @@ pub fn GrammarDiff::is_empty(self : GrammarDiff) -> Bool {
 
 ///|
 /// Diff two grammar trees.
-pub fn GrammarTree::diff(self : GrammarTree, other : GrammarTree) -> GrammarDiff {
+pub fn GrammarTree::diff(
+  self : GrammarTree,
+  other : GrammarTree,
+) -> GrammarDiff {
   gram_diff_maps(self.nodes, other.nodes)
 }
 
@@ -612,11 +643,7 @@ fn gram_diff_maps(
   })
 
   // Check keys only in rhs
-  rhs.each(fn(key, _right) {
-    if lhs.get(key) is None {
-      added.push(key)
-    }
-  })
+  rhs.each(fn(key, _right) { if lhs.get(key) is None { added.push(key) } })
 
   { added, removed, changed, unchanged }
 }
@@ -626,11 +653,13 @@ fn gram_node_sig(node : GrammarNode) -> String {
   let sb = StringBuilder::new()
   sb.write_string(node.node_id)
   sb.write_string("|")
-  sb.write_string(match node.state {
-    Fresh  => "fresh"
-    Dirty  => "dirty"
-    Sealed => "sealed"
-  })
+  sb.write_string(
+    match node.state {
+      Fresh => "fresh"
+      Dirty => "dirty"
+      Sealed => "sealed"
+    },
+  )
   sb.write_string("|")
   sb.write_string(node.mass.to_string())
   sb.write_string("|")
@@ -638,7 +667,9 @@ fn gram_node_sig(node : GrammarNode) -> String {
   sb.write_string("|")
   let mut first = true
   for child in node.children {
-    if !first { sb.write_string(",") }
+    if !first {
+      sb.write_string(",")
+    }
     sb.write_string(child)
     first = false
   }
@@ -656,7 +687,10 @@ fn gram_node_sig(node : GrammarNode) -> String {
 ///   - Mass/heat take max
 ///   - Children are unioned
 /// `self` epoch and hot_root take precedence.
-pub fn GrammarTree::merge(self : GrammarTree, other : GrammarTree) -> GrammarTree {
+pub fn GrammarTree::merge(
+  self : GrammarTree,
+  other : GrammarTree,
+) -> GrammarTree {
   let merged_nodes : Map[String, GrammarNode] = {}
 
   // Copy all from self
@@ -667,7 +701,9 @@ pub fn GrammarTree::merge(self : GrammarTree, other : GrammarTree) -> GrammarTre
     match merged_nodes.get(key) {
       Some(existing) => {
         // Merge bloom sketches
-        let merged_bloom = existing.routing_sketch.merge(other_node.routing_sketch)
+        let merged_bloom = existing.routing_sketch.merge(
+          other_node.routing_sketch,
+        )
         // Merge salience
         let merged_salience = existing.salience.merge(other_node.salience)
         // Union children
@@ -675,9 +711,14 @@ pub fn GrammarTree::merge(self : GrammarTree, other : GrammarTree) -> GrammarTre
         for child in other_node.children {
           let mut found = false
           for existing_child in merged_children {
-            if existing_child == child { found = true; break }
+            if existing_child == child {
+              found = true
+              break
+            }
           }
-          if !found { merged_children.push(child) }
+          if !found {
+            merged_children.push(child)
+          }
         }
         merged_nodes[key] = {
           ..existing,
@@ -714,7 +755,9 @@ pub fn GrammarTree::similarity(self : GrammarTree, other : GrammarTree) -> Int {
 
   let overlap = self_bloom.overlap(other_bloom)
   let union_count = self_bloom.popcount() + other_bloom.popcount() - overlap
-  if union_count == 0 { return 100 }  // both empty
+  if union_count == 0 {
+    return 100
+  } // both empty
   overlap * 100 / union_count
 }
 
@@ -724,7 +767,9 @@ fn gram_aggregate_bloom(tree : GrammarTree) -> GrammarBloom {
   tree.nodes.each(fn(_key, node) {
     let mut i = 0
     while i < gram_bloom_size {
-      if node.routing_sketch.bits[i] { agg.bits[i] = true }
+      if node.routing_sketch.bits[i] {
+        agg.bits[i] = true
+      }
       i = i + 1
     }
   })
@@ -738,14 +783,19 @@ fn gram_aggregate_bloom(tree : GrammarTree) -> GrammarBloom {
 ///|
 pub fn GrammarTree::to_bytes(self : GrammarTree) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in gram_magic { buf.push(b) }
+  for b in gram_magic {
+    buf.push(b)
+  }
   gram_write_u32(buf, gram_version)
   gram_write_u32(buf, self.epoch)
   gram_write_u32(buf, self.total_tokens)
 
   // hot_root
   match self.hot_root {
-    Some(key) => { buf.push(b'\x01'); gram_write_str(buf, key) }
+    Some(key) => {
+      buf.push(b'\x01')
+      gram_write_str(buf, key)
+    }
     None => buf.push(b'\x00')
   }
 
@@ -766,21 +816,37 @@ pub fn GrammarTree::to_bytes(self : GrammarTree) -> Array[Byte] {
 ///|
 pub fn GrammarTree::from_bytes(data : Array[Byte]) -> GrammarTree? {
   let len = data.length()
-  if len < 8 { return None }
-  if data[0] != gram_magic[0] || data[1] != gram_magic[1] ||
-     data[2] != gram_magic[2] || data[3] != gram_magic[3] { return None }
+  if len < 8 {
+    return None
+  }
+  if data[0] != gram_magic[0] ||
+    data[1] != gram_magic[1] ||
+    data[2] != gram_magic[2] ||
+    data[3] != gram_magic[3] {
+    return None
+  }
   let mut pos = 4
-  let _ver = gram_read_u32(data, pos); pos = pos + 4
-  if pos + 8 > len { return None }
-  let epoch = gram_read_u32(data, pos); pos = pos + 4
-  let total_tokens = gram_read_u32(data, pos); pos = pos + 4
+  let _ver = gram_read_u32(data, pos)
+  pos = pos + 4
+  if pos + 8 > len {
+    return None
+  }
+  let epoch = gram_read_u32(data, pos)
+  pos = pos + 4
+  let total_tokens = gram_read_u32(data, pos)
+  pos = pos + 4
 
   // hot_root
-  if pos >= len { return None }
+  if pos >= len {
+    return None
+  }
   let hot_root : String? = if data[pos] == b'\x01' {
     pos = pos + 1
     match gram_read_str(data, pos, len) {
-      Some((s, p)) => { pos = p; Some(s) }
+      Some((s, p)) => {
+        pos = p
+        Some(s)
+      }
       None => return None
     }
   } else {
@@ -789,8 +855,11 @@ pub fn GrammarTree::from_bytes(data : Array[Byte]) -> GrammarTree? {
   }
 
   // nodes
-  if pos + 4 > len { return None }
-  let n_nodes = gram_read_u32(data, pos); pos = pos + 4
+  if pos + 4 > len {
+    return None
+  }
+  let n_nodes = gram_read_u32(data, pos)
+  pos = pos + 4
   let nodes : Map[String, GrammarNode] = {}
   let mut i = 0
   while i < n_nodes {
@@ -846,27 +915,42 @@ fn gram_write_node(buf : Array[Byte], node : GrammarNode) -> Unit {
 }
 
 ///|
-fn gram_read_node(data : Array[Byte], pos : Int, len : Int) -> (GrammarNode, Int)? {
+fn gram_read_node(
+  data : Array[Byte],
+  pos : Int,
+  len : Int,
+) -> (GrammarNode, Int)? {
   let mut p = pos
   let node_id = match gram_read_str(data, p, len) {
-    Some((s, p2)) => { p = p2; s }
+    Some((s, p2)) => {
+      p = p2
+      s
+    }
     None => return None
   }
   // children
-  if p + 4 > len { return None }
-  let n_children = gram_read_u32(data, p); p = p + 4
+  if p + 4 > len {
+    return None
+  }
+  let n_children = gram_read_u32(data, p)
+  p = p + 4
   let children : Array[String] = []
   let mut i = 0
   while i < n_children {
     match gram_read_str(data, p, len) {
-      Some((s, p2)) => { p = p2; children.push(s) }
+      Some((s, p2)) => {
+        p = p2
+        children.push(s)
+      }
       None => return None
     }
     i = i + 1
   }
   // bloom bits
   let bloom_bytes = gram_bloom_size / 8
-  if p + bloom_bytes > len { return None }
+  if p + bloom_bytes > len {
+    return None
+  }
   let bits = Array::make(gram_bloom_size, false)
   i = 0
   while i < bloom_bytes {
@@ -884,23 +968,37 @@ fn gram_read_node(data : Array[Byte], pos : Int, len : Int) -> (GrammarNode, Int
   p = p + bloom_bytes
   let routing_sketch : GrammarBloom = { bits, count: 0 }
   // salience
-  if p + 12 > len { return None }
-  let mu = gram_read_i32(data, p); p = p + 4
-  let sigma = gram_read_i32(data, p); p = p + 4
-  let n = gram_read_i32(data, p); p = p + 4
+  if p + 12 > len {
+    return None
+  }
+  let mu = gram_read_i32(data, p)
+  p = p + 4
+  let sigma = gram_read_i32(data, p)
+  p = p + 4
+  let n = gram_read_i32(data, p)
+  p = p + 4
   let salience : GaussianPair = { mu, sigma, n }
   // mass, heat, state
-  if p + 9 > len { return None }
-  let mass = gram_read_u32(data, p); p = p + 4
-  let heat = gram_read_u32(data, p); p = p + 4
-  let state = GrammarNodeState::from_byte(data[p]); p = p + 1
+  if p + 9 > len {
+    return None
+  }
+  let mass = gram_read_u32(data, p)
+  p = p + 4
+  let heat = gram_read_u32(data, p)
+  p = p + 4
+  let state = GrammarNodeState::from_byte(data[p])
+  p = p + 1
 
   Some(({ node_id, children, routing_sketch, salience, mass, heat, state }, p))
 }
 
 ///|
 fn gram_int_max(a : Int, b : Int) -> Int {
-  if a >= b { a } else { b }
+  if a >= b {
+    a
+  } else {
+    b
+  }
 }
 
 ///|
@@ -913,10 +1011,10 @@ fn gram_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn gram_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -946,22 +1044,29 @@ fn gram_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   gram_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn gram_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = gram_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -974,7 +1079,8 @@ fn gram_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))

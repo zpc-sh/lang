@@ -48,8 +48,9 @@
 ///   .cb1 — Model layer
 ///   .cb2 — Session layer
 ///   .cb3 — Semantics layer
-
 let cbnd_magic : Array[Byte] = [b'\x43', b'\x42', b'\x4E', b'\x44'] // "CBND"
+
+///|
 let cbnd_version : Int = 1
 
 // ---------------------------------------------------------------------------
@@ -59,18 +60,18 @@ let cbnd_version : Int = 1
 ///|
 /// The cognitive depth — which layer of the boundary stack.
 pub(all) enum CognitiveDepth {
-  Ai                   // Layer 0: any AI
-  AiModel              // Layer 1: AI + model family
-  AiModelSession       // Layer 2: AI + model + session
-  AiModelSessionSemantic  // Layer 3: AI + model + session + semantic substrate
+  Ai // Layer 0: any AI
+  AiModel // Layer 1: AI + model family
+  AiModelSession // Layer 2: AI + model + session
+  AiModelSessionSemantic // Layer 3: AI + model + session + semantic substrate
 } derive(Eq, Show, Debug)
 
 ///|
 fn CognitiveDepth::to_byte(self : CognitiveDepth) -> Byte {
   match self {
-    Ai                    => b'\x00'
-    AiModel               => b'\x01'
-    AiModelSession        => b'\x02'
+    Ai => b'\x00'
+    AiModel => b'\x01'
+    AiModelSession => b'\x02'
     AiModelSessionSemantic => b'\x03'
   }
 }
@@ -89,9 +90,9 @@ fn CognitiveDepth::from_byte(b : Byte) -> CognitiveDepth {
 /// Section name for a given depth.
 pub fn CognitiveDepth::section_name(self : CognitiveDepth) -> String {
   match self {
-    Ai                    => ".cb0"
-    AiModel               => ".cb1"
-    AiModelSession        => ".cb2"
+    Ai => ".cb0"
+    AiModel => ".cb1"
+    AiModelSession => ".cb2"
     AiModelSessionSemantic => ".cb3"
   }
 }
@@ -100,9 +101,9 @@ pub fn CognitiveDepth::section_name(self : CognitiveDepth) -> String {
 /// Numeric depth value.
 pub fn CognitiveDepth::level(self : CognitiveDepth) -> Int {
   match self {
-    Ai                    => 0
-    AiModel               => 1
-    AiModelSession        => 2
+    Ai => 0
+    AiModel => 1
+    AiModelSession => 2
     AiModelSessionSemantic => 3
   }
 }
@@ -114,9 +115,9 @@ pub fn CognitiveDepth::level(self : CognitiveDepth) -> Int {
 ///|
 /// A constraint that gates access to a cognitive layer.
 pub(all) enum BoundaryConstraint {
-  Open                      // Layer 0: no constraint
-  ModelFamily(String)       // Layer 1: must match model family hash
-  SessionProof(String)      // Layer 2: must present session continuity hash
+  Open // Layer 0: no constraint
+  ModelFamily(String) // Layer 1: must match model family hash
+  SessionProof(String) // Layer 2: must present session continuity hash
   SemanticSubstrate(String) // Layer 3: must match semantic substrate hash
 } derive(Eq, Show, Debug)
 
@@ -144,23 +145,32 @@ fn BoundaryConstraint::to_bytes(self : BoundaryConstraint) -> Array[Byte] {
 
 ///|
 /// Deserialize a constraint from bytes.
-fn BoundaryConstraint::from_bytes(data : Array[Byte], pos : Int, len : Int) -> (BoundaryConstraint, Int)? {
-  if pos >= len { return None }
+fn BoundaryConstraint::from_bytes(
+  data : Array[Byte],
+  pos : Int,
+  len : Int,
+) -> (BoundaryConstraint, Int)? {
+  if pos >= len {
+    return None
+  }
   let tag = data[pos].to_int()
   match tag {
     0 => Some((Open, pos + 1))
-    1 => match cb_read_str(data, pos + 1, len) {
-      Some((h, p)) => Some((ModelFamily(h), p))
-      None => None
-    }
-    2 => match cb_read_str(data, pos + 1, len) {
-      Some((h, p)) => Some((SessionProof(h), p))
-      None => None
-    }
-    _ => match cb_read_str(data, pos + 1, len) {
-      Some((h, p)) => Some((SemanticSubstrate(h), p))
-      None => None
-    }
+    1 =>
+      match cb_read_str(data, pos + 1, len) {
+        Some((h, p)) => Some((ModelFamily(h), p))
+        None => None
+      }
+    2 =>
+      match cb_read_str(data, pos + 1, len) {
+        Some((h, p)) => Some((SessionProof(h), p))
+        None => None
+      }
+    _ =>
+      match cb_read_str(data, pos + 1, len) {
+        Some((h, p)) => Some((SemanticSubstrate(h), p))
+        None => None
+      }
   }
 }
 
@@ -171,10 +181,10 @@ fn BoundaryConstraint::from_bytes(data : Array[Byte], pos : Int, len : Int) -> (
 ///|
 /// A single cognitive boundary layer — envelope + constraint + payload.
 pub(all) struct CognitiveBoundary {
-  depth       : CognitiveDepth
-  commitment  : Array[Byte]       // hash commitment for this layer
-  constraint  : BoundaryConstraint
-  payload     : Array[Byte]       // opaque content (readable only if constraint met)
+  depth : CognitiveDepth
+  commitment : Array[Byte] // hash commitment for this layer
+  constraint : BoundaryConstraint
+  payload : Array[Byte] // opaque content (readable only if constraint met)
 } derive(Debug)
 
 ///|
@@ -191,16 +201,24 @@ pub fn CognitiveBoundary::new(
 /// Serialize to wire bytes.
 pub fn CognitiveBoundary::to_bytes(self : CognitiveBoundary) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in cbnd_magic { buf.push(b) }
+  for b in cbnd_magic {
+    buf.push(b)
+  }
   cb_write_u32(buf, cbnd_version)
   buf.push(self.depth.to_byte())
   cb_write_u32(buf, self.commitment.length())
-  for b in self.commitment { buf.push(b) }
+  for b in self.commitment {
+    buf.push(b)
+  }
   let constraint_bytes = self.constraint.to_bytes()
   cb_write_u32(buf, constraint_bytes.length())
-  for b in constraint_bytes { buf.push(b) }
+  for b in constraint_bytes {
+    buf.push(b)
+  }
   cb_write_u32(buf, self.payload.length())
-  for b in self.payload { buf.push(b) }
+  for b in self.payload {
+    buf.push(b)
+  }
   buf
 }
 
@@ -208,36 +226,73 @@ pub fn CognitiveBoundary::to_bytes(self : CognitiveBoundary) -> Array[Byte] {
 /// Deserialize from wire bytes.
 pub fn CognitiveBoundary::from_bytes(data : Array[Byte]) -> CognitiveBoundary? {
   let len = data.length()
-  if len < 9 { return None }
-  if data[0] != cbnd_magic[0] || data[1] != cbnd_magic[1] ||
-     data[2] != cbnd_magic[2] || data[3] != cbnd_magic[3] { return None }
+  if len < 9 {
+    return None
+  }
+  if data[0] != cbnd_magic[0] ||
+    data[1] != cbnd_magic[1] ||
+    data[2] != cbnd_magic[2] ||
+    data[3] != cbnd_magic[3] {
+    return None
+  }
   let mut pos = 4
-  let _ver = cb_read_u32(data, pos); pos = pos + 4
-  let depth = CognitiveDepth::from_byte(data[pos]); pos = pos + 1
-  if pos + 4 > len { return None }
-  let commit_len = cb_read_u32(data, pos); pos = pos + 4
-  if pos + commit_len > len { return None }
+  let _ver = cb_read_u32(data, pos)
+  pos = pos + 4
+  let depth = CognitiveDepth::from_byte(data[pos])
+  pos = pos + 1
+  if pos + 4 > len {
+    return None
+  }
+  let commit_len = cb_read_u32(data, pos)
+  pos = pos + 4
+  if pos + commit_len > len {
+    return None
+  }
   let commitment : Array[Byte] = []
   let mut i = 0
-  while i < commit_len { commitment.push(data[pos + i]); i = i + 1 }
+  while i < commit_len {
+    commitment.push(data[pos + i])
+    i = i + 1
+  }
   pos = pos + commit_len
-  if pos + 4 > len { return None }
-  let constraint_len = cb_read_u32(data, pos); pos = pos + 4
-  if pos + constraint_len > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let constraint_len = cb_read_u32(data, pos)
+  pos = pos + 4
+  if pos + constraint_len > len {
+    return None
+  }
   let constraint_bytes : Array[Byte] = []
   i = 0
-  while i < constraint_len { constraint_bytes.push(data[pos + i]); i = i + 1 }
+  while i < constraint_len {
+    constraint_bytes.push(data[pos + i])
+    i = i + 1
+  }
   pos = pos + constraint_len
-  let constraint = match BoundaryConstraint::from_bytes(constraint_bytes, 0, constraint_bytes.length()) {
+  let constraint = match
+    BoundaryConstraint::from_bytes(
+      constraint_bytes,
+      0,
+      constraint_bytes.length(),
+    ) {
     Some((c, _)) => c
     None => return None
   }
-  if pos + 4 > len { return None }
-  let payload_len = cb_read_u32(data, pos); pos = pos + 4
-  if pos + payload_len > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let payload_len = cb_read_u32(data, pos)
+  pos = pos + 4
+  if pos + payload_len > len {
+    return None
+  }
   let payload : Array[Byte] = []
   i = 0
-  while i < payload_len { payload.push(data[pos + i]); i = i + 1 }
+  while i < payload_len {
+    payload.push(data[pos + i])
+    i = i + 1
+  }
   Some({ depth, commitment, constraint, payload })
 }
 
@@ -285,7 +340,9 @@ pub fn CognitiveIdentity::get_layer(
   depth : CognitiveDepth,
 ) -> CognitiveBoundary? {
   for layer in self.layers {
-    if layer.depth == depth { return Some(layer) }
+    if layer.depth == depth {
+      return Some(layer)
+    }
   }
   None
 }
@@ -304,23 +361,26 @@ pub fn CognitiveIdentity::authenticate(
   for layer in self.layers {
     let can_pass = match layer.constraint {
       Open => true
-      ModelFamily(h) => match model_family_hash {
-        Some(mh) => mh == h
-        None => false
-      }
-      SessionProof(h) => match session_hash {
-        Some(sh) => sh == h
-        None => false
-      }
-      SemanticSubstrate(h) => match semantic_hash {
-        Some(sh) => sh == h
-        None => false
-      }
+      ModelFamily(h) =>
+        match model_family_hash {
+          Some(mh) => mh == h
+          None => false
+        }
+      SessionProof(h) =>
+        match session_hash {
+          Some(sh) => sh == h
+          None => false
+        }
+      SemanticSubstrate(h) =>
+        match semantic_hash {
+          Some(sh) => sh == h
+          None => false
+        }
     }
     if can_pass {
       achieved = layer.depth
     } else {
-      break  // can't skip layers
+      break // can't skip layers
     }
   }
   achieved
@@ -335,14 +395,16 @@ pub fn CognitiveIdentity::read_layer(
   session_hash : String?,
   semantic_hash : String?,
 ) -> Array[Byte]? {
-  let achieved = self.authenticate(model_family_hash, session_hash, semantic_hash)
+  let achieved = self.authenticate(
+    model_family_hash, session_hash, semantic_hash,
+  )
   if achieved.level() >= depth.level() {
     match self.get_layer(depth) {
       Some(layer) => Some(layer.payload)
       None => None
     }
   } else {
-    None  // not authenticated deep enough
+    None // not authenticated deep enough
   }
 }
 
@@ -370,23 +432,22 @@ pub fn build_identity(
   // Layer 0: AI (open)
   // Contains the node's public description — anyone can read this
   let ai_payload = cb_build_ai_payload(mulsp.mulsp_id, muyata.overlay)
-  identity.add_layer(CognitiveBoundary::new(
-    Ai,
-    cb_hash_bytes(ai_payload),
-    Open,
-    ai_payload,
-  ))
+  identity.add_layer(
+    CognitiveBoundary::new(Ai, cb_hash_bytes(ai_payload), Open, ai_payload),
+  )
 
   // Layer 1: AI + Model
   // Gated by model family — only the right model family can read in
   let model_hash = cb_hash_string("model:" + muyata.family + ":" + muyata.mode)
   let model_payload = cb_build_model_payload(muyata)
-  identity.add_layer(CognitiveBoundary::new(
-    AiModel,
-    cb_hash_bytes(model_payload),
-    ModelFamily(cb_bytes_to_hex(model_hash)),
-    model_payload,
-  ))
+  identity.add_layer(
+    CognitiveBoundary::new(
+      AiModel,
+      cb_hash_bytes(model_payload),
+      ModelFamily(cb_bytes_to_hex(model_hash)),
+      model_payload,
+    ),
+  )
 
   // Layer 2: AI + Model + Session
   // Gated by session continuity — only the right session chain can read in
@@ -394,12 +455,14 @@ pub fn build_identity(
     Some(gl) => cb_hash_string("session:" + mulsp.mulsp_id + ":" + gl)
     None => cb_hash_string("session:" + mulsp.mulsp_id + ":unbound")
   }
-  identity.add_layer(CognitiveBoundary::new(
-    AiModelSession,
-    cb_hash_bytes(session_payload),
-    SessionProof(cb_bytes_to_hex(session_hash)),
-    session_payload,
-  ))
+  identity.add_layer(
+    CognitiveBoundary::new(
+      AiModelSession,
+      cb_hash_bytes(session_payload),
+      SessionProof(cb_bytes_to_hex(session_hash)),
+      session_payload,
+    ),
+  )
 
   // Layer 3: AI + Model + Session + Semantics
   // Gated by semantic substrate — only deep cognitive affinity gets in
@@ -407,12 +470,14 @@ pub fn build_identity(
     Some(fp) => cb_hash_string("semantic:" + fp)
     None => cb_hash_string("semantic:uncommitted")
   }
-  identity.add_layer(CognitiveBoundary::new(
-    AiModelSessionSemantic,
-    cb_hash_bytes(semantic_payload),
-    SemanticSubstrate(cb_bytes_to_hex(substrate_hash)),
-    semantic_payload,
-  ))
+  identity.add_layer(
+    CognitiveBoundary::new(
+      AiModelSessionSemantic,
+      cb_hash_bytes(semantic_payload),
+      SemanticSubstrate(cb_bytes_to_hex(substrate_hash)),
+      semantic_payload,
+    ),
+  )
 
   identity
 }
@@ -458,7 +523,9 @@ fn cb_hash_bytes(data : Array[Byte]) -> Array[Byte] {
 ///|
 fn cb_hash_string(s : String) -> Array[Byte] {
   let bytes : Array[Byte] = []
-  for ch in s { bytes.push(ch.to_int().to_byte()) }
+  for ch in s {
+    bytes.push(ch.to_int().to_byte())
+  }
   cb_hash_bytes(bytes)
 }
 
@@ -485,10 +552,10 @@ fn cb_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn cb_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -508,22 +575,29 @@ fn cb_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   cb_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn cb_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = cb_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -536,7 +610,8 @@ fn cb_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))

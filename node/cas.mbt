@@ -18,8 +18,9 @@
 ///   [n]  content_type : utf8
 ///   [4]  data_len   : u32 LE
 ///   [n]  data       : raw bytes
-
 let cas_magic : Array[Byte] = [b'\x43', b'\x41', b'\x53', b'\x45'] // "CASE"
+
+///|
 let cas_version : Int = 1
 
 // ---------------------------------------------------------------------------
@@ -47,19 +48,24 @@ pub fn cas_hash(data : Array[Byte]) -> String {
 ///|
 /// A CAS envelope — content type + raw data.
 pub(all) struct CasEnvelope {
-  content_type : String     // MIME-like type tag
-  data         : Array[Byte]
-  hash_key     : String     // computed on construction
+  content_type : String // MIME-like type tag
+  data : Array[Byte]
+  hash_key : String // computed on construction
 } derive(Debug)
 
 ///|
 impl Show for CasEnvelope with output(self, logger) {
-  logger.write_string("CasEnvelope(type=\{self.content_type}, key=\{self.hash_key}, size=\{self.data.length()})")
+  logger.write_string(
+    "CasEnvelope(type=\{self.content_type}, key=\{self.hash_key}, size=\{self.data.length()})",
+  )
 }
 
 ///|
 /// Wrap raw data in a CAS envelope.
-pub fn CasEnvelope::wrap(content_type : String, data : Array[Byte]) -> CasEnvelope {
+pub fn CasEnvelope::wrap(
+  content_type : String,
+  data : Array[Byte],
+) -> CasEnvelope {
   let hash_key = cas_hash(data)
   { content_type, data, hash_key }
 }
@@ -68,11 +74,15 @@ pub fn CasEnvelope::wrap(content_type : String, data : Array[Byte]) -> CasEnvelo
 /// Serialize the envelope to wire bytes.
 pub fn CasEnvelope::to_bytes(self : CasEnvelope) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in cas_magic { buf.push(b) }
+  for b in cas_magic {
+    buf.push(b)
+  }
   cas_write_u32(buf, cas_version)
   cas_write_str(buf, self.content_type)
   cas_write_u32(buf, self.data.length())
-  for b in self.data { buf.push(b) }
+  for b in self.data {
+    buf.push(b)
+  }
   buf
 }
 
@@ -80,18 +90,33 @@ pub fn CasEnvelope::to_bytes(self : CasEnvelope) -> Array[Byte] {
 /// Deserialize an envelope from wire bytes.
 pub fn CasEnvelope::from_bytes(raw : Array[Byte]) -> CasEnvelope? {
   let len = raw.length()
-  if len < 12 { return None }
-  if raw[0] != cas_magic[0] || raw[1] != cas_magic[1] ||
-     raw[2] != cas_magic[2] || raw[3] != cas_magic[3] { return None }
+  if len < 12 {
+    return None
+  }
+  if raw[0] != cas_magic[0] ||
+    raw[1] != cas_magic[1] ||
+    raw[2] != cas_magic[2] ||
+    raw[3] != cas_magic[3] {
+    return None
+  }
   let mut pos = 4
-  let _ver = cas_read_u32(raw, pos); pos = pos + 4
+  let _ver = cas_read_u32(raw, pos)
+  pos = pos + 4
   let content_type = match cas_read_str(raw, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos + 4 > len { return None }
-  let data_len = cas_read_u32(raw, pos); pos = pos + 4
-  if pos + data_len > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let data_len = cas_read_u32(raw, pos)
+  pos = pos + 4
+  if pos + data_len > len {
+    return None
+  }
   let data : Array[Byte] = []
   let mut i = 0
   while i < data_len {
@@ -109,10 +134,10 @@ pub fn CasEnvelope::from_bytes(raw : Array[Byte]) -> CasEnvelope? {
 ///|
 /// The node's CAS — wraps the host bridge for content-addressed storage.
 pub(all) struct CasStore {
-  host           : HostBridge
-  mut put_count  : Int
-  mut get_count  : Int
-  mut hit_count  : Int
+  host : HostBridge
+  mut put_count : Int
+  mut get_count : Int
+  mut hit_count : Int
   mut miss_count : Int
 }
 
@@ -132,15 +157,23 @@ pub fn CasStore::ingest(
   let wire = envelope.to_bytes()
   ignore((self.host.blob_put)(envelope.hash_key, wire))
   self.put_count = self.put_count + 1
-  (self.host.log_trace)("cas: ingest key=\{envelope.hash_key} type=\{content_type} size=\{data.length()}")
+  (self.host.log_trace)(
+    "cas: ingest key=\{envelope.hash_key} type=\{content_type} size=\{data.length()}",
+  )
   envelope.hash_key
 }
 
 ///|
 /// Ingest raw bytes without envelope wrapping (for pre-enveloped data).
-pub fn CasStore::ingest_raw(self : CasStore, key : String, data : Array[Byte]) -> Bool {
+pub fn CasStore::ingest_raw(
+  self : CasStore,
+  key : String,
+  data : Array[Byte],
+) -> Bool {
   let ok = (self.host.blob_put)(key, data)
-  if ok { self.put_count = self.put_count + 1 }
+  if ok {
+    self.put_count = self.put_count + 1
+  }
   ok
 }
 
@@ -171,25 +204,31 @@ pub fn CasStore::has(self : CasStore, key : String) -> Bool {
 pub fn CasStore::get_raw(self : CasStore, key : String) -> Array[Byte]? {
   self.get_count = self.get_count + 1
   match (self.host.blob_get)(key) {
-    Some(data) => { self.hit_count = self.hit_count + 1; Some(data) }
-    None       => { self.miss_count = self.miss_count + 1; None }
+    Some(data) => {
+      self.hit_count = self.hit_count + 1
+      Some(data)
+    }
+    None => {
+      self.miss_count = self.miss_count + 1
+      None
+    }
   }
 }
 
 ///|
 /// CAS statistics.
 pub(all) struct CasStats {
-  put_count  : Int
-  get_count  : Int
-  hit_count  : Int
+  put_count : Int
+  get_count : Int
+  hit_count : Int
   miss_count : Int
-  hit_rate   : Int    // percentage 0-100
+  hit_rate : Int // percentage 0-100
 } derive(Debug)
 
 ///|
 pub fn CasStore::stats(self : CasStore) -> CasStats {
   let hit_rate = if self.get_count > 0 {
-    (self.hit_count * 100) / self.get_count
+    self.hit_count * 100 / self.get_count
   } else {
     0
   }
@@ -230,10 +269,10 @@ fn cas_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn cas_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -253,22 +292,29 @@ fn cas_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   cas_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn cas_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = cas_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -281,7 +327,8 @@ fn cas_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))

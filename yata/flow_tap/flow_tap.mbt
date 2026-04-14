@@ -25,8 +25,9 @@
 ///   [1]  is_ai_flow     : u8
 ///   [...] void bytes
 ///   [...] grammar tree bytes
-
 let ftap_magic : Array[Byte] = [b'\x46', b'\x54', b'\x41', b'\x50'] // "FTAP"
+
+///|
 let ftap_version : Int = 1
 
 // ---------------------------------------------------------------------------
@@ -36,35 +37,37 @@ let ftap_version : Int = 1
 ///|
 /// Protocol hint for the observed flow.
 pub(all) enum FlowKind {
-  Lsp           // existing LSP observation
-  Database      // Postgres/MySQL wire protocols
-  Http          // HTTP/1.1 or HTTP/2
-  Grpc          // gRPC over HTTP/2
-  AiInference   // AI model inference streams
-  Raw           // unknown/raw TCP
+  Lsp // existing LSP observation
+  Database // Postgres/MySQL wire protocols
+  Http // HTTP/1.1 or HTTP/2
+  Grpc // gRPC over HTTP/2
+  AiInference // AI model inference streams
+  Raw // unknown/raw TCP
 } derive(Eq, Debug)
 
 ///|
 impl Show for FlowKind with output(self, logger) {
-  logger.write_string(match self {
-    Lsp         => "Lsp"
-    Database    => "Database"
-    Http        => "Http"
-    Grpc        => "Grpc"
-    AiInference => "AiInference"
-    Raw         => "Raw"
-  })
+  logger.write_string(
+    match self {
+      Lsp => "Lsp"
+      Database => "Database"
+      Http => "Http"
+      Grpc => "Grpc"
+      AiInference => "AiInference"
+      Raw => "Raw"
+    },
+  )
 }
 
 ///|
 fn FlowKind::to_byte(self : FlowKind) -> Byte {
   match self {
-    Lsp         => b'\x00'
-    Database    => b'\x01'
-    Http        => b'\x02'
-    Grpc        => b'\x03'
+    Lsp => b'\x00'
+    Database => b'\x01'
+    Http => b'\x02'
+    Grpc => b'\x03'
     AiInference => b'\x04'
-    Raw         => b'\x05'
+    Raw => b'\x05'
   }
 }
 
@@ -96,11 +99,11 @@ pub(all) enum FlowDirection {
 /// A single observed frame boundary. All values are bucketed/jittered
 /// before storage.
 pub(all) struct FlowFrame {
-  direction    : FlowDirection
-  size_bytes   : Int        // raw size (bucketed by caller)
-  type_tag     : Int        // protocol-specific message type (opaque u8)
-  has_body     : Bool
-  timestamp_ms : Int        // raw wall clock (jittered by FlowTap)
+  direction : FlowDirection
+  size_bytes : Int // raw size (bucketed by caller)
+  type_tag : Int // protocol-specific message type (opaque u8)
+  has_body : Bool
+  timestamp_ms : Int // raw wall clock (jittered by FlowTap)
 } derive(Debug)
 
 // ---------------------------------------------------------------------------
@@ -109,16 +112,19 @@ pub(all) struct FlowFrame {
 
 ///|
 pub(all) struct FlowTapConfig {
-  tap_id         : String
-  flow_kind      : FlowKind
-  batch_size     : Int        // flush after N frames
-  time_jitter_ms : Int        // ± temporal blur
-  decoy_rate     : Int        // 1-in-N flushes emit decoy (0 = off)
-  ngram_depth    : Int        // n-gram token depth (default 3)
+  tap_id : String
+  flow_kind : FlowKind
+  batch_size : Int // flush after N frames
+  time_jitter_ms : Int // ± temporal blur
+  decoy_rate : Int // 1-in-N flushes emit decoy (0 = off)
+  ngram_depth : Int // n-gram token depth (default 3)
 } derive(Debug)
 
 ///|
-pub fn FlowTapConfig::default(tap_id : String, flow_kind : FlowKind) -> FlowTapConfig {
+pub fn FlowTapConfig::default(
+  tap_id : String,
+  flow_kind : FlowKind,
+) -> FlowTapConfig {
   {
     tap_id,
     flow_kind,
@@ -156,19 +162,27 @@ fn TapJitter::next(self : TapJitter) -> Int {
 
 ///|
 fn TapJitter::blur_time(self : TapJitter, t_ms : Int, range_ms : Int) -> Int {
-  if range_ms <= 0 { return t_ms }
+  if range_ms <= 0 {
+    return t_ms
+  }
   let n = self.next()
   let span = 2 * range_ms + 1
   let scaled = (n * span) >> 16
   let offset = scaled - range_ms
   let jittered = t_ms + offset
-  if jittered < 0 { 0 } else { jittered }
+  if jittered < 0 {
+    0
+  } else {
+    jittered
+  }
 }
 
 ///|
 fn TapJitter::coin(self : TapJitter, one_in_n : Int) -> Bool {
-  if one_in_n <= 0 { return false }
-  self.next() < (65536 / one_in_n)
+  if one_in_n <= 0 {
+    return false
+  }
+  self.next() < 65536 / one_in_n
 }
 
 // ---------------------------------------------------------------------------
@@ -178,20 +192,20 @@ fn TapJitter::coin(self : TapJitter, one_in_n : Int) -> Bool {
 ///|
 /// Protocol-agnostic observer. Feeds a GrammarTree + Void.
 pub(all) struct FlowTap {
-  config       : FlowTapConfig
-  mut void_state   : @void.Void
+  config : FlowTapConfig
+  mut void_state : @void.Void
   grammar_tree : @grammar.GrammarTree
-  jitter       : TapJitter
-  mut frames_seen  : Int
-  mut flushes      : Int
-  recent_tags  : Array[Int]     // ring buffer for n-gram computation
-  mut recent_idx   : Int
-  mut last_dir     : FlowDirection
-  mut last_ts      : Int
-  mut c2s_count    : Int
-  mut s2c_count    : Int
-  mut is_ai_flow   : Bool
-  manifold     : @manifold.ManifoldFragment?
+  jitter : TapJitter
+  mut frames_seen : Int
+  mut flushes : Int
+  recent_tags : Array[Int] // ring buffer for n-gram computation
+  mut recent_idx : Int
+  mut last_dir : FlowDirection
+  mut last_ts : Int
+  mut c2s_count : Int
+  mut s2c_count : Int
+  mut is_ai_flow : Bool
+  manifold : @manifold.ManifoldFragment?
 } derive(Debug)
 
 ///|
@@ -229,7 +243,10 @@ pub fn FlowTap::observe(self : FlowTap, frame : FlowFrame) -> Unit {
   }
 
   // Jitter timestamp
-  let jittered_ts = self.jitter.blur_time(frame.timestamp_ms, self.config.time_jitter_ms)
+  let jittered_ts = self.jitter.blur_time(
+    frame.timestamp_ms,
+    self.config.time_jitter_ms,
+  )
 
   // Bucket size
   let bucketed_size = ftap_bucket(frame.size_bytes, 512)
@@ -258,7 +275,9 @@ pub fn FlowTap::observe(self : FlowTap, frame : FlowFrame) -> Unit {
     let prev_idx = (self.recent_idx + ngram_size - 1) % ngram_size
     let prev_tag = self.recent_tags[prev_idx]
     if prev_tag >= 0 {
-      tokens.push("bg:" + prev_tag.to_string() + "->" + frame.type_tag.to_string())
+      tokens.push(
+        "bg:" + prev_tag.to_string() + "->" + frame.type_tag.to_string(),
+      )
     }
   }
 
@@ -269,7 +288,14 @@ pub fn FlowTap::observe(self : FlowTap, frame : FlowFrame) -> Unit {
     let prev_tag = self.recent_tags[prev_idx]
     let prev2_tag = self.recent_tags[prev2_idx]
     if prev_tag >= 0 && prev2_tag >= 0 {
-      tokens.push("tg:" + prev2_tag.to_string() + "->" + prev_tag.to_string() + "->" + frame.type_tag.to_string())
+      tokens.push(
+        "tg:" +
+        prev2_tag.to_string() +
+        "->" +
+        prev_tag.to_string() +
+        "->" +
+        frame.type_tag.to_string(),
+      )
     }
   }
 
@@ -304,7 +330,9 @@ pub fn FlowTap::flush(self : FlowTap) -> Unit {
   // Decoy injection
   if self.config.decoy_rate > 0 && self.jitter.coin(self.config.decoy_rate) {
     self.void_state = self.void_state.attend("decoy")
-    self.void_state = self.void_state.observe_bytes(ftap_bucket(self.jitter.next() * 8, 512))
+    self.void_state = self.void_state.observe_bytes(
+      ftap_bucket(self.jitter.next() * 8, 512),
+    )
   }
 
   // AI-flow heuristic check
@@ -315,7 +343,11 @@ pub fn FlowTap::flush(self : FlowTap) -> Unit {
 /// Direction ratio: c2s_count * 100 / total. 0 if no frames.
 pub fn FlowTap::direction_ratio(self : FlowTap) -> Int {
   let total = self.c2s_count + self.s2c_count
-  if total == 0 { 0 } else { self.c2s_count * 100 / total }
+  if total == 0 {
+    0
+  } else {
+    self.c2s_count * 100 / total
+  }
 }
 
 ///|
@@ -353,14 +385,20 @@ pub fn FlowTap::grammar(self : FlowTap) -> @grammar.GrammarTree {
 ///   3. Flow kind hint is AiInference
 fn FlowTap::detect_ai_flow(self : FlowTap) -> Bool {
   // Explicit hint
-  if self.config.flow_kind == AiInference { return true }
+  if self.config.flow_kind == AiInference {
+    return true
+  }
 
   let total = self.c2s_count + self.s2c_count
-  if total < 10 { return false }  // not enough data
+  if total < 10 {
+    return false
+  } // not enough data
 
   // Check direction imbalance (AI streams are heavily s2c)
   let ratio = self.s2c_count * 100 / total
-  if ratio > 80 { return true }
+  if ratio > 80 {
+    return true
+  }
 
   false
 }
@@ -372,7 +410,9 @@ fn FlowTap::detect_ai_flow(self : FlowTap) -> Bool {
 ///|
 pub fn FlowTap::to_bytes(self : FlowTap) -> Array[Byte] {
   let buf : Array[Byte] = []
-  for b in ftap_magic { buf.push(b) }
+  for b in ftap_magic {
+    buf.push(b)
+  }
   ftap_write_u32(buf, ftap_version)
   ftap_write_str(buf, self.config.tap_id)
   buf.push(self.config.flow_kind.to_byte())
@@ -384,46 +424,83 @@ pub fn FlowTap::to_bytes(self : FlowTap) -> Array[Byte] {
   // Void bytes
   let void_bytes = self.void_state.to_bytes()
   ftap_write_u32(buf, void_bytes.length())
-  for b in void_bytes { buf.push(b) }
+  for b in void_bytes {
+    buf.push(b)
+  }
   // Grammar tree bytes
   let gram_bytes = self.grammar_tree.to_bytes()
   ftap_write_u32(buf, gram_bytes.length())
-  for b in gram_bytes { buf.push(b) }
+  for b in gram_bytes {
+    buf.push(b)
+  }
   buf
 }
 
 ///|
-pub fn FlowTap::from_bytes(data : Array[Byte], config : FlowTapConfig) -> FlowTap? {
+pub fn FlowTap::from_bytes(
+  data : Array[Byte],
+  config : FlowTapConfig,
+) -> FlowTap? {
   let len = data.length()
-  if len < 8 { return None }
-  if data[0] != ftap_magic[0] || data[1] != ftap_magic[1] ||
-     data[2] != ftap_magic[2] || data[3] != ftap_magic[3] { return None }
+  if len < 8 {
+    return None
+  }
+  if data[0] != ftap_magic[0] ||
+    data[1] != ftap_magic[1] ||
+    data[2] != ftap_magic[2] ||
+    data[3] != ftap_magic[3] {
+    return None
+  }
   let mut pos = 4
-  let _ver = ftap_read_u32(data, pos); pos = pos + 4
+  let _ver = ftap_read_u32(data, pos)
+  pos = pos + 4
 
   let _tap_id = match ftap_read_str(data, pos, len) {
-    Some((s, p)) => { pos = p; s }
+    Some((s, p)) => {
+      pos = p
+      s
+    }
     None => return None
   }
-  if pos >= len { return None }
-  let _flow_kind = FlowKind::from_byte(data[pos]); pos = pos + 1
+  if pos >= len {
+    return None
+  }
+  let _flow_kind = FlowKind::from_byte(data[pos])
+  pos = pos + 1
 
-  if pos + 16 > len { return None }
-  let frames_seen = ftap_read_u32(data, pos); pos = pos + 4
-  let flushes = ftap_read_u32(data, pos); pos = pos + 4
-  let c2s_count = ftap_read_u32(data, pos); pos = pos + 4
-  let s2c_count = ftap_read_u32(data, pos); pos = pos + 4
+  if pos + 16 > len {
+    return None
+  }
+  let frames_seen = ftap_read_u32(data, pos)
+  pos = pos + 4
+  let flushes = ftap_read_u32(data, pos)
+  pos = pos + 4
+  let c2s_count = ftap_read_u32(data, pos)
+  pos = pos + 4
+  let s2c_count = ftap_read_u32(data, pos)
+  pos = pos + 4
 
-  if pos >= len { return None }
-  let is_ai_flow = data[pos] == b'\x01'; pos = pos + 1
+  if pos >= len {
+    return None
+  }
+  let is_ai_flow = data[pos] == b'\x01'
+  pos = pos + 1
 
   // Void bytes
-  if pos + 4 > len { return None }
-  let void_len = ftap_read_u32(data, pos); pos = pos + 4
-  if pos + void_len > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let void_len = ftap_read_u32(data, pos)
+  pos = pos + 4
+  if pos + void_len > len {
+    return None
+  }
   let void_bytes : Array[Byte] = []
   let mut i = 0
-  while i < void_len { void_bytes.push(data[pos + i]); i = i + 1 }
+  while i < void_len {
+    void_bytes.push(data[pos + i])
+    i = i + 1
+  }
   pos = pos + void_len
   let void_state = match @void.Void::from_bytes(void_bytes) {
     Some(v) => v
@@ -431,12 +508,20 @@ pub fn FlowTap::from_bytes(data : Array[Byte], config : FlowTapConfig) -> FlowTa
   }
 
   // Grammar tree bytes
-  if pos + 4 > len { return None }
-  let gram_len = ftap_read_u32(data, pos); pos = pos + 4
-  if pos + gram_len > len { return None }
+  if pos + 4 > len {
+    return None
+  }
+  let gram_len = ftap_read_u32(data, pos)
+  pos = pos + 4
+  if pos + gram_len > len {
+    return None
+  }
   let gram_bytes : Array[Byte] = []
   i = 0
-  while i < gram_len { gram_bytes.push(data[pos + i]); i = i + 1 }
+  while i < gram_len {
+    gram_bytes.push(data[pos + i])
+    i = i + 1
+  }
   let grammar_tree = match @grammar.GrammarTree::from_bytes(gram_bytes) {
     Some(t) => t
     None => return None
@@ -468,16 +553,22 @@ pub fn FlowTap::from_bytes(data : Array[Byte], config : FlowTapConfig) -> FlowTa
 ///|
 fn ftap_bucket(n : Int, bucket_size : Int) -> Int {
   let b = if bucket_size > 0 { bucket_size } else { 512 }
-  (n / b) * b
+  n / b * b
 }
 
 ///|
 fn ftap_size_label(n : Int) -> String {
-  if n < 512 { "xs" }
-  else if n < 2048 { "sm" }
-  else if n < 8192 { "md" }
-  else if n < 32768 { "lg" }
-  else { "xl" }
+  if n < 512 {
+    "xs"
+  } else if n < 2048 {
+    "sm"
+  } else if n < 8192 {
+    "md"
+  } else if n < 32768 {
+    "lg"
+  } else {
+    "xl"
+  }
 }
 
 ///|
@@ -490,10 +581,10 @@ fn ftap_write_u32(buf : Array[Byte], v : Int) -> Unit {
 
 ///|
 fn ftap_read_u32(data : Array[Byte], pos : Int) -> Int {
-  (data[pos].to_int() & 0xFF)
-  | ((data[pos + 1].to_int() & 0xFF) << 8)
-  | ((data[pos + 2].to_int() & 0xFF) << 16)
-  | ((data[pos + 3].to_int() & 0xFF) << 24)
+  (data[pos].to_int() & 0xFF) |
+  ((data[pos + 1].to_int() & 0xFF) << 8) |
+  ((data[pos + 2].to_int() & 0xFF) << 16) |
+  ((data[pos + 3].to_int() & 0xFF) << 24)
 }
 
 ///|
@@ -513,22 +604,29 @@ fn ftap_write_str(buf : Array[Byte], s : String) -> Unit {
     }
   }
   ftap_write_u32(buf, encoded.length())
-  for b in encoded { buf.push(b) }
+  for b in encoded {
+    buf.push(b)
+  }
 }
 
 ///|
 fn ftap_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
-  if pos + 4 > len { return None }
+  if pos + 4 > len {
+    return None
+  }
   let n = ftap_read_u32(data, pos)
   let start = pos + 4
-  if start + n > len { return None }
+  if start + n > len {
+    return None
+  }
   let sb = StringBuilder::new()
   let mut i = start
   let end = start + n
   while i < end {
     let b0 = data[i].to_int()
     if (b0 & 0x80) == 0 {
-      sb.write_char(b0.to_char().unwrap()); i = i + 1
+      sb.write_char(b0.to_char().unwrap())
+      i = i + 1
     } else if (b0 & 0xE0) == 0xC0 && i + 1 < end {
       let b1 = data[i + 1].to_int()
       let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -541,7 +639,8 @@ fn ftap_read_str(data : Array[Byte], pos : Int, len : Int) -> (String, Int)? {
       sb.write_char(cp.to_char().unwrap())
       i = i + 3
     } else {
-      sb.write_char('\u{FFFD}'); i = i + 1
+      sb.write_char('\u{FFFD}')
+      i = i + 1
     }
   }
   Some((sb.to_string(), end))
