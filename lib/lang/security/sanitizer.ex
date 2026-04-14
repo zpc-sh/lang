@@ -491,9 +491,9 @@ defmodule Lang.Security.Sanitizer do
     # Basic unicode normalization - remove zero-width characters
     input
     # Zero-width spaces
-    |> String.replace(~r/[\u200B-\u200D\uFEFF]/, "")
+    |> String.replace(~r/[\x{200B}-\x{200D}\x{FEFF}]/u, "")
     # Line/paragraph separators
-    |> String.replace(~r/[\u2028\u2029]/, " ")
+    |> String.replace(~r/[\x{2028}\x{2029}]/u, " ")
   end
 
   defp limit_generic_length(input) do

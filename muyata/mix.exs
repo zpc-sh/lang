@@ -32,7 +32,9 @@ defmodule Muyata.MixProject do
   # The void needs nothing to begin.
   defp deps do
     [
-      # {:atomvm_packbeam, "~> 0.7", runtime: false, only: :dev}
+      # ExAtomVM: Mix task suite including atomvm.packbeam (dev/build only)
+      {:exatomvm, git: "https://github.com/atomvm/ExAtomVM/", only: [:dev]},
+      {:atomvm_packbeam, "~> 0.7", runtime: false, only: :dev}
     ]
   end
 end

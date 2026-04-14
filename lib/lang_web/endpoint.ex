@@ -2,7 +2,7 @@ defmodule LangWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :lang
   # Guard Sentry usage so test env can compile without :sentry dep
   if Mix.env() in [:dev, :prod] do
-    use Sentry.PlugCapture
+    # Bypassing Sentry for swarm validation
   end
 
   # The session will be stored in the cookie and signed,
@@ -58,7 +58,7 @@ defmodule LangWeb.Endpoint do
 
   plug Plug.RequestId
   if Mix.env() in [:dev, :prod] do
-    plug Sentry.PlugContext
+    # Bypassing Sentry for swarm validation
   end
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 

@@ -22,6 +22,8 @@ defmodule Mulsp.Partition do
     finger_port: 7079,
     dc_port: 7071,
     lsp_port: 7080,
+    # Control port — Lang pushes partition updates here (localhost only)
+    control_port: 7100,
     # Feature toggles
     dc_enabled: true,
     finger_enabled: true,
@@ -61,8 +63,16 @@ defmodule Mulsp.Partition do
       lang_methods: [
         "lang.workspace.*", "lang.graph.*", "lang.cloud.*"
       ],
-      cookie: generate_cookie()
+      cookie: generate_cookie(),
+      control_port: env_int("MULSP_CONTROL_PORT", 7100)
     }
+  end
+
+  defp env_int(var, default) do
+    case System.get_env(var) do
+      nil -> default
+      val -> String.to_integer(val)
+    end
   end
 
   defp generate_node_id do

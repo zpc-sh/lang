@@ -87,6 +87,10 @@ defmodule Lang.Application do
         optional_child(Lang.MCP.AdvancedProxy),
         optional_child(Lang.MCP.OAuthIntegration),
 
+        # mulsp/muyata instance management
+        optional_child({Lang.Mulsp.Registry, []}),
+        optional_child({Lang.Mulsp.InstanceSupervisor, []}),
+
         # Web endpoint
         optional_child(LangWeb.Endpoint)
       ]
