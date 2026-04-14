@@ -2,5 +2,5 @@
   "name": "zpc/lang",
   "version": "0.1.0",
   "deps": {},
-  "packages": ["lsp", "yata/void"]
+  "packages": ["lsp", "yata/void", "yata/claude_process"]
 }
