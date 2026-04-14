@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mix test:*)",
+      "Bash(mix deps.get)",
+      "Bash(mix compile:*)",
+      "Bash(mix help:*)",
+      "Bash(ls deps/)",
+      "Bash(cat mix.lock)",
+      "Bash(MIX_ENV=dev mix deps.compile)",
+      "Bash(MIX_ENV=dev mix help)",
+      "Bash(moon build:*)",
+      "Read(//home/locnguyen/ratio/mu/docs/mu/**)",
+      "Read(//home/locnguyen/ratio/void_grammar/**)",
+      "Read(//home/locnguyen/ratio/void_grammar/src/**)",
+      "Read(//home/locnguyen/ratio/void_grammar/docs/**)",
+      "Bash(cat /home/locnguyen/ratio/void_grammar/docs/grammar/*.md)"
+    ]
+  }
+}

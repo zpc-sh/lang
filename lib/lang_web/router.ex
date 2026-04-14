@@ -266,6 +266,9 @@ defmodule LangWeb.Router do
     post "/proxy", ProxyController, :call
     post "/proxy/intent", ProxyController, :issue_intent
     post "/proxy/session", ProxyController, :run_session
+    get "/proxy/captures/:id", ProxyController, :get_capture
+    get "/proxy/captures", ProxyController, :find_capture
+    post "/proxy/captures/:id/replay", ProxyController, :replay_capture
 
     # MCP JSON:API (AshJsonApi) - mounting Domain resources
     forward "/mcp", AshJsonApi.Router, domains: [Lang.MCP]
