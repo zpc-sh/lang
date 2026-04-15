@@ -20,7 +20,14 @@ defmodule Lang.Workers.OrchestratorWorker do
     start_time = System.monotonic_time(:millisecond)
 
     try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+      env_atom = safe_to_atom(env)
+      task_atom = safe_to_atom(task)
+
+      if is_nil(env_atom) or is_nil(task_atom) do
+        raise "Invalid environment or task string (atom exhaustion protection)"
+      end
+
+      result = execute_task(env_atom, task_atom, args)
 
       duration = System.monotonic_time(:millisecond) - start_time
 
@@ -992,12 +999,14 @@ defmodule Lang.Workers.OrchestratorWorker do
       if all_dependencies_completed?(task, dependencies, env) do
         Logger.info("Triggering dependent task #{task} for #{env}")
 
+        env_atom = safe_to_atom(env) || :default
+
         %{
           environment: env,
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(env_atom))
         |> Oban.insert!()
       end
     end)
@@ -1005,7 +1014,7 @@ defmodule Lang.Workers.OrchestratorWorker do
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case safe_to_atom(env) do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1051,18 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    queue_for_env(safe_to_atom(env) || :default)
+  end
+
+  defp safe_to_atom(nil), do: nil
+  defp safe_to_atom(val) when is_atom(val), do: val
+  defp safe_to_atom(val) when is_binary(val) do
+    try do
+      String.to_existing_atom(val)
+    rescue
+      ArgumentError ->
+        Logger.warning("Security Warning: Attempted to convert unknown string to atom: #{inspect(val)}. Potential Atom Table Exhaustion attack.")
+        nil
+    end
   end
 end
