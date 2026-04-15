@@ -120,8 +120,12 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   defp handle_user_metrics_update(args) do
     user_id = args["user_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
+    period_type = safe_to_atom(args["period_type"] || "daily")
     date = Date.from_iso8601!(args["date"])
+
+    if is_nil(period_type) do
+      raise ArgumentError, "Invalid period_type string (atom exhaustion protection)"
+    end
 
     Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
 
@@ -143,9 +147,13 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
   end
 
   defp handle_efficiency_report_generation(args) do
-    period_type = String.to_atom(args["period_type"])
+    period_type = safe_to_atom(args["period_type"])
     date = Date.from_iso8601!(args["date"])
     organization_id = args["organization_id"]
+
+    if is_nil(period_type) do
+      raise ArgumentError, "Invalid period_type string (atom exhaustion protection)"
+    end
 
     Logger.info("Generating efficiency report for #{period_type} on #{date}")
 
@@ -189,8 +197,12 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   defp handle_organization_aggregation(args) do
     organization_id = args["organization_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
+    period_type = safe_to_atom(args["period_type"] || "daily")
     date = Date.from_iso8601!(args["date"])
+
+    if is_nil(period_type) do
+      raise ArgumentError, "Invalid period_type string (atom exhaustion protection)"
+    end
 
     Logger.info("Aggregating organization metrics for #{organization_id}")
 
@@ -541,5 +553,17 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
     start_dt = DateTime.new!(start_date, ~T[00:00:00], "Etc/UTC")
     end_dt = DateTime.new!(end_date, ~T[23:59:59], "Etc/UTC")
     {start_dt, end_dt}
+  end
+
+  defp safe_to_atom(nil), do: nil
+  defp safe_to_atom(val) when is_atom(val), do: val
+  defp safe_to_atom(val) when is_binary(val) do
+    try do
+      String.to_existing_atom(val)
+    rescue
+      ArgumentError ->
+        Logger.warning("Security Warning: Attempted to convert unknown string to atom: #{inspect(val)}. Potential Atom Table Exhaustion attack.")
+        nil
+    end
   end
 end
