@@ -120,7 +120,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   defp handle_user_metrics_update(args) do
     user_id = args["user_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
+    period_type = safe_to_atom(args["period_type"] || "daily", :daily)
     date = Date.from_iso8601!(args["date"])
 
     Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
@@ -143,7 +143,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
   end
 
   defp handle_efficiency_report_generation(args) do
-    period_type = String.to_atom(args["period_type"])
+    period_type = safe_to_atom(args["period_type"], :daily)
     date = Date.from_iso8601!(args["date"])
     organization_id = args["organization_id"]
 
@@ -189,7 +189,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   defp handle_organization_aggregation(args) do
     organization_id = args["organization_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
+    period_type = safe_to_atom(args["period_type"] || "daily", :daily)
     date = Date.from_iso8601!(args["date"])
 
     Logger.info("Aggregating organization metrics for #{organization_id}")
@@ -542,4 +542,18 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
     end_dt = DateTime.new!(end_date, ~T[23:59:59], "Etc/UTC")
     {start_dt, end_dt}
   end
+
+  defp safe_to_atom(nil, default_value), do: default_value
+
+  defp safe_to_atom(string_value, default_value) when is_binary(string_value) do
+    try do
+      String.to_existing_atom(string_value)
+    rescue
+      ArgumentError ->
+        Logger.warning("Security Warning: Attempted atom table exhaustion with string: #{inspect(string_value)}")
+        default_value
+    end
+  end
+
+  defp safe_to_atom(atom_value, _) when is_atom(atom_value), do: atom_value
 end
