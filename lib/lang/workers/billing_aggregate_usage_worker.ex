@@ -7,7 +7,7 @@ defmodule Lang.Workers.BillingAggregateUsageWorker do
   @impl true
   def perform(%Oban.Job{args: args}) do
     org_id = args["organization_id"]
-    gran = (args["granularity"] || "hour") |> to_string() |> String.to_atom()
+    gran = safe_to_atom(args["granularity"] || "hour", :hour)
     now = DateTime.utc_now()
     {period_start, period_end} = period_bounds(now, gran)
 
@@ -98,4 +98,18 @@ defmodule Lang.Workers.BillingAggregateUsageWorker do
 
   defp maybe_org(queryable, nil), do: queryable
   defp maybe_org(queryable, org), do: AshHelpers.scope_to_org(queryable, org)
+
+  defp safe_to_atom(nil, default_value), do: default_value
+
+  defp safe_to_atom(string_value, default_value) when is_binary(string_value) do
+    try do
+      String.to_existing_atom(string_value)
+    rescue
+      ArgumentError ->
+        Logger.warning("Security Warning: Attempted atom table exhaustion with string: #{inspect(string_value)}")
+        default_value
+    end
+  end
+
+  defp safe_to_atom(atom_value, _) when is_atom(atom_value), do: atom_value
 end
