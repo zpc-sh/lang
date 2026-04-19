@@ -1,0 +1,4 @@
+## 2025-05-18 - [Atom Table Exhaustion DoS via External Input in Oban Job]
+**Vulnerability:** User-controlled input (like environment or task parameters) was passed to `String.to_atom/1` in `Lang.Workers.OrchestratorWorker.perform/1`, creating a Denial of Service vulnerability via atom table exhaustion.
+**Learning:** `String.to_atom/1` does not garage collect generated atoms, eventually crashing the VM. Using `try/rescue` to isolate the `ArgumentError` when calling `String.to_existing_atom/1` is essential so that a broad rescue block doesn't mistakenly hide core business logic exceptions.
+**Prevention:** Always use `String.to_existing_atom/1` for parsing untrusted input into atoms, wrap the conversion inside an isolated `try/rescue` block, and fail gracefully if the input is not a known atom.
