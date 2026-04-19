@@ -19,32 +19,42 @@ defmodule Lang.Workers.OrchestratorWorker do
 
     start_time = System.monotonic_time(:millisecond)
 
-    try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+    env_atom = safe_to_existing_atom(env)
+    task_atom = safe_to_existing_atom(task)
 
-      duration = System.monotonic_time(:millisecond) - start_time
+    if is_nil(env_atom) or is_nil(task_atom) do
+      error = "Invalid environment or task atom"
+      Logger.warning("#{error}: env=#{inspect(env)}, task=#{inspect(task)}")
+      Master.notify_job_failed(args["job_id"], error)
+      {:error, error}
+    else
+      try do
+        result = execute_task(env_atom, task_atom, args)
 
-      Logger.info("Successfully completed #{task} for #{env} in #{duration}ms")
+        duration = System.monotonic_time(:millisecond) - start_time
 
-      # Notify master of completion
-      Master.notify_job_completed(args["job_id"])
+        Logger.info("Successfully completed #{task} for #{env} in #{duration}ms")
 
-      # Broadcast completion event
-      Phoenix.PubSub.broadcast(
-        Lang.PubSub,
-        "orchestration:updates",
-        {:task_completed, env, task, result, duration}
-      )
+        # Notify master of completion
+        Master.notify_job_completed(args["job_id"])
 
-      # Trigger dependent tasks
-      trigger_dependent_tasks(env, task, args)
+        # Broadcast completion event
+        Phoenix.PubSub.broadcast(
+          Lang.PubSub,
+          "orchestration:updates",
+          {:task_completed, env, task, result, duration}
+        )
 
-      :ok
-    rescue
-      error ->
-        Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
-        Master.notify_job_failed(args["job_id"], error)
-        {:error, error}
+        # Trigger dependent tasks
+        trigger_dependent_tasks(env, task, args)
+
+        :ok
+      rescue
+        error ->
+          Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
+          Master.notify_job_failed(args["job_id"], error)
+          {:error, error}
+      end
     end
   end
 
@@ -997,7 +1007,7 @@ defmodule Lang.Workers.OrchestratorWorker do
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(env))
         |> Oban.insert!()
       end
     end)
@@ -1005,7 +1015,7 @@ defmodule Lang.Workers.OrchestratorWorker do
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case safe_to_existing_atom(env) do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1052,17 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    queue_for_env(safe_to_existing_atom(env))
   end
+
+  defp safe_to_existing_atom(string) when is_binary(string) do
+    try do
+      String.to_existing_atom(string)
+    rescue
+      ArgumentError ->
+        nil
+    end
+  end
+
+  defp safe_to_existing_atom(atom) when is_atom(atom), do: atom
 end
