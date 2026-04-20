@@ -19,10 +19,29 @@ defmodule Lang.Workers.OrchestratorWorker do
 
     start_time = System.monotonic_time(:millisecond)
 
-    try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+    env_atom =
+      try do
+        String.to_existing_atom(env)
+      rescue
+        ArgumentError -> :invalid_env
+      end
 
-      duration = System.monotonic_time(:millisecond) - start_time
+    task_atom =
+      try do
+        String.to_existing_atom(task)
+      rescue
+        ArgumentError -> :invalid_task
+      end
+
+    if env_atom == :invalid_env or task_atom == :invalid_task do
+      Logger.warning("Security: Attempted atom exhaustion via untrusted string inputs (env: #{env}, task: #{task})")
+      Master.notify_job_failed(args["job_id"], "invalid_arguments")
+      {:error, :invalid_arguments}
+    else
+      try do
+        result = execute_task(env_atom, task_atom, args)
+
+        duration = System.monotonic_time(:millisecond) - start_time
 
       Logger.info("Successfully completed #{task} for #{env} in #{duration}ms")
 
@@ -39,12 +58,13 @@ defmodule Lang.Workers.OrchestratorWorker do
       # Trigger dependent tasks
       trigger_dependent_tasks(env, task, args)
 
-      :ok
-    rescue
-      error ->
-        Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
-        Master.notify_job_failed(args["job_id"], error)
-        {:error, error}
+        :ok
+      rescue
+        error ->
+          Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
+          Master.notify_job_failed(args["job_id"], error)
+          {:error, error}
+      end
     end
   end
 
@@ -997,7 +1017,7 @@ defmodule Lang.Workers.OrchestratorWorker do
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(String.to_existing_atom(env)))
         |> Oban.insert!()
       end
     end)
@@ -1005,7 +1025,7 @@ defmodule Lang.Workers.OrchestratorWorker do
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case String.to_existing_atom(env) do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1062,6 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    queue_for_env(String.to_existing_atom(env))
   end
 end
