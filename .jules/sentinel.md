@@ -1,0 +1,5 @@
+
+## 2024-05-24 - DoS via Atom Table Exhaustion in Oban Workers
+**Vulnerability:** Untrusted string input (e.g., Oban job arguments like `period_type`) was being converted directly to atoms using `String.to_atom/1`. This created a critical Denial of Service (DoS) vulnerability due to atom table exhaustion, as atoms in Elixir are never garbage collected.
+**Learning:** Oban job arguments, even if seemingly internal, must be treated as untrusted external input because they could be crafted or manipulated. Directly converting string arguments to atoms using `String.to_atom/1` poses a severe DoS risk. The `try/rescue` block must be localized just around `String.to_existing_atom/1` to prevent masking broader `ArgumentError`s in the application.
+**Prevention:** Always use `String.to_existing_atom/1` instead of `String.to_atom/1` when converting string input to atoms. Handle the `ArgumentError` exception gracefully (e.g., by logging a security warning and falling back to a safe default value) to protect the application while identifying potential attacks.
