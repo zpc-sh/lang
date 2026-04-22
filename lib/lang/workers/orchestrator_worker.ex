@@ -19,8 +19,30 @@ defmodule Lang.Workers.OrchestratorWorker do
 
     start_time = System.monotonic_time(:millisecond)
 
+    env_atom =
+      try do
+        String.to_existing_atom(env)
+      rescue
+        ArgumentError ->
+          Logger.warning("Security Warning: Unrecognized environment '#{env}' preventing atom exhaustion.")
+          :error
+      end
+
+    task_atom =
+      try do
+        String.to_existing_atom(task)
+      rescue
+        ArgumentError ->
+          Logger.warning("Security Warning: Unrecognized task '#{task}' preventing atom exhaustion.")
+          :error
+      end
+
     try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+      if env_atom == :error or task_atom == :error do
+        raise ArgumentError, "Invalid environment '#{env}' or task '#{task}'"
+      end
+
+      result = execute_task(env_atom, task_atom, args)
 
       duration = System.monotonic_time(:millisecond) - start_time
 
@@ -997,15 +1019,22 @@ defmodule Lang.Workers.OrchestratorWorker do
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(env))
         |> Oban.insert!()
       end
     end)
   end
 
   defp get_task_dependencies(env) do
+    env_atom =
+      try do
+        String.to_existing_atom(env)
+      rescue
+        ArgumentError -> :error
+      end
+
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case env_atom do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1071,10 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    try do
+      queue_for_env(String.to_existing_atom(env))
+    rescue
+      ArgumentError -> :default
+    end
   end
 end
