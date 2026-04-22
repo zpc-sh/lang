@@ -12,7 +12,20 @@ defmodule Lang.Workers.SystemsEnvironment do
   Main entry point for systems environment tasks
   """
   def perform(%Oban.Job{args: %{"task" => task} = args}) do
-    execute_task(String.to_atom(task), args)
+    task_atom =
+      try do
+        String.to_existing_atom(task)
+      rescue
+        ArgumentError ->
+          Logger.warning("Security Warning: Unrecognized task '#{task}' preventing atom exhaustion.")
+          :error
+      end
+
+    if task_atom == :error do
+      {:error, :invalid_task}
+    else
+      execute_task(task_atom, args)
+    end
   end
 
   def execute_task(:analyze_system_topology, args) do
