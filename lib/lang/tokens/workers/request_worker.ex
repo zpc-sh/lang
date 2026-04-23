@@ -93,7 +93,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
   defp estimate_tokens(input, model_type) do
     content = get_content(input)
 
-    if String.length(content) == 0 do
+    if content == "" do
       {:error, "No content provided for token estimation"}
     else
       # Estimate tokens for different models
@@ -132,7 +132,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
     content = get_content(input)
     ratio = target_ratio || Decimal.new("0.6")
 
-    if String.length(content) == 0 do
+    if content == "" do
       {:error, "No content provided for compression"}
     else
       original_tokens = estimate_gpt4_tokens(content)
@@ -176,7 +176,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
     content = get_content(input)
     query = get_in(input, ["query"]) || get_in(input, [:query]) || ""
 
-    if String.length(content) == 0 do
+    if content == "" do
       {:error, "No content provided for filtering"}
     else
       original_tokens = estimate_gpt4_tokens(content)
@@ -214,7 +214,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
     previous_content =
       get_in(input, ["previous_content"]) || get_in(input, [:previous_content]) || ""
 
-    if String.length(content) == 0 do
+    if content == "" do
       {:error, "No content provided for streaming optimization"}
     else
       original_tokens = estimate_gpt4_tokens(content)
@@ -253,7 +253,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
     content = get_content(input)
     usage_pattern = get_in(input, ["usage_pattern"]) || get_in(input, [:usage_pattern]) || %{}
 
-    if String.length(content) == 0 do
+    if content == "" do
       {:error, "No content provided for cache strategy analysis"}
     else
       tokens = estimate_gpt4_tokens(content)
@@ -367,7 +367,7 @@ defmodule Lang.Tokens.Workers.RequestWorker do
 
   defp generate_streaming_deltas(previous_content, current_content) do
     # Simple delta generation - in production, use proper diff algorithms
-    if String.length(previous_content) == 0 do
+    if previous_content == "" do
       [%{"type" => "add", "content" => current_content, "position" => 0}]
     else
       # For now, just return the full content as a single delta
