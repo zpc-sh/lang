@@ -1252,17 +1252,28 @@ defmodule Lang.LSP.Server do
       Enum.reduce(sorted, {[], {0, 0}}, fn {line, start, len, type, mods}, {acc, {pl, ps}} ->
         delta_line = line - pl
         delta_start = if delta_line == 0, do: start - ps, else: start
-        entry = [delta_line, delta_start, len, token_type_index(type), token_mods_bitset(mods)]
-        {[acc | [entry]] |> List.flatten(), {line, start}}
+
+        new_acc = [
+          token_mods_bitset(mods),
+          token_type_index(type),
+          len,
+          delta_start,
+          delta_line
+          | acc
+        ]
+
+        {new_acc, {line, start}}
       end)
 
-    data
+    Enum.reverse(data)
   end
 
   # Decode back to absolute tuples (used for simple range filter)
   defp decode_semantic_tokens(data) do
     {_line, _start, out} =
-      Enum.reduce(data, {0, 0, []}, fn [dl, ds, len, tix, mods], {pl, ps, acc} ->
+      data
+      |> Enum.chunk_every(5)
+      |> Enum.reduce({0, 0, []}, fn [dl, ds, len, tix, mods], {pl, ps, acc} ->
         line = pl + dl
         start = if dl == 0, do: ps + ds, else: ds
         type = Enum.at(semantic_token_types(), tix) || "variable"
