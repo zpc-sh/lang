@@ -24,6 +24,8 @@
     "yata/pg_tap",
     "spore",
     "nntp",
-    "gopher"
+    "gopher",
+    "gemtext",
+    "gemini"
   ]
 }
