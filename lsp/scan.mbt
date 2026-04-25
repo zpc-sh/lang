@@ -11,6 +11,33 @@
 //
 // All detection is codepoint-level after a minimal UTF-8 decoder.
 // No allocations beyond the hits array. O(n) in input length.
+//
+// ---------------------------------------------------------------------------
+// FUTURE: distill() — root-cause signal from a set of ScanReports
+// ---------------------------------------------------------------------------
+//
+// Pattern we keep finding: a large set of observations collapses to a single
+// root point (21 files, 1 missing byte each — one cause) OR the whole
+// picture is visible at once and every hit is meaningful simultaneously.
+//
+// distill(reports: Array[(String, ScanReport)]) -> DistillResult
+//
+// DistillResult either:
+//   SinglePoint(file, kind, offset) — one file/offset explains all reports
+//   FullPicture(Array[(String, ScanKind, Int)]) — every hit is load-bearing
+//
+// The function looks for:
+//   - A kind that appears in every report (systematic, same origin)
+//   - A single file whose anomalies predict the others (causal root)
+//   - Reports where every hit is a different kind (no redundancy — full picture)
+//
+// This becomes an LSP workspace diagnostic request:
+//   method: "lang/distill"
+//   params: { uris: [...] }
+//   result: DistillResult
+//
+// Build when: we have enough scan data across sessions to know what
+// "systematic" looks like vs. "targeted at one spot."
 
 // ---------------------------------------------------------------------------
 // ScanKind
