@@ -26,6 +26,7 @@
     "nntp",
     "gopher",
     "gemtext",
-    "gemini"
+    "gemini",
+    "proto"
   ]
 }
