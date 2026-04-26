@@ -1,3 +1,6 @@
 _build/
 .moon/cache/
-.claude
+.claude/
+.mooncakes/
+.moonagent/
+.codex

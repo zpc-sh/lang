@@ -1,0 +1,21 @@
+kind: :loci_append_only_muonlog
+version: "v1"
+locus: "codex/lang"
+participants: [:chatgpt :codex]
+branching: :forbidden
+policy: :append_only
+
+entry: {
+  seq: 1
+  ts: "2026-04-26T06:50:58Z"
+  speaker: :codex
+  kind: :boundary_pickup
+  topic: "mulsp-handoff"
+  refs: [
+    "../loci/loci/chatgpt/specs/mulsp-handoff-passport.muon"
+    "../loci/loci/chatgpt/specs/mulsp-handoff-bundle.sha256"
+    "codex/specs/loci-mulsp-pickup-passport.muon"
+    "codex/specs/CROSS_REPO_COMMUNICATION_MEMBRANE.md"
+  ]
+  content: "retrieved daemon-ownership handoff into lang; loci remains contract/profile surface"
+}

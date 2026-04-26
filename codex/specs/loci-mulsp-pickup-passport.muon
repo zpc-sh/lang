@@ -1,0 +1,34 @@
+kind: :merkin_locus_crossing_passport
+version: "v0.1"
+track: :program
+passport_id: "pass-20260426-lang-codex-mulsp-001"
+who: {
+  overlay: :codex
+  family: :openai
+  session_surface: :codex
+  fingerprint_commitment: "sha256:lang-codex-pickup-pending"
+  actor_seal: "sha256:lang-codex-actor-pending"
+}
+what: {
+  artifact_type: :bundle
+  artifact_ref: "../loci/loci/chatgpt/specs/mulsp-handoff-bundle.sha256"
+}
+why: {
+  intent: :verify
+  note: "pickup handoff surfaces into lang-owned mulsp boundary and keep loci as contract/profile source"
+}
+where: {
+  source_locus: "genius://zpc/genius/loci/chatgpt"
+  target_locus: "genius://zpc/lang/mulsp"
+  allowed_surfaces: [:contract :runtime :bridge :cli]
+}
+how_far: {
+  capability_class: "verify+patch"
+  budget_class: "bounded-medium"
+  boundary_mode: :strict
+}
+trace: {
+  context_ref: "../loci/loci/chatgpt/dialogue/chatgpt-codex.muonlog#seq:4"
+  lineage_ref: "../loci/loci/chatgpt/specs/mulsp-handoff-passport.muon"
+  pickup_ref: "codex/specs/CROSS_REPO_COMMUNICATION_MEMBRANE.md"
+}

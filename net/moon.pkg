@@ -1,0 +1,19 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/socket",
+  "zpc/lang/node",
+  "zpc/lang/nntp",
+  "zpc/lang/gopher",
+  "zpc/lang/finger",
+}
+
+options(
+  targets: {
+    "discovery.mbt": [ "native" ],
+    "gmu_server.mbt": [ "native" ],
+    "gopher_server.mbt": [ "native" ],
+    "nntp_server.mbt": [ "native" ],
+    "peer_client.mbt": [ "native" ],
+    "server.mbt": [ "native" ],
+  },
+)
