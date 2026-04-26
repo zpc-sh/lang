@@ -2,7 +2,7 @@
   "name": "zpc/lang",
   "version": "0.1.0",
   "deps": {
-    "moonbitlang/async": "0.16.6"
+    "moonbitlang/async": "0.16.8"
   },
   "readme": "README.md",
   "packages": [
@@ -24,6 +24,8 @@
     "yata/pg_tap",
     "spore",
     "nntp",
-    "gopher"
+    "gopher",
+    "net",
+    "crypto"
   ]
 }

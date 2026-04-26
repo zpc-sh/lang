@@ -94,6 +94,16 @@ pub(all) struct HostBridge {
   // Network (optional — may be no-ops)
   net_send : (Int, Array[Byte]) -> Bool // fd, data → success
   net_recv : (Int) -> Array[Byte]? // fd → data or None
+
+  // Network socket management (wasm-gc host functions; no-ops in native)
+  net_listen : (Int) -> Int // port → listener fd, -1 on error
+  net_accept : (Int) -> Int? // listener fd → conn fd or None
+  net_connect : (String, Int) -> Int? // host, port → conn fd or None
+
+  // Crypto primitives (wasm-gc host functions; no-ops in stub)
+  crypto_hash : (Array[Byte]) -> Array[Byte] // sha-256 or blake3
+  crypto_sign : (Array[Byte], Array[Byte]) -> Array[Byte] // msg, key → sig
+  crypto_verify : (Array[Byte], Array[Byte], Array[Byte]) -> Bool // msg, sig, pubkey
 }
 
 ///|
@@ -119,5 +129,32 @@ pub fn HostBridge::stub() -> HostBridge {
     blob_has: fn(key : String) -> Bool { store.get(key) is Some(_) },
     net_send: fn(_fd : Int, _data : Array[Byte]) -> Bool { false },
     net_recv: fn(_fd : Int) -> Array[Byte]? { None },
+    net_listen: fn(_port : Int) -> Int { -1 },
+    net_accept: fn(_fd : Int) -> Int? { None },
+    net_connect: fn(_host : String, _port : Int) -> Int? { None },
+    crypto_hash: fn(data : Array[Byte]) -> Array[Byte] {
+      // FNV-1a stub — real impl provided by host at runtime
+      let mut h = 0x811C9DC5
+      for b in data {
+        h = h ^ (b.to_int() & 0xFF)
+        h = h * 0x01000193
+      }
+      [
+        ((h >> 24) & 0xFF).to_byte(),
+        ((h >> 16) & 0xFF).to_byte(),
+        ((h >> 8) & 0xFF).to_byte(),
+        (h & 0xFF).to_byte(),
+      ]
+    },
+    crypto_sign: fn(_msg : Array[Byte], _key : Array[Byte]) -> Array[Byte] {
+      Array::make(64, b'\x00') // stub — no-op
+    },
+    crypto_verify: fn(
+      _msg : Array[Byte],
+      _sig : Array[Byte],
+      _pubkey : Array[Byte],
+    ) -> Bool {
+      false // stub — always rejects
+    },
   }
 }
