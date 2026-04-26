@@ -26,6 +26,7 @@
     "nntp",
     "gopher",
     "net",
-    "crypto"
+    "crypto",
+    "codex"
   ]
 }
