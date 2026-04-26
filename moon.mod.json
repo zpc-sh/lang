@@ -25,6 +25,9 @@
     "spore",
     "nntp",
     "gopher",
+    "gemtext",
+    "gemini",
+    "proto"
     "net",
     "crypto",
     "codex",
