@@ -1,0 +1,4 @@
+## 2024-05-18 - Atom Table Exhaustion in Workers
+**Vulnerability:** Use of `String.to_atom/1` with untrusted input (`env` and `task` parameters from Oban job arguments) in `lib/lang/workers/orchestrator_worker.ex` can lead to atom table exhaustion and Denial of Service (DoS) attacks.
+**Learning:** In Elixir/Erlang, atoms are not garbage collected. Dynamically converting user-controlled strings to atoms can crash the VM if the atom limit is reached.
+**Prevention:** Always use `String.to_existing_atom/1` when converting dynamic or untrusted strings to atoms. Wrap the conversion in a `try/rescue` block targeting `ArgumentError` to safely handle invalid inputs and fail gracefully.
