@@ -27,6 +27,7 @@
     "gopher",
     "net",
     "crypto",
-    "codex"
+    "codex",
+    "loci/claude"
   ]
 }
