@@ -29,6 +29,7 @@ pub async fn handle_nntp_connection(
   }
 }
 
+///|
 fn is_quit_response(response : Array[Byte]) -> Bool {
   response.length() >= 3 &&
   response[0] == b'2' &&

@@ -2,7 +2,6 @@
 /// GMU/1 UDP server — peer messaging listener.
 ///
 /// Receives datagrams, decodes, dispatches responses.
-
 let gmu_max_datagram : Int = 65507
 
 ///|
@@ -20,7 +19,10 @@ pub async fn run_gmu_server(
     if n == 0 {
       continue
     }
-    let data = buf.unsafe_reinterpret_as_bytes()[0:n].to_bytes().iter().collect()
+    let data = buf.unsafe_reinterpret_as_bytes()[0:n]
+      .to_bytes()
+      .iter()
+      .collect()
     match @finger.GmuMessage::decode(data) {
       None => ()
       Some(msg) =>
@@ -29,6 +31,7 @@ pub async fn run_gmu_server(
   }
 }
 
+///|
 async fn handle_gmu_message(
   server : @socket.UdpServer,
   src : @socket.Addr,
@@ -46,10 +49,23 @@ async fn handle_gmu_message(
     @finger.GmuType::Pong => finger.note_peer(msg.source, 0)
     @finger.GmuType::PlanRequest => {
       let plan = @finger.FingerPlan::generate(
-        node_id, 0, "standard", "lang", "standard", "Headless", [], 0, [], 0,
+        node_id,
+        0,
+        "standard",
+        "lang",
+        "standard",
+        "Headless",
+        [],
+        0,
+        [],
+        0,
       )
       let response = @finger.GmuMessage::new(
-        @finger.GmuType::PlanResponse, 0, node_id, msg.source, plan.to_bytes(),
+        @finger.GmuType::PlanResponse,
+        0,
+        node_id,
+        msg.source,
+        plan.to_bytes(),
       )
       server.sendto(Bytes::from_array(response.encode()[:]), src)
     }

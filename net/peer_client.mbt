@@ -33,7 +33,9 @@ pub async fn fetch_oci_layer(
   let conn = @socket.Tcp::connect(peer_addr)
   defer conn.close()
   let _ = conn.read_until("\r\n") // banner
-  conn.write(Bytes::from_array(@nntp.build_group_command(@nntp.ng_oci_layer)[:]))
+  conn.write(
+    Bytes::from_array(@nntp.build_group_command(@nntp.ng_oci_layer)[:]),
+  )
   let _ = conn.read_until("\r\n")
   conn.write(Bytes::from_array(@nntp.build_article_request(hash)[:]))
   let buf = collect_until_dot_crlf(conn)
@@ -52,7 +54,11 @@ pub async fn fetch_oci_layer(
 /// Fetch raw capability response bytes from a peer's Gopher port.
 pub async fn fetch_gopher_caps(peer_addr : @socket.Addr) -> Array[Byte]? {
   let bytes = gopher_fetch(peer_addr, "/caps")
-  if bytes.is_empty() { None } else { Some(bytes) }
+  if bytes.is_empty() {
+    None
+  } else {
+    Some(bytes)
+  }
 }
 
 ///|
@@ -62,10 +68,18 @@ pub async fn fetch_gopher_wasm(
   selector : String,
 ) -> Array[Byte]? {
   let bytes = gopher_fetch(peer_addr, selector)
-  if bytes.is_empty() { None } else { Some(bytes) }
+  if bytes.is_empty() {
+    None
+  } else {
+    Some(bytes)
+  }
 }
 
-async fn gopher_fetch(peer_addr : @socket.Addr, selector : String) -> Array[Byte] {
+///|
+async fn gopher_fetch(
+  peer_addr : @socket.Addr,
+  selector : String,
+) -> Array[Byte] {
   let conn = @socket.Tcp::connect(peer_addr)
   defer conn.close()
   conn.write(Bytes::of_string("\{selector}\r\n"))
@@ -91,17 +105,22 @@ pub async fn send_gmu(
 // Private helpers
 // ---------------------------------------------------------------------------
 
+///|
 async fn collect_all(conn : @socket.Tcp) -> Array[Byte] {
   let buf : Array[Byte] = []
   for ;; {
     match conn.read_some() {
       None => break
-      Some(chunk) => for b in chunk { buf.push(b) }
+      Some(chunk) =>
+        for b in chunk {
+          buf.push(b)
+        }
     }
   }
   buf
 }
 
+///|
 async fn collect_until_dot_crlf(conn : @socket.Tcp) -> Array[Byte] {
   let buf : Array[Byte] = []
   for ;; {
@@ -120,6 +139,7 @@ async fn collect_until_dot_crlf(conn : @socket.Tcp) -> Array[Byte] {
   buf
 }
 
+///|
 fn ends_with_dot_crlf(buf : Array[Byte]) -> Bool {
   let n = buf.length()
   n >= 5 &&

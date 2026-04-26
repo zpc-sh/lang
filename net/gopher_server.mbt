@@ -67,7 +67,8 @@ pub async fn handle_gopher_connection(
   }
   let request_bytes = Bytes::of_string("\{selector}\r\n").iter().collect()
   let response = match @gopher.GopherRequest::parse(request_bytes) {
-    None => @gopher.GopherResponse::Menu(@gopher.build_not_found_response(selector))
+    None =>
+      @gopher.GopherResponse::Menu(@gopher.build_not_found_response(selector))
     Some(req) =>
       @gopher.dispatch_request(
         req,

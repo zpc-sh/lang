@@ -3,7 +3,6 @@
 ///
 /// Sends GMU/1 PlanRequest to all known seed peers on each interval.
 /// PlanResponse handling is done in gmu_server.mbt via the on_plan callback.
-
 pub let default_discovery_interval_ms : Int = 30000
 
 ///|
@@ -18,7 +17,11 @@ pub async fn run_discovery(
   seeds : Array[String],
   gmu_port : Int,
 ) -> Unit {
-  let effective_ms = if interval_ms > 0 { interval_ms } else { default_discovery_interval_ms }
+  let effective_ms = if interval_ms > 0 {
+    interval_ms
+  } else {
+    default_discovery_interval_ms
+  }
   for ;; {
     @async.sleep(effective_ms)
     ping_seeds(node_id, finger, seeds)
@@ -30,6 +33,7 @@ pub async fn run_discovery(
 // Ping helpers
 // ---------------------------------------------------------------------------
 
+///|
 async fn ping_seeds(
   node_id : String,
   finger : @finger.FingerState,
@@ -45,6 +49,7 @@ async fn ping_seeds(
   }
 }
 
+///|
 async fn ping_peers_from_plans(
   node_id : String,
   finger : @finger.FingerState,
@@ -72,10 +77,9 @@ async fn ping_peers_from_plans(
   }
 }
 
+///|
 fn parse_addr_safe(s : String) -> @socket.Addr? {
-  try {
-    Some(@socket.Addr::parse(s))
-  } catch {
+  Some(@socket.Addr::parse(s)) catch {
     _ => None
   }
 }

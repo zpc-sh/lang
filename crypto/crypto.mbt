@@ -55,6 +55,7 @@ pub fn crypto_verify(
 // Private helpers
 // ---------------------------------------------------------------------------
 
+///|
 fn hex_nibble(n : Int) -> Char {
   match n {
     0 => '0'

@@ -9,11 +9,11 @@ import {
 
 options(
   targets: {
-    "server.mbt": [ "native" ],
-    "nntp_server.mbt": [ "native" ],
-    "gopher_server.mbt": [ "native" ],
-    "gmu_server.mbt": [ "native" ],
-    "peer_client.mbt": [ "native" ],
     "discovery.mbt": [ "native" ],
+    "gmu_server.mbt": [ "native" ],
+    "gopher_server.mbt": [ "native" ],
+    "nntp_server.mbt": [ "native" ],
+    "peer_client.mbt": [ "native" ],
+    "server.mbt": [ "native" ],
   },
 )
