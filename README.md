@@ -111,7 +111,7 @@ No deployed demo links detected.
 - Dual identity model: lifecycle state (`mulsp`) + cognitive intent profile (`muyata`)
 - Typed wire serialization for core identity/profile objects
 - Package-oriented MoonBit architecture covering protocols and node substrate
-- Spec-driven testing pattern (`*_spec.mbt` + `*_spec_test.mbt`) is implemented in `mulsp`, `cave`, and `codex`, and is intended as a reusable pattern across partitions
+- Spec-driven testing pattern (`*_spec.mbt` + `*_spec_test.mbt`) is implemented in `mulsp`, `cave`, and `codex`; it is designed as a recursive, self-documenting pattern that can be applied to additional partitions
 
 ⚠️ Limitations / Coming Soon
 - `net` package milestone is in progress
