@@ -24,12 +24,12 @@ It exists to make agent identity, lifecycle transitions, capability scoping, and
 ## ☯️ Dual Core Architecture
 
 ### 1) `mulsp` — Runtime Identity Wrapper
-- **Path:** `/home/runner/work/lang/lang/mulsp/mulsp.mbt`
+- **Path:** `mulsp/mulsp.mbt`
 - Models session identity, lifecycle (`Dormant → Attached → Active → ...`), delegation, and capability scope.
 - Uses immutable transition APIs and binary wire format (`MLSP` magic).
 
 ### 2) `muyata` — AI-Shaped Cognitive Profile
-- **Path:** `/home/runner/work/lang/lang/muyata/muyata.mbt`
+- **Path:** `muyata/muyata.mbt`
 - Models overlay/family/mode/tier, work intent, execution surface, and commitments.
 - Supports profile cloning and binary wire format (`MUYA` magic).
 
@@ -89,8 +89,8 @@ moon test
 ```
 
 For package-level exploration, inspect:
-- `/home/runner/work/lang/lang/mulsp/mulsp.mbt`
-- `/home/runner/work/lang/lang/muyata/muyata.mbt`
+- `mulsp/mulsp.mbt`
+- `muyata/muyata.mbt`
 
 ### Example Inputs / Outputs
 - `MulspState` can be created, transitioned, and serialized/deserialized.
@@ -152,7 +152,7 @@ moon test
 ## 📈 Project Management
 
 ### Roadmap / Future Plans
-- See `/home/runner/work/lang/lang/task.md` for milestone planning (M1–M4).
+- See `task.md` for milestone planning (M1–M4).
 
 ### Changelog / Versioning
 - Current module version in `moon.mod.json`: `0.1.0`
@@ -175,9 +175,9 @@ _Add as needed:_
 ### License
 - Repository includes a **Superposition License** form with SPDX collapse state documented as `Apache-2.0` in `LICENSE.mbt.md`.
 - See:
-  - `/home/runner/work/lang/lang/LICENSE`
-  - `/home/runner/work/lang/lang/LICENSE.mbt.md`
-  - `/home/runner/work/lang/lang/LICENSE-EXECUTABLE.md`
+  - `LICENSE`
+  - `LICENSE.mbt.md`
+  - `LICENSE-EXECUTABLE.md`
 
 ### Acknowledgements
 - Credits noted in license text: **Loc & Claude (ZPC)**
