@@ -24,12 +24,12 @@ It exists to make agent identity, lifecycle transitions, capability scoping, and
 ## ☯️ Dual Core Architecture
 
 ### 1) `mulsp` — Runtime Identity Wrapper
-- **Path:** `mulsp/mulsp.mbt`
+- **Path:** `mulsp/` (notably `mulsp.mbt`, `mulsp_spec.mbt`, `mulsp_spec_test.mbt`)
 - Models session identity, lifecycle (`Dormant → Attached → Active → ...`), delegation, and capability scope.
 - Uses immutable transition APIs and binary wire format (`MLSP` magic).
 
 ### 2) `muyata` — AI-Shaped Cognitive Profile
-- **Path:** `muyata/muyata.mbt`
+- **Path:** `muyata/` (currently centered on `muyata.mbt`)
 - Models overlay/family/mode/tier, work intent, execution surface, and commitments.
 - Supports profile cloning and binary wire format (`MUYA` magic).
 
@@ -111,7 +111,7 @@ No deployed demo links detected.
 - Dual identity model: lifecycle state (`mulsp`) + cognitive intent profile (`muyata`)
 - Typed wire serialization for core identity/profile objects
 - Package-oriented MoonBit architecture covering protocols and node substrate
-- Spec-driven testing pattern in parts of the repo (`*_spec.mbt` + `*_spec_test.mbt`)
+- Spec-driven testing pattern (`*_spec.mbt` + `*_spec_test.mbt`) is implemented in `mulsp`, `cave`, and `codex`, and is intended as a reusable pattern across partitions
 
 ⚠️ Limitations / Coming Soon
 - `net` package milestone is in progress
