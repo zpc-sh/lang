@@ -11,9 +11,31 @@
 pub(all) enum DeferredStatus {
   Queued
   Awaiting
+  StreamingMedia
   Completed
   Failed
 } derive(Eq, Debug)
+
+///|
+/// Dual-tape memory representation for the mulsp FST.
+/// Memory 0 is standard heap, Memory 1 is the 1MB code cave.
+pub(all) struct NativeCodeCave {
+  capacity : Int // fixed 1MB: 1048576
+  mut secret_tape : Array[Byte] // Memory 1
+} derive(Debug)
+
+///|
+/// Media streaming mesh proxy for Vision/Audio transformations.
+pub(all) struct MediaMeshProxy {
+  plugin_dimension : String // e.g., "vision", "pdf"
+  mut total_bytes_streamed : Int
+} derive(Debug)
+
+///|
+/// Initializing the proxy with standard Vision dimension (like avici-plugin-vision).
+pub fn MediaMeshProxy::vision() -> MediaMeshProxy {
+  { plugin_dimension: "vision", total_bytes_streamed: 0 }
+}
 
 ///|
 pub(all) struct LociDropboxItem {
@@ -23,6 +45,8 @@ pub(all) struct LociDropboxItem {
   inverse_function : String
   mulsp_packet : @mulsp.MulspState
   muyata_packet : @muyata.MuyataProfile
+  cave_memory : NativeCodeCave
+  media_proxy : MediaMeshProxy?
   wire : Array[Byte]
   mut response : @lsp.LspMessage?
   mut status : DeferredStatus
@@ -87,9 +111,28 @@ fn native_muyata_packet(function_name : String, execution_surface : String) -> @
 }
 
 ///|
+/// Baremetal FFI endpoint representing a physical device (e.g., Raspberry Pi via USB).
+pub(all) struct BaremetalEndpoint {
+  device_id : String
+  ffi_descriptor : String // FFI binding to USB gadget / raw hardware
+  active_mulsp : @mulsp.MulspState?
+} derive(Debug)
+
+///|
+/// A squad of baremetal endpoints piloted simultaneously.
+/// The union transducer merges their output tapes, but the perception collapse
+/// risk happens if the squad size exceeds the pilot's cognitive window.
+pub(all) struct NativeSquad {
+  squad_id : String
+  endpoints : Array[BaremetalEndpoint]
+  mut perception_collapsed : Bool
+} derive(Debug)
+
+///|
 pub(all) struct NativeLspShim {
   client : @lsp.LspClient
   ratio_loci : String
+  vfs_belly_hash : String // The entire filesystem reference stored in its belly
   execution_surface : String
   outbox : Array[Array[Byte]]
   dropbox : Array[LociDropboxItem]
@@ -98,11 +141,13 @@ pub(all) struct NativeLspShim {
 ///|
 pub fn NativeLspShim::boot_proxy(
   ratio_loci : String,
+  vfs_belly_hash : String,
   execution_surface? : String = "native-bin",
 ) -> NativeLspShim {
   {
     client: @lsp.LspClient::proxy(),
     ratio_loci,
+    vfs_belly_hash,
     execution_surface,
     outbox: [],
     dropbox: [],
@@ -121,18 +166,25 @@ pub fn NativeLspShim::enqueue_emit(
     None => None
     Some(block) => {
       let wire = self.client.encode(json)
+      let cave = { capacity: 1048576, secret_tape: [] } // 1MB Code Cave constraint
+      
+      // We inject the VFS belly reference directly into the MulspState scope root
+      let mulsp = native_mulsp_packet(
+          function_name,
+          request_id,
+          self.ratio_loci,
+          self.execution_surface,
+        ).set_projection(self.vfs_belly_hash)
+
       let item : LociDropboxItem = {
         loci_id,
         function_name,
         request_id,
         inverse_function: block.inverse_function,
-        mulsp_packet: native_mulsp_packet(
-          function_name,
-          request_id,
-          self.ratio_loci,
-          self.execution_surface,
-        ),
+        mulsp_packet: mulsp,
         muyata_packet: native_muyata_packet(function_name, self.execution_surface),
+        cave_memory: cave,
+        media_proxy: if function_name.contains("vision") { Some(MediaMeshProxy::vision()) } else { None },
         wire,
         response: None,
         status: Awaiting,
