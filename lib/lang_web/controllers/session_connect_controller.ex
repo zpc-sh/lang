@@ -95,7 +95,14 @@ defmodule LangWeb.SessionConnectController do
       resp = %{
         "wss_url" => wss_url,
         "ticket" => token,
-        "provenance" => %{"runner" => "ssh-proxy", "version" => "0.0.1"}
+        "provenance" => %{
+          "runner" => "ssh-proxy",
+          "version" => "0.0.1",
+          "app_supported" => true,
+          "app_versions" => ["0.0.1"],
+          "app_policy_ref" => ldspolicy,
+          "required_fallback" => true
+        }
       }
 
       conn
