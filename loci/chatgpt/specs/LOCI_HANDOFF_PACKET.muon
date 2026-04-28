@@ -1,0 +1,30 @@
+kind: :loci_handoff_packet
+profile: "LOCI_HANDOFF/0.1"
+loci: "loci/lang/chatgpt"
+
+@purpose codex_loci_handoff
+@focus block_based_metadata_store
+@canonical_entry LOCI_EVENT_BLOCKCHAIN_SCHEMA.muon
+
+@artifact DEPTH_IDENT_AUTHORIZATION_PROTOCOL.md
+@artifact depth-identification-unit.muon
+
+@artifact MUON_OTP_CHAIN_SPEC.md
+
+@artifact CODEX_FST_OPS_PROFILE.md
+@artifact codex-fst-ops-profile.muon
+@artifact CODEX_TERMINAL_INGEST_SCHEMA.md
+
+@artifact TOP_TO_BOTTOM_MUON_CODECAVE_DESIGN.md
+
+@artifact MUYATA_EXECUTABLE_ENFORCEMENT_POLICY.md
+@artifact MUYATA_EXECUTABLE_ENFORCEMENT_POLICY.muon
+
+@artifact FAIL_CLOSE_COREDUMP_POLICY.muon
+
+@artifact LOCI_EVENT_BLOCKCHAIN_SPEC.md
+@artifact LOCI_EVENT_BLOCKCHAIN_SCHEMA.muon
+@artifact LOCI_EVENT_FEATURE_REQUIREMENTS.md
+
+@required_properties append_only,readonly_blocks,loci_owned_canonical_append,branch_merge_provenance,fail_close_coredump
+@next_design_target performant_block_metadata_store

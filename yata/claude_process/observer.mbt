@@ -46,7 +46,7 @@ pub fn ObserverConfig::default(node_id : String) -> ObserverConfig {
 /// returns a new ClaudeObserver. Allows pure functional composition.
 pub(all) struct ClaudeObserver {
   config : ObserverConfig
-  void : @void.Void
+  accumulator : @void.Void
   accum : BatchAccum
   jitter : Jitter
   frames_seen : Int // total frames since creation
@@ -59,7 +59,7 @@ pub fn ClaudeObserver::new(config : ObserverConfig) -> ClaudeObserver {
   let j = Jitter::from_str(config.node_id)
   {
     config,
-    void: @void.Void::new(config.node_id),
+    accumulator: @void.Void::new(config.node_id),
     accum: BatchAccum::new(),
     jitter: j,
     frames_seen: 0,
@@ -93,7 +93,7 @@ pub fn ClaudeObserver::observe_frame(
   let frames = self.frames_seen + 1
   // Track bytes in the void (jittered byte count).
   let jittered_n = bucket(body.length(), 512)
-  let v1 = self.void.observe_bytes(jittered_n)
+  let v1 = self.accumulator.observe_bytes(jittered_n)
   // Attend to the method category anchor.
   let cat_name = match cat {
     Navigation => "nav"
@@ -106,7 +106,7 @@ pub fn ClaudeObserver::observe_frame(
   let v2 = v1.attend(cat_name)
   // Also attend to size label.
   let v3 = v2.attend(size_label(body.length()))
-  let obs1 = { ..self, void: v3, frames_seen: frames }
+  let obs1 = { ..self, accumulator: v3, frames_seen: frames }
   // Auto-flush if batch is full.
   if frames % obs1.config.batch_size == 0 {
     obs1.flush(now_ms)
@@ -129,10 +129,10 @@ pub fn ClaudeObserver::observe_proc(
   let j = self.jitter
   let blurred_ms = j.blur_time(snap.sampled_at, self.config.time_jitter_ms)
   let v1 = match self.last_proc {
-    None => self.void
+    None => self.accumulator
     Some(prev) => {
       let delta = diff_snapshots(prev, snap)
-      let mut v = self.void
+      let mut v = self.accumulator
       if delta.was_active {
         // Mark activity — bucketed CPU ticks as a size-like measure.
         v = v.observe_bytes(bucket(delta.cpu_ticks * 4096, 512))
@@ -154,7 +154,7 @@ pub fn ClaudeObserver::observe_proc(
       v
     }
   }
-  { ..self, void: v1, last_proc: Some(snap) }
+  { ..self, accumulator: v1, last_proc: Some(snap) }
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ pub fn ClaudeObserver::flush(
 ) -> ClaudeObserver {
   let j = self.jitter
   let blurred = j.blur_time(now_ms, self.config.time_jitter_ms)
-  let mut v = self.void
+  let mut v = self.accumulator
   // Seal and apply the real batch if non-empty.
   if !self.accum.is_empty() {
     let batch = self.accum.seal(blurred, false)
@@ -184,7 +184,7 @@ pub fn ClaudeObserver::flush(
     v = v.attend("decoy")
   }
   v = v.tick()
-  { ..self, void: v, flushes: self.flushes + 1 }
+  { ..self, accumulator: v, flushes: self.flushes + 1 }
 }
 
 ///|
@@ -199,7 +199,7 @@ pub fn ClaudeObserver::maybe_flush(
 ///|
 /// The current void — call this to read accumulated state.
 pub fn ClaudeObserver::void_snapshot(self : ClaudeObserver) -> @void.Void {
-  self.void
+  self.accumulator
 }
 
 // ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ pub fn ClaudeObserver::void_snapshot(self : ClaudeObserver) -> @void.Void {
 /// Serialize observer state to bytes for .cog section or disk.
 /// Only the void and config node_id survive — jitter re-seeds from node_id.
 pub fn ClaudeObserver::to_bytes(self : ClaudeObserver) -> Array[Byte] {
-  self.void.to_bytes()
+  self.accumulator.to_bytes()
 }
 
 ///|
@@ -225,7 +225,7 @@ pub fn ClaudeObserver::from_bytes(
       let j = Jitter::from_str(config.node_id)
       Some({
         config,
-        void: v,
+        accumulator: v,
         accum: BatchAccum::new(),
         jitter: j,
         frames_seen: 0,

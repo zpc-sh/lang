@@ -1,0 +1,20 @@
+kind: :fail_close_coredump_policy
+profile: "FAIL_CLOSE_COREDUMP/0.1"
+
+@default_action close_and_dump
+@apply_to code_cave_workloads
+@trigger collapse,boundary_violation,unhandled_event
+
+@required.compose_provenance_valid true
+@required.append_only_compose_chain true
+@required.parent_chain_ref true
+@required.loci_return_ref true
+@required.branch_id true
+
+@dump.kind runtime_coredump
+@dump.raw_secret_export false
+@dump.secret_mode refs_only
+@dump.close_after_dump true
+
+@collector.on_fst_finished collect_and_archive
+@collector.require_provenance_through true

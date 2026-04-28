@@ -1,0 +1,20 @@
+kind: :loci_event_chain_schema
+schema: "LOCI_EVENT_CHAIN/0.1"
+
+@domain event_input_output_only
+@canonical_owner loci
+@readonly_blocks true
+@append_only true
+
+@input.fields event_id,source,event_kind,loci_id,branch_id,seq,payload_ref,parent_event_refs,return_to_loci_hint
+@output.fields output_id,from_event_id,output_kind,projection_ref,ticket_ref,receipt_ref,visibility
+@block.fields block_id,height,loci_id,branch_id,parent_block_refs,source,event_kind,seq,payload_ref,event_ref,return_to_loci_ref,readonly
+
+@required_fences cross,mark,emit_stigmergy,verify,publish,synchronize,closure,return_to_loci,runtime_coredump
+@fail_close_code_cave true
+@secret_export forbidden
+@secret_zone_mode refs_only
+
+@projection.visibility internal,boundary,external
+@merge.mode multi_parent_block
+@sparse_tree_overlay metadata_block_chain

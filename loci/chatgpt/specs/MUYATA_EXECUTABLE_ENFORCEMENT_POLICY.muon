@@ -1,0 +1,18 @@
+kind: :muyata_executable_policy
+profile: "MUYATA_POLICY/0.1"
+
+@max_fst_per_shard 8
+@overflow_strategy duplicate_clean_self_array
+@append_only_compose_required true
+
+@required_compose_chain_kind muyata_compose_chain
+@required_compose_fields chain_id,step_count,step.seq,step.op,step.left_ref,step.right_ref,step.out_ref,step.prev_ref,step.ref
+
+@mandatory_snapshot_fences cross,mark,emit_stigmergy,verify,publish,synchronize,closure,return_to_loci
+@proof_mode moc_counter_otp
+@outer_layer app
+
+@ownership.mulsp identity_capability_envelope
+@ownership.muyata witness_compose_policy
+@ownership.loci_fsm deterministic_transducer_compute
+@ownership.procsi_app boundary_attestation_projection

@@ -46,7 +46,7 @@ pub(all) enum MulspCategory {
 } derive(Eq, Debug)
 
 ///|
-impl Show for MulspCategory with output(self, logger) {
+pub impl Show for MulspCategory with output(self, logger) {
   logger.write_string(
     match self {
       Lifecycle => "Lifecycle"
@@ -68,7 +68,7 @@ pub(all) enum SpecSize {
 } derive(Eq, Debug)
 
 ///|
-impl Show for SpecSize with output(self, logger) {
+pub impl Show for SpecSize with output(self, logger) {
   logger.write_string(
     match self {
       Trivial => "Trivial"
@@ -92,7 +92,7 @@ pub(all) enum MulspFuncType {
 } derive(Eq, Debug)
 
 ///|
-impl Show for MulspFuncType with output(self, logger) {
+pub impl Show for MulspFuncType with output(self, logger) {
   logger.write_string(
     match self {
       Constructor => "Constructor"

@@ -1,1 +1,3 @@
-
+import {
+  "zpc/lang/proto",
+}

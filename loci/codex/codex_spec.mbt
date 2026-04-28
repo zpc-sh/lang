@@ -119,3 +119,13 @@ pub fn ConversationLocus::observe(
 pub fn ConversationLocus::can_seal(self : ConversationLocus) -> Bool {
   ...
 }
+
+///|
+#declaration_only
+pub fn codex_codex_handshake_artifact(
+  contract_id : String,
+  dialogue_ref : String,
+  deploy_queue_ref : String,
+) -> Array[String] {
+  ...
+}

@@ -49,7 +49,7 @@ pub(all) enum MulspLifecycle {
 } derive(Eq, Debug)
 
 ///|
-impl Show for MulspLifecycle with output(self, logger) {
+pub impl Show for MulspLifecycle with output(self, logger) {
   logger.write_string(
     match self {
       Dormant => "Dormant"
@@ -280,9 +280,8 @@ pub fn MulspState::fork(
       }
       // Parent records the delegation
       let parent_refs = self.parent_mulsp_refs.copy()
-      // Note: parent_mulsp_refs on the parent tracks child IDs when delegating
-      // (overloaded field — parent's refs are its own parents, but delegate() pushes children)
-      let parent = { ..self, lifecycle: Delegated }
+      parent_refs.push(child_id)
+      let parent = { ..self, parent_mulsp_refs: parent_refs, lifecycle: Delegated }
       Some((parent, child))
     }
     _ => None // can only fork from Active

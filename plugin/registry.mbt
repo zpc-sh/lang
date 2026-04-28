@@ -91,6 +91,10 @@ pub(all) struct PluginEntry {
   // Procsi identity (extracted from .prc section)
   mut procsi_locus : String?
   mut procsi_tier : String?
+  mut is_core_capsule : Bool
+  mut wasi_enabled : Bool
+  mut replace_generation : Int
+  mut handler_effect_ref : String?
   // Runtime state
   mut invocations : Int // total handle() calls
   mut last_tick_ms : Int // last tick timestamp
@@ -115,6 +119,10 @@ pub fn PluginEntry::new(
     topics,
     procsi_locus: None,
     procsi_tier: None,
+    is_core_capsule: false,
+    wasi_enabled: false,
+    replace_generation: 0,
+    handler_effect_ref: None,
     invocations: 0,
     last_tick_ms: 0,
     output: [],
@@ -192,6 +200,25 @@ pub fn PluginEntry::set_procsi(
   self.procsi_tier = Some(tier)
 }
 
+///|
+pub fn PluginEntry::mark_core_capsule(
+  self : PluginEntry,
+  wasi_enabled? : Bool = true,
+) -> Unit {
+  self.is_core_capsule = true
+  self.wasi_enabled = wasi_enabled
+}
+
+///|
+pub fn PluginEntry::record_handler_effect(
+  self : PluginEntry,
+  effect_ref : String,
+  generation : Int,
+) -> Unit {
+  self.handler_effect_ref = Some(effect_ref)
+  self.replace_generation = generation
+}
+
 // ---------------------------------------------------------------------------
 // Plugin Registry
 // ---------------------------------------------------------------------------
@@ -219,10 +246,87 @@ pub fn PluginRegistry::register(
   abi : PluginAbi,
   topics : Array[@node.Topic],
 ) -> Int {
+  if name == "procsi" {
+    match self.find_by_name("procsi") {
+      Some(existing) => {
+        // procsi is a reserved core capsule/plugin. Keep existing instance
+        // stable unless an explicit replacement effect is used.
+        if existing.is_core_capsule &&
+          existing.state != Unloaded &&
+          existing.cas_key != cas_key {
+          self.fail_count = self.fail_count + 1
+          return match self.find_index_by_id(existing.id) {
+            Some(idx) => idx
+            None => -1
+          }
+        }
+      }
+      None => ()
+    }
+  }
   let idx = self.plugins.length()
-  self.plugins.push(PluginEntry::new(id, name, cas_key, abi, topics))
+  let entry = PluginEntry::new(id, name, cas_key, abi, topics)
+  if name == "procsi" {
+    entry.mark_core_capsule()
+    entry.procsi_tier = Some("core-capsule")
+  }
+  self.plugins.push(entry)
   self.load_count = self.load_count + 1
   idx
+}
+
+///|
+fn PluginRegistry::find_index_by_id(self : PluginRegistry, id : String) -> Int? {
+  let mut i = 0
+  for p in self.plugins {
+    if p.id == id {
+      return Some(i)
+    }
+    i = i + 1
+  }
+  None
+}
+
+///|
+fn PluginRegistry::find_index_by_name(self : PluginRegistry, name : String) -> Int? {
+  let mut i = 0
+  for p in self.plugins {
+    if p.name == name {
+      return Some(i)
+    }
+    i = i + 1
+  }
+  None
+}
+
+///|
+/// Replace the reserved procsi core capsule via an explicit handler effect.
+///
+/// This is the only path that may swap an existing live procsi module.
+pub fn PluginRegistry::replace_core_procsi_wasi(
+  self : PluginRegistry,
+  id : String,
+  cas_key : String,
+  abi : PluginAbi,
+  topics : Array[@node.Topic],
+  handler_effect_ref : String,
+) -> Int {
+  let next_generation = match self.find_index_by_name("procsi") {
+    Some(idx) => {
+      let existing = self.plugins[idx]
+      existing.unload()
+      existing.replace_generation + 1
+    }
+    None => 0
+  }
+  let next_idx = self.plugins.length()
+  let entry = PluginEntry::new(id, "procsi", cas_key, abi, topics)
+  entry.mark_core_capsule(wasi_enabled=true)
+  entry.procsi_tier = Some("core-capsule")
+  entry.record_handler_effect(handler_effect_ref, next_generation)
+  self.plugins.push(entry)
+  self.load_count = self.load_count + 1
+  next_idx
 }
 
 ///|

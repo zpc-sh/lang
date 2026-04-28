@@ -1,0 +1,31 @@
+kind: :codex_fst_ops_profile
+profile: "FST_OPS_PROFILE/0.1"
+outer_layer: :app
+root_authority: :loci
+
+@deploy_now true
+@runtime codex
+@surface pseudo_shell_terminal
+@proof_mode moc_counter_otp
+
+@ops.core Compose,Concat,Connect,Project,Union,Intersect,Difference
+@ops.normalize Determinize,Disambiguate,Prune,Synchronize
+@ops.validate Equal,Isomorphic,Distance,Closure
+
+@tier.A Compose,Concat,Connect,Union,Intersect,Difference
+@tier.B Determinize,Disambiguate,Prune,Distance
+@tier.C Project,Synchronize,Closure
+
+@required.procsi_core_non_clobber true
+@required.procsi_replace_handler_effect true
+@required.wasi_surface true
+@required.append_only_receipts true
+
+@receipt.kind muon_otp_receipt
+@receipt.protocol MOC/0.1
+@receipt.fields loci_id,contract_id,transducer_id,op,seq,state_from,state_to,prev_code,otp_code,key_slot,code_profile
+
+@domain.first pseudo_shell_terminal_ingest
+@pipeline.default Compose->Determinize->Prune->Distance->Synchronize->Closure
+@working_set sparse_loci_tree
+@exit_behavior return_to_loci_merge_emit

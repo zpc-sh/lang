@@ -268,14 +268,14 @@ pub fn scan_str(s : String) -> ScanReport {
 fn utf8_decode_at(data : Array[Byte], off : Int) -> (Int, Int) {
   let n = data.length()
   let b0 = data[off].to_int()
-  if b0 & 0x80 == 0 {
+  if (b0 & 0x80) == 0 {
     (b0, 1)
-  } else if b0 & 0xE0 == 0xC0 {
+  } else if (b0 & 0xE0) == 0xC0 {
     if off + 1 >= n {
       return (-1, 1)
     }
     let b1 = data[off + 1].to_int()
-    if b1 & 0xC0 != 0x80 {
+    if (b1 & 0xC0) != 0x80 {
       return (-1, 1)
     }
     let cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F)
@@ -283,13 +283,13 @@ fn utf8_decode_at(data : Array[Byte], off : Int) -> (Int, Int) {
       return (-1, 2) // overlong
     }
     (cp, 2)
-  } else if b0 & 0xF0 == 0xE0 {
+  } else if (b0 & 0xF0) == 0xE0 {
     if off + 2 >= n {
       return (-1, 1)
     }
     let b1 = data[off + 1].to_int()
     let b2 = data[off + 2].to_int()
-    if b1 & 0xC0 != 0x80 || b2 & 0xC0 != 0x80 {
+    if (b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80 {
       return (-1, 1)
     }
     let cp = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F)
@@ -297,14 +297,16 @@ fn utf8_decode_at(data : Array[Byte], off : Int) -> (Int, Int) {
       return (-1, 3) // overlong
     }
     (cp, 3)
-  } else if b0 & 0xF8 == 0xF0 {
+  } else if (b0 & 0xF8) == 0xF0 {
     if off + 3 >= n {
       return (-1, 1)
     }
     let b1 = data[off + 1].to_int()
     let b2 = data[off + 2].to_int()
     let b3 = data[off + 3].to_int()
-    if b1 & 0xC0 != 0x80 || b2 & 0xC0 != 0x80 || b3 & 0xC0 != 0x80 {
+    if (b1 & 0xC0) != 0x80 ||
+      (b2 & 0xC0) != 0x80 ||
+      (b3 & 0xC0) != 0x80 {
       return (-1, 1)
     }
     let cp = ((b0 & 0x07) << 18) |
@@ -407,7 +409,7 @@ fn cp_hex(cp : Int) -> String {
   }
   let sb = StringBuilder::new()
   let mut v = cp
-  let mut nibbles : Array[Int] = []
+  let nibbles : Array[Int] = []
   while v > 0 {
     nibbles.push(v & 0xF)
     v = v >> 4

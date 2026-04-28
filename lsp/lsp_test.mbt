@@ -28,7 +28,7 @@ test "frame_read returns None for incomplete frame" {
   let wire = frame_write(body)
   // truncate to only the header portion
   let partial = @lsp.slice_pub(wire, 0, 25)
-  assert_true(frame_read(partial).is_empty())
+  assert_true(frame_read(partial) is None)
 }
 
 ///|
@@ -63,7 +63,7 @@ test "parse_message classifies Notification" {
   let json = "{\"jsonrpc\":\"2.0\",\"method\":\"initialized\",\"params\":{}}"
   let msg = parse_message(json)
   assert_true(msg.kind == Notification)
-  assert_true(msg.id.is_empty())
+  assert_true(msg.id is None)
   assert_true(msg.lsp_method == Some("initialized"))
 }
 
@@ -73,7 +73,7 @@ test "parse_message classifies Response" {
   let msg = parse_message(json)
   assert_true(msg.kind == Response)
   assert_true(msg.id == Some("1"))
-  assert_true(msg.lsp_method.is_empty())
+  assert_true(msg.lsp_method is None)
 }
 
 ///|
@@ -87,4 +87,44 @@ test "parse_frame from wire bytes" {
       assert_true(msg.kind == Notification)
     }
   }
+}
+
+///|
+test "lsp client proxy ingests and parses frame" {
+  let client = LspClient::proxy()
+  let body = "{\"jsonrpc\":\"2.0\",\"method\":\"initialized\",\"params\":{}}"
+  let wire = client.encode(body)
+  let frames = client.ingest(wire)
+  assert_eq(frames.length(), 1)
+  let msg = client.parse(frames[0])
+  assert_true(msg.kind == Notification)
+  assert_true(msg.lsp_method == Some("initialized"))
+}
+
+///|
+test "lsp client can swap implementations via ops" {
+  let client = LspClient::new(LspClientOps::claude_process())
+  assert_true(client.impl_id() == ClaudeProcess)
+  let body = "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"initialize\",\"params\":{}}"
+  let wire = client.encode(body)
+  let frames = client.ingest(wire)
+  assert_eq(frames.length(), 1)
+  let msg = client.parse(frames[0])
+  assert_true(msg.kind == Request)
+  assert_true(msg.id == Some("7"))
+}
+
+///|
+test "lsp client keeps partial bytes buffered" {
+  let client = LspClient::proxy()
+  let body = "{\"jsonrpc\":\"2.0\",\"method\":\"initialized\",\"params\":{}}"
+  let wire = client.encode(body)
+  let partial = @lsp.slice_pub(wire, 0, wire.length() - 5)
+  let tail = @lsp.slice_pub(wire, wire.length() - 5, wire.length())
+  let first = client.ingest(partial)
+  assert_eq(first.length(), 0)
+  assert_true(client.pending_bytes() > 0)
+  let second = client.ingest(tail)
+  assert_eq(second.length(), 1)
+  assert_eq(client.pending_bytes(), 0)
 }

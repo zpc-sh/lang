@@ -14,7 +14,7 @@ test "scan detects CRLF" {
   let r = scan_bytes(data)
   assert_false(r.clean)
   assert_eq(r.hits.length(), 1)
-  assert_eq(r.hits[0].kind, CrlfNewline)
+  assert_true(r.hits[0].kind == CrlfNewline)
   assert_eq(r.hits[0].offset, 2)
 }
 
@@ -23,7 +23,7 @@ test "scan detects bare CR" {
   let data : Array[Byte] = [0x68, 0x0D, 0x69] // "h\ri"
   let r = scan_bytes(data)
   assert_false(r.clean)
-  assert_eq(r.hits[0].kind, BareCarriage)
+  assert_true(r.hits[0].kind == BareCarriage)
 }
 
 ///|
@@ -43,7 +43,7 @@ test "scan detects BiDi RLO U+202E" {
   let r = scan_bytes(data)
   assert_false(r.clean)
   assert_true(r.has_bidi)
-  assert_eq(r.hits[0].kind, BiDiControl)
+  assert_true(r.hits[0].kind == BiDiControl)
   assert_eq(r.hits[0].cp, 0x202E)
   assert_eq(r.hits[0].offset, 1)
 }
@@ -54,7 +54,7 @@ test "scan detects BiDi LRI U+2066" {
   let data : Array[Byte] = [0xE2, 0x81, 0xA6, 0x78]
   let r = scan_bytes(data)
   assert_true(r.has_bidi)
-  assert_eq(r.hits[0].kind, BiDiIsolate)
+  assert_true(r.hits[0].kind == BiDiIsolate)
   assert_eq(r.hits[0].cp, 0x2066)
 }
 
@@ -64,7 +64,7 @@ test "scan detects curly left double quote U+201C" {
   let data : Array[Byte] = [0x61, 0xE2, 0x80, 0x9C, 0x62]
   let r = scan_bytes(data)
   assert_false(r.clean)
-  assert_eq(r.hits[0].kind, CurlyQuote)
+  assert_true(r.hits[0].kind == CurlyQuote)
   assert_eq(r.hits[0].cp, 0x201C)
 }
 
@@ -86,7 +86,7 @@ test "scan detects zero-width space U+200B" {
   // UTF-8 of U+200B: E2 80 8B
   let data : Array[Byte] = [0x61, 0xE2, 0x80, 0x8B, 0x62]
   let r = scan_bytes(data)
-  assert_eq(r.hits[0].kind, ZeroWidth)
+  assert_true(r.hits[0].kind == ZeroWidth)
   assert_eq(r.hits[0].cp, 0x200B)
 }
 
@@ -95,7 +95,7 @@ test "scan detects soft hyphen U+00AD" {
   // UTF-8 of U+00AD: C2 AD
   let data : Array[Byte] = [0x61, 0xC2, 0xAD, 0x62]
   let r = scan_bytes(data)
-  assert_eq(r.hits[0].kind, SoftHyphen)
+  assert_true(r.hits[0].kind == SoftHyphen)
   assert_eq(r.hits[0].cp, 0x00AD)
 }
 
@@ -104,7 +104,7 @@ test "scan detects invalid UTF-8 sequence" {
   // 0xFF is never valid in UTF-8
   let data : Array[Byte] = [0x61, 0xFF, 0x62]
   let r = scan_bytes(data)
-  assert_eq(r.hits[0].kind, InvalidUtf8)
+  assert_true(r.hits[0].kind == InvalidUtf8)
   assert_eq(r.hits[0].offset, 1)
 }
 
@@ -113,7 +113,7 @@ test "scan detects line separator U+2028" {
   // UTF-8 of U+2028: E2 80 A8
   let data : Array[Byte] = [0x61, 0xE2, 0x80, 0xA8, 0x62]
   let r = scan_bytes(data)
-  assert_eq(r.hits[0].kind, LineSeparator)
+  assert_true(r.hits[0].kind == LineSeparator)
   assert_eq(r.hits[0].cp, 0x2028)
 }
 
@@ -122,7 +122,7 @@ test "scan detects fullwidth quotation mark U+FF02" {
   // UTF-8 of U+FF02: EF BC 82
   let data : Array[Byte] = [0x61, 0xEF, 0xBC, 0x82, 0x62]
   let r = scan_bytes(data)
-  assert_eq(r.hits[0].kind, FullwidthQuote)
+  assert_true(r.hits[0].kind == FullwidthQuote)
   assert_eq(r.hits[0].cp, 0xFF02)
 }
 

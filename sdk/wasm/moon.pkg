@@ -1,0 +1,15 @@
+import {
+  "zpc/lang/sdk/core",
+  "zpc/lang/sdk/portable_wasi" @portable_wasi,
+  "zpc/lang/sdk/clients/jsonrpc",
+  "zpc/lang/sdk/clients/proxy",
+  "zpc/lang/sdk/clients/claude",
+  "zpc/lang/sdk/clients/codex" @codex_client,
+  "zpc/lang/node",
+  "zpc/lang/mulsp",
+}
+
+import {
+  "zpc/lang/loci/codex",
+  "zpc/lang/lsp",
+} for "test"

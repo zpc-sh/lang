@@ -117,12 +117,12 @@ test "to_bytes / from_bytes round-trip" {
 ///|
 test "from_bytes returns None on bad magic" {
   let data : Array[Byte] = [b'\x00', b'\x00', b'\x00', b'\x00']
-  assert_true(Void::from_bytes(data).is_empty())
+  assert_true(Void::from_bytes(data) is None)
 }
 
 ///|
 test "from_bytes returns None on empty" {
-  assert_true(Void::from_bytes([]).is_empty())
+  assert_true(Void::from_bytes([]) is None)
 }
 
 ///|

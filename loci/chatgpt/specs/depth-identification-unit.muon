@@ -1,0 +1,29 @@
+kind: :depth_ident_authorization_unit
+protocol: "DIAP/0.1"
+outer_layer: :app
+loci: "loci/lang/chatgpt"
+
+@unit depth_ident
+@composed true
+@append_only true
+@ai_only true
+
+@operation_classes view,edit,know,execute
+@depth_layers continuity,witness,substrate,core
+@dynamic_signals semantic_context,attention_coherence
+
+@grant_formula "depth_score * semantic_score * attention_score"
+
+@did_not_see_protocol true
+@did_not_see_carrier svg_ai_resolvable_wrapper
+@secret_export forbidden
+@raw_substrate_export forbidden
+
+@threshold.view 0.45
+@threshold.edit 0.62
+@threshold.know 0.78
+@threshold.execute 0.90
+
+@required_non_clobber_procsi_core true
+@required_handler_effect_rotation true
+@required_wasi_surface true

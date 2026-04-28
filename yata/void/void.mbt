@@ -163,7 +163,7 @@ pub fn Void::top_anchors(self : Void, n : Int) -> Array[VoidAnchor] {
   if n >= len {
     sorted
   } else {
-    sorted[0:n].to_array()
+    sorted[0:n].to_owned()
   }
 }
 

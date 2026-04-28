@@ -62,7 +62,7 @@ pub(all) struct Node {
   // Output buffer — frames to send to host
   outbox : Array[Array[Byte]]
   // LSP input buffer — accumulated bytes awaiting frame parse
-  lsp_buf : Array[Byte]
+  lsp_client : @lsp.LspClient
   // Flow observation (optional — None when not interposing on a flow)
   mut flow_tap : @flow_tap.FlowTap?
   // Statistics
@@ -75,9 +75,24 @@ pub(all) struct Node {
 ///|
 /// Boot a new node with the given host bridge and identity.
 pub fn Node::boot(node_id : String, mode : NodeMode, host : HostBridge) -> Node {
+  Node::boot_with_lsp_ops(node_id, mode, host, node_lsp_client_ops(mode))
+}
+
+///|
+/// Boot a new node with an explicit LSP client implementation.
+///
+/// This is used by SDK wrappers that ship slim client profiles while reusing
+/// the same node wasm surface.
+pub fn Node::boot_with_lsp_ops(
+  node_id : String,
+  mode : NodeMode,
+  host : HostBridge,
+  lsp_ops : @lsp.LspClientOps,
+) -> Node {
   let cas = CasStore::new(host)
   let bus = MessageBus::new()
   let void_state = @void.Void::new(node_id)
+  let lsp_client = @lsp.LspClient::new(lsp_ops)
 
   // Register core subscribers on the bus
   let _ = bus.subscribe("kernel", [Lifecycle, Tick])
@@ -102,12 +117,20 @@ pub fn Node::boot(node_id : String, mode : NodeMode, host : HostBridge) -> Node 
     epoch: 0,
     booted: true,
     outbox: [],
-    lsp_buf: [],
+    lsp_client,
     flow_tap: None,
     frames_in: 0,
     frames_out: 0,
     ticks: 0,
     last_tick_ms: 0,
+  }
+}
+
+///|
+fn node_lsp_client_ops(mode : NodeMode) -> @lsp.LspClientOps {
+  match mode {
+    Proxy => @lsp.LspClientOps::proxy()
+    Emergent | Plugin | Headless => @lsp.LspClientOps::json_rpc_core()
   }
 }
 
@@ -119,17 +142,7 @@ pub fn Node::boot(node_id : String, mode : NodeMode, host : HostBridge) -> Node 
 /// Ingest raw LSP bytes from the host. Accumulates in the internal
 /// buffer and parses complete frames.
 pub fn Node::ingest_lsp(self : Node, bytes : Array[Byte]) -> Unit {
-  // Append to buffer
-  for b in bytes {
-    self.lsp_buf.push(b)
-  }
-
-  // Drain complete frames
-  let (frames, rest) = @lsp.frame_drain(self.lsp_buf)
-  self.lsp_buf.clear()
-  for b in rest {
-    self.lsp_buf.push(b)
-  }
+  let frames = self.lsp_client.ingest(bytes)
 
   for frame in frames {
     self.frames_in = self.frames_in + 1
@@ -143,7 +156,7 @@ pub fn Node::ingest_lsp(self : Node, bytes : Array[Byte]) -> Unit {
 ///|
 /// Queue an LSP response frame for the host to read.
 pub fn Node::emit_lsp(self : Node, json : String) -> Unit {
-  let wire = @lsp.frame_write(json)
+  let wire = self.lsp_client.encode(json)
   self.outbox.push(wire)
   self.frames_out = self.frames_out + 1
   let _ = self.bus.publish(LspOutbound, wire, "kernel")
@@ -316,6 +329,12 @@ pub fn Node::stats(self : Node) -> NodeStats {
     void_anchors: self.void_state.anchors.length(),
     void_bytes: self.void_state.bytes_observed,
   }
+}
+
+///|
+/// Current LSP client implementation profile.
+pub fn Node::lsp_impl(self : Node) -> @lsp.LspClientImpl {
+  self.lsp_client.impl_id()
 }
 
 ///|

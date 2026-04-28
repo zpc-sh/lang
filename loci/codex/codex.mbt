@@ -140,3 +140,24 @@ pub fn ConversationLocus::can_seal(self : ConversationLocus) -> Bool {
   self.chain.event_count() > 0 &&
   self.chain.is_well_formed()
 }
+
+///|
+/// Canonical codex-codex connector handshake artifact for contract execution.
+pub fn codex_codex_handshake_artifact(
+  contract_id : String,
+  dialogue_ref : String,
+  deploy_queue_ref : String,
+) -> Array[String] {
+  [
+    "kind: :codex_codex_connector_handshake",
+    "contract_id: \"" + contract_id + "\"",
+    "dialogue_ref: \"" + dialogue_ref + "\"",
+    "deploy_queue_ref: \"" + deploy_queue_ref + "\"",
+    "@function LspClient::ingest",
+    "@inverse frame_drain",
+    "@deploy_ready true",
+    "@cross_repo_ready true",
+    "@required_capability fn:codex.connector.channel",
+    "@execution_command lsp.dual.contract.execute",
+  ]
+}

@@ -27,10 +27,18 @@
     "gopher",
     "gemtext",
     "gemini",
-    "proto"
+    "proto",
     "net",
     "crypto",
-    "codex",
-    "loci/claude"
+    "loci/codex",
+    "loci/claude",
+    "sdk/core",
+    "sdk/portable_wasi",
+    "sdk/clients/jsonrpc",
+    "sdk/clients/proxy",
+    "sdk/clients/claude",
+    "sdk/clients/codex",
+    "sdk/clients/native",
+    "sdk/wasm"
   ]
 }

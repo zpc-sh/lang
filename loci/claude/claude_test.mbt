@@ -268,7 +268,7 @@ test "scout deposits to loci orchestrator reads hot anchors" {
     "emergent",
   )
   let orch = @claude.ClaudeOrchestrator::new(mulsp3, muyata, cave).unwrap()
-  let mut scout = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let scout = orch.spawn_haiku(@muyata.Observation).unwrap()
   assert_true(scout.observe("cave/storage", 10, 1000))
   assert_true(scout.observe("cave/storage", 5, 2000))
   assert_true(scout.observe("mulsp/lifecycle", 8, 3000))
@@ -294,9 +294,9 @@ test "multiple scouts converge on same anchor" {
     "emergent",
   )
   let orch = @claude.ClaudeOrchestrator::new(mulsp3, muyata, cave).unwrap()
-  let mut s1 = orch.spawn_haiku(@muyata.Observation).unwrap()
-  let mut s2 = orch.spawn_haiku(@muyata.Observation).unwrap()
-  let mut s3 = orch.spawn_haiku(@muyata.GrammarInfer).unwrap()
+  let s1 = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let s2 = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let s3 = orch.spawn_haiku(@muyata.GrammarInfer).unwrap()
   // All three converge on "loci/partition"
   let _ = s1.observe("loci/partition", 6, 100)
   let _ = s2.observe("loci/partition", 4, 200)
@@ -325,7 +325,7 @@ test "scout observe fails when not active" {
     "emergent",
   )
   let orch = @claude.ClaudeOrchestrator::new(mulsp3, muyata, cave).unwrap()
-  let mut scout = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let scout = orch.spawn_haiku(@muyata.Observation).unwrap()
   // Quiesce the scout
   assert_true(scout.quiesce())
   assert_eq(scout.is_active(), false)
@@ -350,7 +350,7 @@ test "scout quiesces cleanly" {
     "emergent",
   )
   let orch = @claude.ClaudeOrchestrator::new(mulsp3, muyata, cave).unwrap()
-  let mut scout = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let scout = orch.spawn_haiku(@muyata.Observation).unwrap()
   let _ = scout.observe("node/kernel", 5, 500)
   assert_true(scout.is_active())
   assert_true(scout.quiesce())
@@ -373,7 +373,7 @@ test "deposit count tracks observations" {
     "emergent",
   )
   let orch = @claude.ClaudeOrchestrator::new(mulsp3, muyata, cave).unwrap()
-  let mut scout = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let scout = orch.spawn_haiku(@muyata.Observation).unwrap()
   assert_eq(scout.deposit_count(), 0)
   let _ = scout.observe("a", 1, 0)
   let _ = scout.observe("b", 2, 0)
@@ -398,7 +398,7 @@ test "loci cave retains stigma after scout quiesces" {
     "emergent",
   )
   let orch = @claude.ClaudeOrchestrator::new(mulsp3, muyata, cave).unwrap()
-  let mut scout = orch.spawn_haiku(@muyata.Observation).unwrap()
+  let scout = orch.spawn_haiku(@muyata.Observation).unwrap()
   let _ = scout.observe("spore/mobile-agent", 12, 1000)
   let _ = scout.observe("spore/mobile-agent", 8, 2000)
   let _ = scout.quiesce()

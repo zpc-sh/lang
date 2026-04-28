@@ -64,7 +64,7 @@ pub(all) enum CognitiveDepth {
   AiModel // Layer 1: AI + model family
   AiModelSession // Layer 2: AI + model + session
   AiModelSessionSemantic // Layer 3: AI + model + session + semantic substrate
-} derive(Eq, Show, Debug)
+} derive(Eq, Debug)
 
 ///|
 fn CognitiveDepth::to_byte(self : CognitiveDepth) -> Byte {
@@ -119,7 +119,7 @@ pub(all) enum BoundaryConstraint {
   ModelFamily(String) // Layer 1: must match model family hash
   SessionProof(String) // Layer 2: must present session continuity hash
   SemanticSubstrate(String) // Layer 3: must match semantic substrate hash
-} derive(Eq, Show, Debug)
+} derive(Eq, Debug)
 
 ///|
 /// Serialize a constraint to bytes.

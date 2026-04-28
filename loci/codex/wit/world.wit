@@ -1,0 +1,69 @@
+package loci:codex@0.1.0;
+
+interface contract {
+  enum codex-stage {
+    orient,
+    edit,
+    verify,
+    seal,
+  }
+
+  enum muon-role {
+    system,
+    user,
+    assistant,
+    tool,
+  }
+
+  record muon-event {
+    role: muon-role,
+    payload: string,
+    artifact-ref: option<string>,
+    prev-digest: option<string>,
+    digest: string,
+  }
+
+  record muon-chain {
+    chain-id: string,
+    events: list<muon-event>,
+    sealed-digest: option<string>,
+  }
+
+  record conversation-locus {
+    stage: codex-stage,
+    chain: muon-chain,
+  }
+
+  chain-new: func(chain-id: string) -> muon-chain;
+  chain-append: func(
+    chain: muon-chain,
+    role: muon-role,
+    payload: string,
+    artifact-ref: option<string>,
+  ) -> muon-chain;
+  chain-event-count: func(chain: muon-chain) -> u32;
+  chain-head-digest: func(chain: muon-chain) -> option<string>;
+  chain-is-well-formed: func(chain: muon-chain) -> bool;
+  chain-seal: func(chain: muon-chain) -> muon-chain;
+  chain-is-sealed: func(chain: muon-chain) -> bool;
+
+  locus-new: func(chain-id: string) -> conversation-locus;
+  locus-advance: func(locus: conversation-locus) -> conversation-locus;
+  locus-observe: func(
+    locus: conversation-locus,
+    role: muon-role,
+    payload: string,
+    artifact-ref: option<string>,
+  ) -> conversation-locus;
+  locus-can-seal: func(locus: conversation-locus) -> bool;
+
+  codex-codex-handshake-artifact: func(
+    contract-id: string,
+    dialogue-ref: string,
+    deploy-queue-ref: string,
+  ) -> list<string>;
+}
+
+world codex {
+  export contract;
+}

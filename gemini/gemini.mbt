@@ -179,9 +179,9 @@ pub(all) struct GeminiUrl {
 /// Returns None if the string is empty after stripping the scheme.
 pub fn GeminiUrl::parse(s : String) -> GeminiUrl? {
   let stripped = if s.has_prefix("gemini://") {
-    s[9:].to_string()
+    s[9:].to_owned()
   } else if s.has_prefix("//") {
-    s[2:].to_string()
+    s[2:].to_owned()
   } else {
     s
   }
@@ -200,8 +200,8 @@ pub fn GeminiUrl::parse(s : String) -> GeminiUrl? {
     }
     i = i + 1
   }
-  let host = stripped[0:host_end].to_string()
-  let rest = if host_end < len { stripped[host_end:].to_string() } else { "/" }
+  let host = stripped[0:host_end].to_owned()
+  let rest = if host_end < len { stripped[host_end:].to_owned() } else { "/" }
   // Split path and query
   let rest_chars = rest.to_array()
   let rest_len = rest_chars.length()
@@ -215,8 +215,8 @@ pub fn GeminiUrl::parse(s : String) -> GeminiUrl? {
     j = j + 1
   }
   if q_pos >= 0 {
-    let path = rest[0:q_pos].to_string()
-    let query = rest[q_pos + 1:].to_string()
+    let path = rest[0:q_pos].to_owned()
+    let query = rest[q_pos + 1:].to_owned()
     Some({ host, path, query })
   } else {
     Some({ host, path: rest, query: "" })
@@ -303,19 +303,19 @@ pub fn GeminiRequest::selector(self : GeminiRequest) -> GeminiSelector {
     return NntpGroups
   }
   if lower.has_prefix("/oci/") {
-    let hash = path[5:].to_string()
+    let hash = path[5:].to_owned()
     return OciLayer(hash)
   }
   if lower.has_prefix("oci/") {
-    let hash = path[4:].to_string()
+    let hash = path[4:].to_owned()
     return OciLayer(hash)
   }
   if lower.has_prefix("/mulsp/") {
-    let id = path[7:].to_string()
+    let id = path[7:].to_owned()
     return MulspState(id)
   }
   if lower.has_prefix("mulsp/") {
-    let id = path[6:].to_string()
+    let id = path[6:].to_owned()
     return MulspState(id)
   }
   if lower == "/search" || lower == "search" {
@@ -447,7 +447,7 @@ pub fn GeminiResponse::decode_header(
   let code = d0 * 10 + d1
   let status = GeminiStatus::from_code(code)
   let meta = if s.length() > 3 {
-    gemini_str_trim(s[3:].to_string())
+    gemini_str_trim(s[3:].to_owned())
   } else {
     ""
   }
@@ -595,7 +595,7 @@ fn gemini_str_trim(s : String) -> String {
   if start >= end {
     return ""
   }
-  s[start:end].to_string()
+  s[start:end].to_owned()
 }
 
 ///|
