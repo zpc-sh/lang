@@ -20,7 +20,7 @@ defmodule Lang.Workers.OrchestratorWorker do
     start_time = System.monotonic_time(:millisecond)
 
     try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+      result = execute_task(String.to_existing_atom(env), String.to_existing_atom(task), args)
 
       duration = System.monotonic_time(:millisecond) - start_time
 
@@ -41,6 +41,10 @@ defmodule Lang.Workers.OrchestratorWorker do
 
       :ok
     rescue
+      error in ArgumentError ->
+        Logger.warning("Security Warning: Attempted atom table exhaustion with invalid env or task: #{env}, #{task}. Error: #{inspect(error)}")
+        Master.notify_job_failed(args["job_id"], error)
+        {:error, "Invalid environment or task provided"}
       error ->
         Logger.error("Failed to execute #{task} for #{env}: #{inspect(error)}")
         Master.notify_job_failed(args["job_id"], error)
@@ -997,15 +1001,19 @@ defmodule Lang.Workers.OrchestratorWorker do
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(String.to_existing_atom(env)))
         |> Oban.insert!()
       end
     end)
+  rescue
+    ArgumentError ->
+      Logger.warning("Security Warning: Invalid environment provided to trigger_dependent_tasks: #{env}")
+      :ok
   end
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case String.to_existing_atom(env) do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1050,8 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    queue_for_env(String.to_existing_atom(env))
+  rescue
+    ArgumentError -> :default
   end
 end
