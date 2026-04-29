@@ -118,86 +118,103 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
 
   # Private handlers
 
-  defp handle_user_metrics_update(args) do
-    user_id = args["user_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
-    date = Date.from_iso8601!(args["date"])
-
-    Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
-
+  defp safe_period_type(args, default \\ "daily") do
+    period_str = args["period_type"] || default
     try do
-      case update_user_productivity_metrics(user_id, period_type, date) do
-        {:ok, metrics} ->
-          Logger.info("Successfully updated productivity metrics for user #{user_id}")
-          {:ok, %{user_id: user_id, metrics_id: metrics.id}}
-
-        {:error, reason} ->
-          Logger.error("Failed to update user productivity metrics: #{inspect(reason)}")
-          {:error, reason}
-      end
+      {:ok, String.to_existing_atom(period_str)}
     rescue
-      error ->
-        Logger.error("Exception in user metrics update: #{inspect(error)}")
-        {:error, :processing_exception}
+      error in ArgumentError ->
+        Logger.warning("Security Warning: Untrusted input caused ArgumentError when converting period_type to atom: #{inspect(period_str)} - #{inspect(error)}")
+        {:error, :invalid_argument}
+    end
+  end
+
+  defp handle_user_metrics_update(args) do
+    with {:ok, period_type} <- safe_period_type(args) do
+      user_id = args["user_id"]
+      date = Date.from_iso8601!(args["date"])
+
+      Logger.info("Processing user metrics update for user #{user_id}, period: #{period_type}")
+
+      try do
+        case update_user_productivity_metrics(user_id, period_type, date) do
+          {:ok, metrics} ->
+            Logger.info("Successfully updated productivity metrics for user #{user_id}")
+            {:ok, %{user_id: user_id, metrics_id: metrics.id}}
+
+          {:error, reason} ->
+            Logger.error("Failed to update user productivity metrics: #{inspect(reason)}")
+            {:error, reason}
+        end
+      rescue
+        error ->
+          Logger.error("Exception in user metrics update: #{inspect(error)}")
+          {:error, :processing_exception}
+      end
+    else
+      {:error, _} = error -> error
     end
   end
 
   defp handle_efficiency_report_generation(args) do
-    period_type = String.to_atom(args["period_type"])
-    date = Date.from_iso8601!(args["date"])
-    organization_id = args["organization_id"]
+    with {:ok, period_type} <- safe_period_type(args, nil) do
+      date = Date.from_iso8601!(args["date"])
+      organization_id = args["organization_id"]
 
-    Logger.info("Generating efficiency report for #{period_type} on #{date}")
+      Logger.info("Generating efficiency report for #{period_type} on #{date}")
 
-    try do
-      opts = [date: date]
+      try do
+        opts = [date: date]
 
-      opts =
-        if organization_id, do: Keyword.put(opts, :organization_id, organization_id), else: opts
+        opts =
+          if organization_id, do: Keyword.put(opts, :organization_id, organization_id), else: opts
 
-      case TokenEfficiency.generate_efficiency_report(period_type, opts) do
-        {:ok, report} ->
-          Logger.info("Successfully generated efficiency report: #{report.id}")
+        case TokenEfficiency.generate_efficiency_report(period_type, opts) do
+          {:ok, report} ->
+            Logger.info("Successfully generated efficiency report: #{report.id}")
 
-          # Broadcast to dashboards for real-time updates
-          Phoenix.PubSub.broadcast(
-            Lang.PubSub,
-            "efficiency_reports:all",
-            {:efficiency_report_generated, report}
-          )
-
-          if organization_id do
+            # Broadcast to dashboards for real-time updates
             Phoenix.PubSub.broadcast(
               Lang.PubSub,
-              "efficiency_reports:#{organization_id}",
+              "efficiency_reports:all",
               {:efficiency_report_generated, report}
             )
-          end
 
-          {:ok, %{report_id: report.id, period_type: period_type}}
+            if organization_id do
+              Phoenix.PubSub.broadcast(
+                Lang.PubSub,
+                "efficiency_reports:#{organization_id}",
+                {:efficiency_report_generated, report}
+              )
+            end
 
-        {:error, reason} ->
-          Logger.error("Failed to generate efficiency report: #{inspect(reason)}")
-          {:error, reason}
+            {:ok, %{report_id: report.id, period_type: period_type}}
+
+          {:error, reason} ->
+            Logger.error("Failed to generate efficiency report: #{inspect(reason)}")
+            {:error, reason}
+        end
+      rescue
+        error ->
+          Logger.error("Exception in efficiency report generation: #{inspect(error)}")
+          {:error, :processing_exception}
       end
-    rescue
-      error ->
-        Logger.error("Exception in efficiency report generation: #{inspect(error)}")
-        {:error, :processing_exception}
+    else
+      {:error, _} = error -> error
     end
   end
 
   defp handle_organization_aggregation(args) do
-    organization_id = args["organization_id"]
-    period_type = String.to_atom(args["period_type"] || "daily")
-    date = Date.from_iso8601!(args["date"])
+    with {:ok, period_type} <- safe_period_type(args) do
+      organization_id = args["organization_id"]
+      date = Date.from_iso8601!(args["date"])
 
-    Logger.info("Aggregating organization metrics for #{organization_id}")
+      Logger.info("Aggregating organization metrics for #{organization_id}")
 
-    try do
-      case aggregate_organization_productivity(organization_id, period_type, date) do
-        {:ok, results} ->
-          Logger.info("Successfully aggregated organization metrics")
+      try do
+        case aggregate_organization_productivity(organization_id, period_type, date) do
+          {:ok, results} ->
+            Logger.info("Successfully aggregated organization metrics")
 
           # Broadcast organization-wide updates
           Phoenix.PubSub.broadcast(
@@ -211,11 +228,14 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
         {:error, reason} ->
           Logger.error("Failed to aggregate organization metrics: #{inspect(reason)}")
           {:error, reason}
+        end
+      rescue
+        error ->
+          Logger.error("Exception in organization aggregation: #{inspect(error)}")
+          {:error, :processing_exception}
       end
-    rescue
-      error ->
-        Logger.error("Exception in organization aggregation: #{inspect(error)}")
-        {:error, :processing_exception}
+    else
+      {:error, _} = error -> error
     end
   end
 
