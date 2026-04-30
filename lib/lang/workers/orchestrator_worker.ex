@@ -20,7 +20,16 @@ defmodule Lang.Workers.OrchestratorWorker do
     start_time = System.monotonic_time(:millisecond)
 
     try do
-      result = execute_task(String.to_atom(env), String.to_atom(task), args)
+      {env_atom, task_atom} =
+        try do
+          {String.to_existing_atom(env), String.to_existing_atom(task)}
+        rescue
+          error in ArgumentError ->
+            Logger.warning("Security Warning: Atom exhaustion attempt with env=#{inspect(env)} task=#{inspect(task)}")
+            reraise error, __STACKTRACE__
+        end
+
+      result = execute_task(env_atom, task_atom, args)
 
       duration = System.monotonic_time(:millisecond) - start_time
 
@@ -997,7 +1006,7 @@ defmodule Lang.Workers.OrchestratorWorker do
           task: task,
           triggered_by: completed_task
         }
-        |> __MODULE__.new(queue: queue_for_env(String.to_atom(env)))
+        |> __MODULE__.new(queue: queue_for_env(String.to_existing_atom(env)))
         |> Oban.insert!()
       end
     end)
@@ -1005,7 +1014,7 @@ defmodule Lang.Workers.OrchestratorWorker do
 
   defp get_task_dependencies(env) do
     # Return task dependencies for the environment
-    case String.to_atom(env) do
+    case String.to_existing_atom(env) do
       :text ->
         %{
           implement_parsers: [:generate_spec],
@@ -1042,6 +1051,6 @@ defmodule Lang.Workers.OrchestratorWorker do
   end
 
   defp queue_for_env(env) when is_binary(env) do
-    queue_for_env(String.to_atom(env))
+    queue_for_env(String.to_existing_atom(env))
   end
 end
