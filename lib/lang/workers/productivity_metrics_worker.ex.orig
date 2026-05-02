@@ -123,7 +123,7 @@ defmodule Lang.Workers.ProductivityMetricsWorker do
     try do
       String.to_existing_atom(str)
     rescue
-      ArgumentError ->
+      e in ArgumentError ->
         Logger.warning("Invalid period_type provided: #{inspect(str)}, potential atom exhaustion attempt.")
         :daily
     end
