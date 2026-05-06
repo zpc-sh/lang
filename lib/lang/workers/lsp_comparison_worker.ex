@@ -262,21 +262,33 @@ defmodule Lang.Workers.LSPComparisonWorker do
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
     # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
-      {:ok, result} ->
-        %{
-          status: :success,
-          output: result,
-          method: method,
-          lsp_context_used: lsp_enabled,
-          confidence: Map.get(result, :confidence, 0.0),
-          provider_metadata: Map.get(result, :metadata, %{})
-        }
+    try do
+      module_atom = String.to_existing_atom(agent_module)
+      case apply(module_atom, :handle_request, [method, params, []]) do
+        {:ok, result} ->
+          %{
+            status: :success,
+            output: result,
+            method: method,
+            lsp_context_used: lsp_enabled,
+            confidence: Map.get(result, :confidence, 0.0),
+            provider_metadata: Map.get(result, :metadata, %{})
+          }
 
-      {:error, reason} ->
+        {:error, reason} ->
+          %{
+            status: :error,
+            error: reason,
+            method: method,
+            lsp_context_used: lsp_enabled
+          }
+      end
+    rescue
+      ArgumentError ->
+        Logger.error("Security Warning: Attempted to convert non-existent atom from agent_module: #{inspect(agent_module)}")
         %{
           status: :error,
-          error: reason,
+          error: "Invalid provider module",
           method: method,
           lsp_context_used: lsp_enabled
         }
