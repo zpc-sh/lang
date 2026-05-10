@@ -258,6 +258,11 @@ defmodule Lang.Workers.LSPComparisonWorker do
     # Reconstruct the agent module
     agent_module = agent_variant["provider_module"]
 
+    # Security check: Ensure module is within the safe Variants namespace to prevent RCE
+    unless String.starts_with?(agent_module, "Elixir.Lang.Testing.Variants.") do
+      raise ArgumentError, "Invalid agent variant module: #{agent_module}"
+    end
+
     # Convert task to provider request format
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
