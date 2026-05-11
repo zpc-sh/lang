@@ -258,28 +258,54 @@ defmodule Lang.Workers.LSPComparisonWorker do
     # Reconstruct the agent module
     agent_module = agent_variant["provider_module"]
 
-    # Convert task to provider request format
-    {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
+    # Security: Validate module prefix to prevent RCE
+    if is_binary(agent_module) and String.starts_with?(agent_module, "Elixir.Lang.Testing.Variants.") do
+      # Convert task to provider request format
+      {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
-    # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
-      {:ok, result} ->
-        %{
-          status: :success,
-          output: result,
-          method: method,
-          lsp_context_used: lsp_enabled,
-          confidence: Map.get(result, :confidence, 0.0),
-          provider_metadata: Map.get(result, :metadata, %{})
-        }
+      # Safely convert to existing atom and execute
+      agent_atom =
+        try do
+          String.to_existing_atom(agent_module)
+        rescue
+          ArgumentError -> nil
+        end
 
-      {:error, reason} ->
+      if agent_atom do
+        case apply(agent_atom, :handle_request, [method, params, []]) do
+          {:ok, result} ->
+            %{
+              status: :success,
+              output: result,
+              method: method,
+              lsp_context_used: lsp_enabled,
+              confidence: Map.get(result, :confidence, 0.0),
+              provider_metadata: Map.get(result, :metadata, %{})
+            }
+
+          {:error, reason} ->
+            %{
+              status: :error,
+              error: reason,
+              method: method,
+              lsp_context_used: lsp_enabled
+            }
+        end
+      else
         %{
           status: :error,
-          error: reason,
-          method: method,
+          error: "Agent module not found",
+          method: "unknown",
           lsp_context_used: lsp_enabled
         }
+      end
+    else
+      %{
+        status: :error,
+        error: "Invalid or unauthorized agent module",
+        method: "unknown",
+        lsp_context_used: lsp_enabled
+      }
     end
   end
 
