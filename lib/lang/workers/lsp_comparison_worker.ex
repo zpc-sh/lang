@@ -262,24 +262,44 @@ defmodule Lang.Workers.LSPComparisonWorker do
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
     # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
-      {:ok, result} ->
-        %{
-          status: :success,
-          output: result,
-          method: method,
-          lsp_context_used: lsp_enabled,
-          confidence: Map.get(result, :confidence, 0.0),
-          provider_metadata: Map.get(result, :metadata, %{})
-        }
+    if String.starts_with?(agent_module, "Elixir.Lang.Testing.Variants.") do
+      try do
+        module_atom = String.to_existing_atom(agent_module)
+        case apply(module_atom, :handle_request, [method, params, []]) do
+          {:ok, result} ->
+            %{
+              status: :success,
+              output: result,
+              method: method,
+              lsp_context_used: lsp_enabled,
+              confidence: Map.get(result, :confidence, 0.0),
+              provider_metadata: Map.get(result, :metadata, %{})
+            }
 
-      {:error, reason} ->
-        %{
-          status: :error,
-          error: reason,
-          method: method,
-          lsp_context_used: lsp_enabled
-        }
+          {:error, reason} ->
+            %{
+              status: :error,
+              error: reason,
+              method: method,
+              lsp_context_used: lsp_enabled
+            }
+        end
+      rescue
+        ArgumentError ->
+          %{
+            status: :error,
+            error: "Invalid agent variant module",
+            method: method,
+            lsp_context_used: lsp_enabled
+          }
+      end
+    else
+      %{
+        status: :error,
+        error: "Unauthorized agent module namespace",
+        method: method,
+        lsp_context_used: lsp_enabled
+      }
     end
   end
 

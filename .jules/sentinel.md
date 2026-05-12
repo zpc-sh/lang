@@ -1,0 +1,4 @@
+## 2024-05-18 - [Preventing Remote Code Execution via Dynamic Dispatch]
+**Vulnerability:** A critical Remote Code Execution (RCE) and DoS (Atom Exhaustion) vulnerability was found in `lib/lang/workers/lsp_comparison_worker.ex` due to the use of `apply(String.to_atom(agent_module), ...)` with dynamically generated untrusted input.
+**Learning:** The application dynamically dispatches tasks to testing variants. Directly casting strings to atoms and invoking them without validation allows attackers to execute arbitrary code or crash the BEAM VM.
+**Prevention:** Always validate the expected namespace prefix using `String.starts_with?` before dynamic module dispatch, and safely map to existing atoms using `String.to_existing_atom` wrapped in an isolated `try/rescue` block to handle invalid references.
