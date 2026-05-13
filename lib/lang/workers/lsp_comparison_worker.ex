@@ -254,6 +254,20 @@ defmodule Lang.Workers.LSPComparisonWorker do
     end
   end
 
+  defp safe_string_to_module(module_string) when is_binary(module_string) do
+    if String.starts_with?(module_string, "Elixir.Lang.Testing.Variants.") do
+      try do
+        {:ok, String.to_existing_atom(module_string)}
+      rescue
+        ArgumentError -> {:error, "Module does not exist"}
+      end
+    else
+      {:error, "Unauthorized module prefix"}
+    end
+  end
+
+  defp safe_string_to_module(_), do: {:error, "Invalid module format"}
+
   defp execute_agent_task(agent_variant, task, context, lsp_enabled) do
     # Reconstruct the agent module
     agent_module = agent_variant["provider_module"]
@@ -261,18 +275,18 @@ defmodule Lang.Workers.LSPComparisonWorker do
     # Convert task to provider request format
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
-    # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
-      {:ok, result} ->
-        %{
-          status: :success,
-          output: result,
-          method: method,
-          lsp_context_used: lsp_enabled,
-          confidence: Map.get(result, :confidence, 0.0),
-          provider_metadata: Map.get(result, :metadata, %{})
-        }
-
+    # Execute via the agent variant safely
+    with {:ok, module_atom} <- safe_string_to_module(agent_module),
+         {:ok, result} <- apply(module_atom, :handle_request, [method, params, []]) do
+      %{
+        status: :success,
+        output: result,
+        method: method,
+        lsp_context_used: lsp_enabled,
+        confidence: Map.get(result, :confidence, 0.0),
+        provider_metadata: Map.get(result, :metadata, %{})
+      }
+    else
       {:error, reason} ->
         %{
           status: :error,
