@@ -1,0 +1,4 @@
+## 2024-05-24 - [Fix Dynamic Module Execution via String.to_atom]
+**Vulnerability:** Found a critical Remote Code Execution (RCE) and Denial of Service (DoS) vulnerability in `LSPComparisonWorker` where an untrusted string (`agent_variant["provider_module"]`) was used with `String.to_atom/1` and then directly applied as a module using `apply/3`.
+**Learning:** In Elixir, using `String.to_atom/1` with arbitrary data leads to Atom Exhaustion since atoms are never garbage-collected on the BEAM VM. Passing this generated atom to `apply/3` compounds this issue by enabling arbitrary code execution if an attacker can manipulate the module string.
+**Prevention:** Always strictly validate and namespace dynamic module names using allow-lists (e.g., `String.starts_with?`) and use `String.to_existing_atom/1` in a `try/rescue ArgumentError` block to safely map untrusted strings to application code, preventing both DoS and RCE.
