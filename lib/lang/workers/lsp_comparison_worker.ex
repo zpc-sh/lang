@@ -258,11 +258,24 @@ defmodule Lang.Workers.LSPComparisonWorker do
     # Reconstruct the agent module
     agent_module = agent_variant["provider_module"]
 
+    # Validate agent_module prefix to prevent RCE
+    if not String.starts_with?(agent_module, "Elixir.Lang.Testing.Variants.") do
+      raise ArgumentError, "Invalid agent variant module: #{agent_module}"
+    end
+
+    module_atom =
+      try do
+        String.to_existing_atom(agent_module)
+      rescue
+        ArgumentError ->
+          raise ArgumentError, "Agent variant module not found: #{agent_module}"
+      end
+
     # Convert task to provider request format
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
     # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
+    case apply(module_atom, :handle_request, [method, params, []]) do
       {:ok, result} ->
         %{
           status: :success,
