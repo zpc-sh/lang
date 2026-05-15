@@ -261,25 +261,54 @@ defmodule Lang.Workers.LSPComparisonWorker do
     # Convert task to provider request format
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
-    # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
-      {:ok, result} ->
-        %{
-          status: :success,
-          output: result,
-          method: method,
-          lsp_context_used: lsp_enabled,
-          confidence: Map.get(result, :confidence, 0.0),
-          provider_metadata: Map.get(result, :metadata, %{})
-        }
+    # Validate the module namespace to prevent RCE
+    if String.starts_with?(agent_module, "Elixir.Lang.Testing.Variants.") do
+      # Isolate the try block to avoid masking ArgumentErrors from core logic
+      module_atom_result =
+        try do
+          {:ok, String.to_existing_atom(agent_module)}
+        rescue
+          ArgumentError -> {:error, "Module not found: #{agent_module}"}
+        end
 
-      {:error, reason} ->
-        %{
-          status: :error,
-          error: reason,
-          method: method,
-          lsp_context_used: lsp_enabled
-        }
+      case module_atom_result do
+        {:ok, module_atom} ->
+          # Execute via the agent variant
+          case apply(module_atom, :handle_request, [method, params, []]) do
+            {:ok, result} ->
+              %{
+                status: :success,
+                output: result,
+                method: method,
+                lsp_context_used: lsp_enabled,
+                confidence: Map.get(result, :confidence, 0.0),
+                provider_metadata: Map.get(result, :metadata, %{})
+              }
+
+            {:error, reason} ->
+              %{
+                status: :error,
+                error: reason,
+                method: method,
+                lsp_context_used: lsp_enabled
+              }
+          end
+
+        {:error, reason} ->
+          %{
+            status: :error,
+            error: reason,
+            method: method,
+            lsp_context_used: lsp_enabled
+          }
+      end
+    else
+      %{
+        status: :error,
+        error: "Invalid agent module namespace",
+        method: method,
+        lsp_context_used: lsp_enabled
+      }
     end
   end
 
