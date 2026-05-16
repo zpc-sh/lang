@@ -65,7 +65,12 @@ defmodule Lang.Proxy.Envelope do
       "lsp" -> {:ok, :lsp}
       "mcp" -> {:ok, :mcp}
       "proxy" -> {:ok, :proxy}
-      other -> {:ok, String.to_atom(other)}
+      other ->
+        try do
+          {:ok, String.to_existing_atom(other)}
+        rescue
+          ArgumentError -> {:error, :invalid_service}
+        end
     end
   end
 
