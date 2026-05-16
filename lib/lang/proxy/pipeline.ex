@@ -81,7 +81,14 @@ defmodule Lang.Proxy.Pipeline do
   end
 
   defp normalize_service(s) when is_atom(s), do: s
-  defp normalize_service(s) when is_binary(s), do: String.to_atom(String.downcase(s))
+  defp normalize_service(s) when is_binary(s) do
+    s_downcase = String.downcase(s)
+    try do
+      String.to_existing_atom(s_downcase)
+    rescue
+      ArgumentError -> s_downcase
+    end
+  end
 
   defp prune(%{service: s, method: m, params: params}) do
     base = %{service: s, method: m}
@@ -99,7 +106,13 @@ defmodule Lang.Proxy.Pipeline do
   end
 
   defp normalize_key(k) when is_atom(k), do: k
-  defp normalize_key(k) when is_binary(k), do: String.to_atom(k)
+  defp normalize_key(k) when is_binary(k) do
+    try do
+      String.to_existing_atom(k)
+    rescue
+      ArgumentError -> k
+    end
+  end
 
   defp maybe_require_intent(env, assigns) do
     sensitive? = sensitive_op?(env)
