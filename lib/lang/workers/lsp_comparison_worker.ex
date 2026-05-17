@@ -261,18 +261,21 @@ defmodule Lang.Workers.LSPComparisonWorker do
     # Convert task to provider request format
     {method, params} = convert_task_to_provider_request(task, context, lsp_enabled)
 
-    # Execute via the agent variant
-    case apply(String.to_atom(agent_module), :handle_request, [method, params, []]) do
-      {:ok, result} ->
-        %{
-          status: :success,
-          output: result,
-          method: method,
-          lsp_context_used: lsp_enabled,
-          confidence: Map.get(result, :confidence, 0.0),
-          provider_metadata: Map.get(result, :metadata, %{})
-        }
+    # Execute via the agent variant safely
+    # Validate the module name to prevent RCE and use String.to_existing_atom to prevent Atom Exhaustion
+    unless is_binary(agent_module) and String.starts_with?(agent_module, "Elixir.Lang.Testing.Variants.") do
+      raise ArgumentError, "Invalid agent variant module: #{inspect(agent_module)}"
+    end
 
+    module_atom_result =
+      try do
+        {:ok, String.to_existing_atom(agent_module)}
+      rescue
+        ArgumentError ->
+          {:error, "Unknown agent variant module (could not find existing atom): #{inspect(agent_module)}"}
+      end
+
+    case module_atom_result do
       {:error, reason} ->
         %{
           status: :error,
@@ -280,6 +283,27 @@ defmodule Lang.Workers.LSPComparisonWorker do
           method: method,
           lsp_context_used: lsp_enabled
         }
+      {:ok, module_atom} ->
+        # Now execute the apply outside of the try/rescue to not swallow other ArgumentErrors
+        case apply(module_atom, :handle_request, [method, params, []]) do
+          {:ok, result} ->
+            %{
+              status: :success,
+              output: result,
+              method: method,
+              lsp_context_used: lsp_enabled,
+              confidence: Map.get(result, :confidence, 0.0),
+              provider_metadata: Map.get(result, :metadata, %{})
+            }
+
+          {:error, reason} ->
+            %{
+              status: :error,
+              error: reason,
+              method: method,
+              lsp_context_used: lsp_enabled
+            }
+        end
     end
   end
 
